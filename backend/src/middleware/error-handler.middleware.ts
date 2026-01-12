@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError, ErrorCodes } from '../utils/errors.js';
-import { errorResponse } from '../utils/response.js';
-import { createRequestLogger } from '../utils/logger.js';
+import { AppError, ErrorCodes } from '../utils/errors';
+import { errorResponse } from '../utils/response';
+import { createRequestLogger } from '../utils/logger';
 
 /**
  * Global error handler middleware

@@ -1,4 +1,4 @@
-import { setupTestDB, teardownTestDB, clearTestDB } from './db.js';
+import { setupTestDB, teardownTestDB, clearTestDB } from './db';
 
 // Increase timeout for MongoDB Memory Server
 jest.setTimeout(30000);

@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { Errors } from '../utils/errors.js';
-import { createRequestLogger } from '../utils/logger.js';
+import { AuthService } from '../services/auth.service';
+import { User } from '../models';
+import { AppError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 // Extend Express Request type for user context
 declare global {
@@ -38,64 +40,98 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 };
 
 /**
- * Placeholder authentication middleware
- * TODO: Implement in Slice 1 (Auth Core)
+ * JWT Authentication Middleware
+ * Validates JWT token from Authorization header and attaches user to request
  */
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
-  const logger = createRequestLogger(req.correlationId);
+  try {
+    // Check for Authorization header
+    const authHeader = req.headers.authorization;
 
-  // Check for Authorization header
-  const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      throw new AppError('MISSING_AUTH_TOKEN', 'Authorization header is required', 401);
+    }
 
-  if (!authHeader) {
-    // For now, allow unauthenticated requests to pass through
-    // This will be properly implemented in Slice 1
-    logger.debug('No auth header provided', {
-      action: 'auth.check.skipped',
-      context: { reason: 'placeholder_middleware' },
+    // Extract token from "Bearer <token>"
+    if (!authHeader.startsWith('Bearer ')) {
+      throw new AppError('INVALID_AUTH_FORMAT', 'Authorization header must be in format: Bearer <token>', 401);
+    }
+
+    const token = authHeader.substring(7); // Remove "Bearer " prefix
+
+    // Verify token
+    const decoded = AuthService.verifyToken(token);
+
+    // Attach user to request
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+      companyId: decoded.companyId,
+    };
+
+    logger.debug({
+      action: 'auth.jwt.success',
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      correlationId: req.correlationId,
     });
-    return next();
+
+    next();
+  } catch (error) {
+    // Log auth failure
+    logger.warn({
+      action: 'auth.jwt.failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      correlationId: req.correlationId,
+    });
+
+    next(error);
   }
-
-  // TODO: Validate JWT token
-  // TODO: Extract user from token
-  // TODO: Attach user to request
-
-  logger.debug('Auth header found (placeholder)', {
-    action: 'auth.check.placeholder',
-    context: { hasBearer: authHeader.startsWith('Bearer ') },
-  });
-
-  next();
 }
 
 /**
- * Placeholder API key authentication middleware
- * TODO: Implement in Slice 1 (Auth Core)
+ * API Key Authentication Middleware
+ * Validates API key from X-API-Key header and attaches user to request
+ * Used for mobile apps and responder devices
  */
-export function authenticateApiKey(req: Request, _res: Response, next: NextFunction): void {
-  const logger = createRequestLogger(req.correlationId);
+export async function authenticateApiKey(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    const apiKey = req.headers['x-api-key'] as string;
 
-  const apiKey = req.headers['x-api-key'] as string;
+    if (!apiKey) {
+      throw new AppError('MISSING_API_KEY', 'X-API-Key header is required', 401);
+    }
 
-  if (!apiKey) {
-    logger.debug('No API key provided', {
-      action: 'auth.apikey.skipped',
-      context: { reason: 'placeholder_middleware' },
+    // Validate API key
+    const user = await AuthService.validateApiKey(apiKey);
+
+    // Attach user to request
+    req.user = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId.toString(),
+    };
+
+    logger.debug({
+      action: 'auth.apikey.success',
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      correlationId: req.correlationId,
     });
-    return next();
+
+    next();
+  } catch (error) {
+    // Log auth failure
+    logger.warn({
+      action: 'auth.apikey.failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      correlationId: req.correlationId,
+    });
+
+    next(error);
   }
-
-  // TODO: Validate API key
-  // TODO: Extract company from API key
-  // TODO: Attach context to request
-
-  logger.debug('API key found (placeholder)', {
-    action: 'auth.apikey.placeholder',
-    context: { keyPrefix: apiKey.slice(0, 10) + '***' },
-  });
-
-  next();
 }
 
 /**
@@ -104,32 +140,29 @@ export function authenticateApiKey(req: Request, _res: Response, next: NextFunct
  */
 export function authorize(...requiredRoles: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const logger = createRequestLogger(req.correlationId);
-
-    // If no user attached (placeholder mode), skip authorization
+    // User must be authenticated first
     if (!req.user) {
-      logger.debug('Authorization skipped - no user', {
-        action: 'auth.authorize.skipped',
-        context: { requiredRoles, reason: 'no_user_context' },
-      });
-      return next();
+      throw new AppError('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     const userRoleLevel = ROLE_HIERARCHY[req.user.role];
     const requiredMinLevel = Math.min(...requiredRoles.map((r) => ROLE_HIERARCHY[r]));
 
     if (userRoleLevel >= requiredMinLevel) {
-      logger.debug('Authorization passed', {
+      logger.debug({
         action: 'auth.authorize.passed',
+        userId: req.user.id,
+        companyId: req.user.companyId,
         context: {
           userRole: req.user.role,
           requiredRoles,
         },
+        correlationId: req.correlationId,
       });
       return next();
     }
 
-    logger.warn('Authorization failed', {
+    logger.warn({
       action: 'auth.authorize.failed',
       userId: req.user.id,
       companyId: req.user.companyId,
@@ -137,9 +170,10 @@ export function authorize(...requiredRoles: UserRole[]) {
         userRole: req.user.role,
         requiredRoles,
       },
+      correlationId: req.correlationId,
     });
 
-    throw Errors.forbidden(`Role ${req.user.role} is not authorized for this action`);
+    throw new AppError('FORBIDDEN', `Role ${req.user.role} is not authorized for this action`, 403);
   };
 }
 
@@ -149,11 +183,9 @@ export function authorize(...requiredRoles: UserRole[]) {
  */
 export function authorizeCompany(companyIdParam = 'companyId') {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const logger = createRequestLogger(req.correlationId);
-
-    // If no user attached (placeholder mode), skip
+    // User must be authenticated first
     if (!req.user) {
-      return next();
+      throw new AppError('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     const targetCompanyId = req.params[companyIdParam] || req.body?.companyId;
@@ -165,15 +197,16 @@ export function authorizeCompany(companyIdParam = 'companyId') {
 
     // User must belong to the target company
     if (targetCompanyId && req.user.companyId !== targetCompanyId) {
-      logger.warn('Cross-company access denied', {
+      logger.warn({
         action: 'auth.company.denied',
         userId: req.user.id,
         companyId: req.user.companyId,
         context: {
           targetCompanyId,
         },
+        correlationId: req.correlationId,
       });
-      throw Errors.forbidden('Cannot access resources from another company');
+      throw new AppError('TENANT_MISMATCH', 'Cannot access resources from another company', 403);
     }
 
     next();

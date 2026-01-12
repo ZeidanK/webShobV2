@@ -115,7 +115,7 @@ Set up project scaffolding with dev environment, testing infrastructure, logging
 - [x] Set up testing structure (optional: 1 sample test)
 
 ### AI Service Tasks
-- [x] Create Python project structure
+- [x] Create Python project structure 
 - [x] Set up FastAPI skeleton
 - [x] Create health endpoint
 - [x] Create placeholder detection callback endpoint

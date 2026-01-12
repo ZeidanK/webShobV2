@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import { logger } from '../utils/logger.js';
-import { config } from './index.js';
+import { logger } from '../utils/logger';
+import { config } from './index';
 
 export async function connectDatabase(): Promise<void> {
   try {

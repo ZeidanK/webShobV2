@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createRequestLogger } from '../utils/logger.js';
+import { createRequestLogger } from '../utils/logger';
 
 /**
  * Middleware to log all incoming requests and their responses

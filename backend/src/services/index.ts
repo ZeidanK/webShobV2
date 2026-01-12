@@ -6,7 +6,7 @@
  */
 
 // Slice 1: Auth Core
-// export { AuthService } from './auth.service';
+export { AuthService } from './auth.service';
 
 // Slice 2: Company & User CRUD
 // export { CompanyService } from './company.service';

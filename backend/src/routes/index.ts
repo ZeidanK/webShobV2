@@ -1,13 +1,14 @@
 import { Router } from 'express';
-import { healthRoutes } from './health.routes.js';
+import { healthRoutes } from './health.routes';
+import authRoutes from './auth.routes';
 
 const router = Router();
 
 // Mount route modules
 router.use('/health', healthRoutes);
+router.use('/auth', authRoutes);
 
 // Placeholder routes for future implementation
-// router.use('/auth', authRoutes);        // Slice 1
 // router.use('/companies', companyRoutes); // Slice 2
 // router.use('/users', userRoutes);        // Slice 2
 // router.use('/reports', reportRoutes);    // Slice 3

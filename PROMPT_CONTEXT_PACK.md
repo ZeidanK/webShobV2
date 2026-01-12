@@ -127,7 +127,7 @@ Audit logs REQUIRED for:
 
 ### CI/CD
 - Tests run on every commit
-- Coverage reports required for PR approval
+- Coverage reports required for PR approval 
 
 ---
 

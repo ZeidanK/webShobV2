@@ -1,7 +1,7 @@
-import { createApp } from './app.js';
-import { config } from './config/index.js';
-import { connectDatabase } from './config/database.js';
-import { logger } from './utils/logger.js';
+import { createApp } from './app';
+import { config } from './config/index';
+import { connectDatabase } from './config/database';
+import { logger } from './utils/logger';
 
 async function bootstrap() {
   try {

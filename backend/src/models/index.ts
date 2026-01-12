@@ -6,7 +6,8 @@
  */
 
 // Slice 1: Auth Core
-// export { User } from './user.model';
+export { User, UserRole, IUser, IUserModel } from './user.model';
+export { AuditLog, AuditAction, IAuditLog } from './audit-log.model';
 
 // Slice 2: Company & User CRUD
 // export { Company } from './company.model';
@@ -17,9 +18,6 @@
 // Slice 4: Event Management
 // export { Event } from './event.model';
 // export { EventType } from './event-type.model';
-// export { AuditLog } from './audit-log.model';
 
 // Slice 7: Camera Management
 // export { Camera } from './camera.model';
-
-export {};

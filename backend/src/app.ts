@@ -5,15 +5,15 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 
-import { config } from './config/index.js';
-import { swaggerSpec } from './config/swagger.js';
-import { apiRoutes } from './routes/index.js';
+import { config } from './config/index';
+import { swaggerSpec } from './config/swagger';
+import { apiRoutes } from './routes/index';
 import {
   correlationIdMiddleware,
   requestLoggerMiddleware,
   errorHandlerMiddleware,
   notFoundHandler,
-} from './middleware/index.js';
+} from './middleware/index';
 
 export function createApp(): Express {
   const app = express();
@@ -98,3 +98,6 @@ export function createApp(): Express {
 
   return app;
 }
+
+// Export app instance for testing
+export const app = createApp();
