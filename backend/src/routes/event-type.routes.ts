@@ -29,24 +29,24 @@ const router = express.Router();
  *         description:
  *           type: string
  *           maxLength: 500
- *           description: Event type description
+ *           description: Optional description
  *         color:
  *           type: string
- *           pattern: "^#[0-9A-F]{6}$"
- *           description: Hex color for UI display
+ *           pattern: '^#[0-9A-F]{6}$'
+ *           description: Hex color code for UI display
  *         icon:
  *           type: string
  *           maxLength: 50
- *           description: Icon identifier for UI
+ *           description: Icon name/class for UI display
+ *         isSystemDefault:
+ *           type: boolean
+ *           description: Whether this is a system-provided default
+ *         isActive:
+ *           type: boolean
+ *           description: Whether the event type is active
  *         companyId:
  *           type: string
  *           description: Company ID (null for system defaults)
- *         isSystemDefault:
- *           type: boolean
- *           description: Whether this is a system default type
- *         isActive:
- *           type: boolean
- *           description: Whether this type is active
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -68,12 +68,10 @@ const router = express.Router();
  *           maxLength: 500
  *         color:
  *           type: string
- *           pattern: "^#[0-9A-F]{6}$"
- *           example: "#FF0000"
+ *           pattern: '^#[0-9A-F]{6}$'
  *         icon:
  *           type: string
  *           maxLength: 50
- *           example: "shield-exclamation"
  *     
  *     UpdateEventTypeRequest:
  *       type: object
@@ -86,20 +84,26 @@ const router = express.Router();
  *           maxLength: 500
  *         color:
  *           type: string
- *           pattern: "^#[0-9A-F]{6}$"
+ *           pattern: '^#[0-9A-F]{6}$'
  *         icon:
  *           type: string
  *           maxLength: 50
  *         isActive:
  *           type: boolean
+ *
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */
 
 /**
  * @swagger
  * /api/event-types:
  *   get:
- *     summary: Get available event types for company
- *     description: Returns both system default and company-specific event types
+ *     summary: Get available event types
+ *     description: Returns system defaults plus company-specific event types
  *     tags: [Event Types]
  *     security:
  *       - bearerAuth: []
@@ -124,11 +128,12 @@ const router = express.Router();
  *         description: Unauthorized
  */
 router.get('/', 
-  authMiddleware, 
+  authenticate, 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventTypes = await EventTypeService.getAvailableEventTypes(req.user!.companyId);
-      responseWrapper(res, 200, eventTypes);
+      const eventTypes = await EventTypeService.getAvailableEventTypes(new mongoose.Types.ObjectId(req.user!.companyId));
+      res.status(200).json(successResponse(eventTypes, req.correlationId!));
     } catch (error) {
       next(error);
     }
@@ -140,7 +145,6 @@ router.get('/',
  * /api/event-types/company:
  *   get:
  *     summary: Get company-specific event types only
- *     description: Returns only event types created by the company (excludes system defaults)
  *     tags: [Event Types]
  *     security:
  *       - bearerAuth: []
@@ -165,11 +169,12 @@ router.get('/',
  *         description: Unauthorized
  */
 router.get('/company', 
-  authMiddleware, 
+  authenticate, 
+  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventTypes = await EventTypeService.getCompanyEventTypes(req.user!.companyId);
-      responseWrapper(res, 200, eventTypes);
+      const eventTypes = await EventTypeService.getCompanyEventTypes(new mongoose.Types.ObjectId(req.user!.companyId));
+      res.status(200).json(successResponse(eventTypes, req.correlationId!));
     } catch (error) {
       next(error);
     }
@@ -180,7 +185,7 @@ router.get('/company',
  * @swagger
  * /api/event-types/{id}:
  *   get:
- *     summary: Get event type by ID
+ *     summary: Get single event type by ID
  *     tags: [Event Types]
  *     security:
  *       - bearerAuth: []
@@ -211,11 +216,12 @@ router.get('/company',
  *         description: Unauthorized
  */
 router.get('/:id', 
-  authMiddleware, 
+  authenticate, 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventType = await EventTypeService.getEventTypeById(req.params.id, req.user!.companyId);
-      responseWrapper(res, 200, eventType);
+      const eventType = await EventTypeService.getEventTypeById(req.params.id, new mongoose.Types.ObjectId(req.user!.companyId));
+      res.status(200).json(successResponse(eventType, req.correlationId!));
     } catch (error) {
       next(error);
     }
@@ -252,59 +258,54 @@ router.get('/:id',
  *                 correlationId:
  *                   type: string
  *       400:
- *         description: Validation error or name already exists
+ *         description: Validation error
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden (insufficient permissions)
  */
 router.post('/', 
-  authMiddleware, 
-  rbacMiddleware([UserRole.ADMIN, UserRole.COMPANY_ADMIN]), 
+  authenticate, 
+  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, description, color, icon } = req.body;
       
       // Validate required fields
       if (!name || !color) {
-        throw new ValidationError('Missing required fields', {
-          name: !name ? 'Name is required' : undefined,
-          color: !color ? 'Color is required' : undefined,
-        });
+        throw new AppError('VALIDATION_ERROR', 'Missing required fields: name and color are required', 400);
       }
       
-      // Validate color format
-      const colorRegex = /^#[0-9A-F]{6}$/i;
-      if (!colorRegex.test(color)) {
-        throw new ValidationError('Invalid color format', {
-          color: 'Color must be a valid hex color (e.g., #FF0000)',
-        });
+      // Validate color format (basic hex check)
+      if (!/^#[0-9A-F]{6}$/i.test(color)) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid color format: must be a valid hex color (#RRGGBB)', 400);
       }
       
       const eventTypeData: CreateEventTypeData = {
-        name: name.trim(),
-        description: description?.trim(),
+        name,
+        description,
         color: color.toUpperCase(),
-        icon: icon?.trim(),
+        icon,
       };
       
       const eventType = await EventTypeService.createEventType(
         eventTypeData,
-        req.user!.companyId,
-        req.user!._id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
+      // Log successful creation
       logger.info('Event type created', {
-        action: 'event_type.create',
+        action: 'event_type.created',
         eventTypeId: eventType._id,
         name: eventType.name,
-        createdBy: req.user!._id,
+        createdBy: req.user!.id,
         companyId: req.user!.companyId,
         correlationId: req.correlationId,
       });
       
-      responseWrapper(res, 201, eventType);
+      res.status(201).json(successResponse(eventType, req.correlationId!));
     } catch (error) {
       next(error);
     }
@@ -315,8 +316,8 @@ router.post('/',
  * @swagger
  * /api/event-types/{id}:
  *   patch:
- *     summary: Update company-specific event type
- *     description: Only company-specific event types can be updated, not system defaults
+ *     summary: Update company event type
+ *     description: Can only update company-specific event types, not system defaults
  *     tags: [Event Types]
  *     security:
  *       - bearerAuth: []
@@ -348,7 +349,7 @@ router.post('/',
  *                 correlationId:
  *                   type: string
  *       400:
- *         description: Validation error or cannot update system default
+ *         description: Validation error or system default cannot be updated
  *       404:
  *         description: Event type not found
  *       401:
@@ -357,58 +358,43 @@ router.post('/',
  *         description: Forbidden (insufficient permissions)
  */
 router.patch('/:id', 
-  authMiddleware, 
-  rbacMiddleware([UserRole.ADMIN, UserRole.COMPANY_ADMIN]), 
+  authenticate, 
+  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, description, color, icon, isActive } = req.body;
       
+      // Validate color format if provided
+      if (color && !/^#[0-9A-F]{6}$/i.test(color)) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid color format: must be a valid hex color (#RRGGBB)', 400);
+      }
+      
       const updateData: UpdateEventTypeData = {};
-      
-      if (name !== undefined) {
-        updateData.name = name.trim();
-      }
-      
-      if (description !== undefined) {
-        updateData.description = description?.trim();
-      }
-      
-      if (color !== undefined) {
-        // Validate color format
-        const colorRegex = /^#[0-9A-F]{6}$/i;
-        if (!colorRegex.test(color)) {
-          throw new ValidationError('Invalid color format', {
-            color: 'Color must be a valid hex color (e.g., #FF0000)',
-          });
-        }
-        updateData.color = color.toUpperCase();
-      }
-      
-      if (icon !== undefined) {
-        updateData.icon = icon?.trim();
-      }
-      
-      if (isActive !== undefined) {
-        updateData.isActive = isActive;
-      }
+      if (name !== undefined) updateData.name = name;
+      if (description !== undefined) updateData.description = description;
+      if (color !== undefined) updateData.color = color.toUpperCase();
+      if (icon !== undefined) updateData.icon = icon;
+      if (isActive !== undefined) updateData.isActive = isActive;
       
       const eventType = await EventTypeService.updateEventType(
         req.params.id,
         updateData,
-        req.user!.companyId,
-        req.user!._id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
+      // Log successful update
       logger.info('Event type updated', {
-        action: 'event_type.update',
+        action: 'event_type.updated',
         eventTypeId: eventType._id,
-        updatedBy: req.user!._id,
+        name: eventType.name,
+        updatedBy: req.user!.id,
         companyId: req.user!.companyId,
         correlationId: req.correlationId,
       });
       
-      responseWrapper(res, 200, eventType);
+      res.status(200).json(successResponse(eventType, req.correlationId!));
     } catch (error) {
       next(error);
     }
@@ -419,8 +405,8 @@ router.patch('/:id',
  * @swagger
  * /api/event-types/{id}:
  *   delete:
- *     summary: Delete (soft delete) company-specific event type
- *     description: Only company-specific event types can be deleted, not system defaults
+ *     summary: Delete company event type (soft delete)
+ *     description: Can only delete company-specific event types, not system defaults
  *     tags: [Event Types]
  *     security:
  *       - bearerAuth: []
@@ -431,10 +417,22 @@ router.patch('/:id',
  *         schema:
  *           type: string
  *     responses:
- *       204:
+ *       200:
  *         description: Event type deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/EventType'
+ *                 correlationId:
+ *                   type: string
  *       400:
- *         description: Cannot delete system default event type
+ *         description: System default cannot be deleted
  *       404:
  *         description: Event type not found
  *       401:
@@ -443,26 +441,28 @@ router.patch('/:id',
  *         description: Forbidden (insufficient permissions)
  */
 router.delete('/:id', 
-  authMiddleware, 
-  rbacMiddleware([UserRole.ADMIN, UserRole.COMPANY_ADMIN]), 
+  authenticate, 
+  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await EventTypeService.deleteEventType(
+      const eventType = await EventTypeService.deleteEventType(
         req.params.id,
-        req.user!.companyId,
-        req.user!._id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
+      // Log successful deletion
       logger.info('Event type deleted', {
-        action: 'event_type.delete',
-        eventTypeId: req.params.id,
-        deletedBy: req.user!._id,
+        action: 'event_type.deleted',
+        eventTypeId: eventType._id,
+        name: eventType.name,
+        deletedBy: req.user!.id,
         companyId: req.user!.companyId,
         correlationId: req.correlationId,
       });
       
-      res.status(204).send();
+      res.status(200).json(successResponse(eventType, req.correlationId!));
     } catch (error) {
       next(error);
     }

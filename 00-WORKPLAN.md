@@ -324,19 +324,19 @@ Implement event CRUD, lifecycle management, and report-event linking.
 - ❌ Do NOT implement geo-spatial auto-linking yet
 
 ### Backend Tasks
-- [ ] Create Event model (Mongoose schema)
-- [ ] Create EventType model (with system defaults)
-- [ ] Implement `POST /api/events` (manual creation)
-- [ ] Implement `GET /api/events` (company-scoped, paginated)
-- [ ] Implement `GET /api/events/:id`
-- [ ] Implement `PATCH /api/events/:id` (update)
-- [ ] Implement `PATCH /api/events/:id/status` (lifecycle)
-- [ ] Implement `POST /api/events/:id/reports` (link report)
-- [ ] Implement `DELETE /api/events/:id/reports/:reportId` (unlink)
-- [ ] Implement `GET /api/event-types`
-- [ ] Implement `POST /api/event-types` (company-specific)
-- [ ] Create audit trail entries for all event changes
-- [ ] Implement state machine for event lifecycle
+- [x] Create Event model (Mongoose schema)
+- [x] Create EventType model (with system defaults)
+- [x] Implement `POST /api/events` (manual creation)
+- [x] Implement `GET /api/events` (company-scoped, paginated)
+- [x] Implement `GET /api/events/:id`
+- [x] Implement `PATCH /api/events/:id` (update)
+- [x] Implement `PATCH /api/events/:id/status` (lifecycle)
+- [x] Implement `POST /api/events/:id/reports` (link report)
+- [x] Implement `DELETE /api/events/:id/reports/:reportId` (unlink)
+- [x] Implement `GET /api/event-types`
+- [x] Implement `POST /api/event-types` (company-specific)
+- [x] Create audit trail entries for all event changes
+- [x] Implement state machine for event lifecycle
 
 ### Frontend Tasks
 - [ ] Create event list view with filters
@@ -352,19 +352,19 @@ Implement event CRUD, lifecycle management, and report-event linking.
 - [ ] Add lifecycle state machine documentation
 
 ### Tests
-- [ ] Unit: lifecycle state transitions
-- [ ] Integration: event CRUD
-- [ ] Integration: report linking
-- [ ] Integration: invalid state transitions (400)
-- [ ] Integration: audit trail creation
+- [x] Unit: lifecycle state transitions
+- [x] Integration: event CRUD
+- [x] Integration: report linking
+- [x] Integration: invalid state transitions (400)
+- [x] Integration: audit trail creation
 
 ### Definition of Done (Slice 4)
-- [ ] Operator can create events manually
-- [ ] Operator can update event status through lifecycle
-- [ ] Reports can be linked/unlinked to events
-- [ ] Audit trail captures all changes
-- [ ] Invalid state transitions rejected
-- [ ] All tests pass
+- [x] Operator can create events manually
+- [x] Operator can update event status through lifecycle
+- [x] Reports can be linked/unlinked to events
+- [x] Audit trail captures all changes
+- [x] Invalid state transitions rejected
+- [x] All tests pass
 
 ### Dependencies
 - Slice 3 (Report Submission)

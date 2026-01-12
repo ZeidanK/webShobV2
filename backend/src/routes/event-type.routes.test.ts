@@ -430,7 +430,12 @@ describe('EventType Routes', () => {
         .delete(`/api/event-types/${customEventType._id}`)
         .set('Authorization', `Bearer ${token1}`);
 
-      expect(response.status).toBe(204);
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toMatchObject({
+        _id: customEventType._id.toString(),
+        name: customEventType.name,
+      });
 
       // Verify soft delete
       const deletedType = await EventType.findById(customEventType._id);

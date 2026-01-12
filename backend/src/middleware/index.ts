@@ -6,8 +6,8 @@ export {
   authenticateApiKey,
   authorize,
   authorizeCompany,
-  UserRole,
 } from './auth.middleware';
+export { UserRole } from '../models/user.model';
 export {
   requireRole,
   requireAnyRole,

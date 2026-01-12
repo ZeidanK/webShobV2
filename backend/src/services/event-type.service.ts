@@ -75,7 +75,7 @@ export class EventTypeService {
     });
     
     if (!eventType) {
-      throw new NotFoundError('Event type not found');
+      throw new AppError('EVENT_TYPE_NOT_FOUND', 'Event type not found', 404);
     }
     
     return eventType;
@@ -101,9 +101,7 @@ export class EventTypeService {
     });
     
     if (existing) {
-      throw new ValidationError('Event type name already exists', {
-        name: `An event type with name "${data.name}" already exists`,
-      });
+      throw new AppError('VALIDATION_ERROR', `An event type with name "${data.name}" already exists`, 400);
     }
     
     // Create event type
@@ -122,8 +120,8 @@ export class EventTypeService {
     // Create audit log
     await AuditLog.create({
       action: AuditAction.EVENT_TYPE_CREATED,
-      entityType: 'EventType',
-      entityId: eventType._id,
+      resourceType: 'EventType',
+      resourceId: eventType._id,
       companyId,
       userId: createdById,
       details: {
@@ -153,13 +151,11 @@ export class EventTypeService {
     });
     
     if (!eventType) {
-      throw new NotFoundError('Event type not found or cannot be updated');
+      throw new AppError('EVENT_TYPE_NOT_FOUND', 'Event type not found or cannot be updated', 404);
     }
     
     if (eventType.isSystemDefault) {
-      throw new ValidationError('System default event types cannot be updated', {
-        eventTypeId: 'Cannot modify system default event types',
-      });
+      throw new AppError('VALIDATION_ERROR', 'System default event types cannot be updated', 400);
     }
     
     // Check for name conflicts if name is being changed
@@ -175,9 +171,7 @@ export class EventTypeService {
       });
       
       if (existing) {
-        throw new ValidationError('Event type name already exists', {
-          name: `An event type with name "${data.name}" already exists`,
-        });
+        throw new AppError('VALIDATION_ERROR', `An event type with name "${data.name}" already exists`, 400);
       }
     }
     
@@ -196,19 +190,19 @@ export class EventTypeService {
     
     // Create audit log with changed fields
     const changedFields: any = {};
-    Object.keys(data).forEach(key => {
-      if (originalValues.hasOwnProperty(key) && originalValues[key] !== data[key]) {
+    Object.keys(data).forEach((key) => {
+      if (originalValues.hasOwnProperty(key) && (originalValues as any)[key] !== (data as any)[key]) {
         changedFields[key] = {
-          from: originalValues[key],
-          to: data[key],
+          from: (originalValues as any)[key],
+          to: (data as any)[key],
         };
       }
     });
     
     await AuditLog.create({
       action: AuditAction.EVENT_TYPE_UPDATED,
-      entityType: 'EventType',
-      entityId: eventType._id,
+      resourceType: 'EventType',
+      resourceId: eventType._id,
       companyId,
       userId: updatedById,
       details: {
@@ -228,7 +222,7 @@ export class EventTypeService {
     companyId: mongoose.Types.ObjectId,
     deletedById: mongoose.Types.ObjectId,
     correlationId: string
-  ): Promise<void> {
+  ): Promise<IEventType> {
     const eventType = await EventType.findOne({
       _id: eventTypeId,
       companyId, // Only company-specific types can be deleted
@@ -236,13 +230,11 @@ export class EventTypeService {
     });
     
     if (!eventType) {
-      throw new NotFoundError('Event type not found or cannot be deleted');
+      throw new AppError('EVENT_TYPE_NOT_FOUND', 'Event type not found or cannot be deleted', 404);
     }
     
     if (eventType.isSystemDefault) {
-      throw new ValidationError('System default event types cannot be deleted', {
-        eventTypeId: 'Cannot delete system default event types',
-      });
+      throw new AppError('VALIDATION_ERROR', 'System default event types cannot be deleted', 400);
     }
     
     // Soft delete
@@ -252,8 +244,8 @@ export class EventTypeService {
     // Create audit log
     await AuditLog.create({
       action: AuditAction.EVENT_TYPE_DELETED,
-      entityType: 'EventType',
-      entityId: eventType._id,
+      resourceType: 'EventType',
+      resourceId: eventType._id,
       companyId,
       userId: deletedById,
       details: {
@@ -261,6 +253,8 @@ export class EventTypeService {
       },
       correlationId,
     });
+    
+    return eventType;
   }
   
   /**

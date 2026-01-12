@@ -226,8 +226,8 @@ router.post('/',
       
       const event = await EventService.createEvent(
         eventData,
-        req.user!.companyId,
-        req.user!.id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
@@ -352,7 +352,7 @@ router.get('/',
         search,
       } = req.query;
       
-      const result = await EventService.getEvents(req.user!.companyId, {
+      const result = await EventService.getEvents(new mongoose.Types.ObjectId(req.user!.companyId), {
         page: Number(page),
         pageSize: Math.min(Number(pageSize), 100),
         status: status as EventStatus,
@@ -369,6 +369,8 @@ router.get('/',
         page: result.page,
         pageSize: result.pageSize,
         totalPages: Math.ceil(result.total / result.pageSize),
+        hasNextPage: result.page < Math.ceil(result.total / result.pageSize),
+        hasPrevPage: result.page > 1,
       };
       
       res.status(200).json(successResponse(result.events, req.correlationId!, meta));
@@ -417,7 +419,7 @@ router.get('/:id',
   requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const event = await EventService.getEventById(req.params.id, req.user!.companyId);
+      const event = await EventService.getEventById(req.params.id, new mongoose.Types.ObjectId(req.user!.companyId));
       res.status(200).json(successResponse(event, req.correlationId!));
     } catch (error) {
       next(error);
@@ -519,8 +521,8 @@ router.patch('/:id',
       const event = await EventService.updateEvent(
         req.params.id,
         updateData,
-        req.user!.companyId,
-        req.user!.id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
@@ -601,8 +603,8 @@ router.patch('/:id/status',
       const event = await EventService.updateEventStatus(
         req.params.id,
         status,
-        req.user!.companyId,
-        req.user!.id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
@@ -680,8 +682,8 @@ router.post('/:id/reports',
       const event = await EventService.linkReport(
         req.params.id,
         reportId,
-        req.user!.companyId,
-        req.user!.id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       
@@ -754,8 +756,8 @@ router.delete('/:id/reports/:reportId',
       const event = await EventService.unlinkReport(
         req.params.id,
         req.params.reportId,
-        req.user!.companyId,
-        req.user!.id,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        new mongoose.Types.ObjectId(req.user!.id),
         req.correlationId!
       );
       

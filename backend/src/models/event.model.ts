@@ -123,7 +123,6 @@ const EventSchema = new Schema<IEvent>({
         message: 'Invalid coordinates. Must be [longitude, latitude] within valid ranges.',
       },
     },
-    index: '2dsphere', // Enable geospatial queries
   },
   locationDescription: {
     type: String,
@@ -185,7 +184,7 @@ EventSchema.pre('save', function(next) {
   
   if (this.isNew) return next(); // New documents can start with any initial status
   
-  const originalDoc = this.constructor.findById(this._id).exec();
+  const originalDoc = (this.constructor as any).findById(this._id).exec();
   originalDoc.then((doc: any) => {
     if (!doc) return next();
     
@@ -194,7 +193,7 @@ EventSchema.pre('save', function(next) {
     
     if (oldStatus === newStatus) return next();
     
-    const allowed = validTransitions[oldStatus] || [];
+    const allowed = validTransitions[oldStatus as EventStatus] || [];
     if (!allowed.includes(newStatus)) {
       const error = new Error(`Invalid status transition from ${oldStatus} to ${newStatus}`);
       error.name = 'ValidationError';
@@ -213,7 +212,7 @@ EventSchema.pre('save', function(next) {
       case EventStatus.ACTIVE:
         // If reopening from resolved, clear resolvedAt
         if (oldStatus === EventStatus.RESOLVED) {
-          this.resolvedAt = null;
+          this.resolvedAt = undefined;
         }
         break;
     }
@@ -234,6 +233,9 @@ EventSchema.methods.getAuditContext = function(): any {
     status: this.status,
   };
 };
+
+// Add geospatial index for location-based queries
+EventSchema.index({ location: '2dsphere' });
 
 /**
  * Export the model

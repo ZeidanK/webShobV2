@@ -1,4 +1,5 @@
 import { setupTestDB, teardownTestDB, clearTestDB } from './db';
+import { EventTypeService } from '../services/event-type.service';
 
 // Increase timeout for MongoDB Memory Server
 jest.setTimeout(30000);
@@ -14,6 +15,8 @@ jest.setTimeout(30000);
 
 beforeAll(async () => {
   await setupTestDB();
+  // Seed system default event types
+  await EventTypeService.seedSystemDefaults();
 });
 
 afterAll(async () => {
@@ -24,4 +27,6 @@ afterAll(async () => {
 
 afterEach(async () => {
   await clearTestDB();
+  // Re-seed system defaults after clearing DB
+  await EventTypeService.seedSystemDefaults();
 });

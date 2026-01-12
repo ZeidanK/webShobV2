@@ -10,6 +10,7 @@ import { UserRole } from '../models';
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
   citizen: 0,
   first_responder: 1,
+  viewer: 1, // Same level as first_responder - read-only access
   operator: 2,
   admin: 3,
   company_admin: 3, // Same level as admin

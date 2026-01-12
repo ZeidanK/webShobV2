@@ -15,6 +15,7 @@ export enum UserRole {
   CITIZEN = 'citizen',
   FIRST_RESPONDER = 'first_responder',
   OPERATOR = 'operator',
+  VIEWER = 'viewer',
   ADMIN = 'admin',
   COMPANY_ADMIN = 'company_admin',
   SUPER_ADMIN = 'super_admin',

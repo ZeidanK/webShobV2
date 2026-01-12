@@ -110,8 +110,8 @@ export class EventService {
     // Create audit log
     await AuditLog.create({
       action: AuditAction.EVENT_CREATED,
-      entityType: 'Event',
-      entityId: event._id,
+      resourceType: 'Event',
+      resourceId: event._id,
       companyId,
       userId: createdById,
       details: {
@@ -132,7 +132,7 @@ export class EventService {
   static async getEvents(
     companyId: mongoose.Types.ObjectId,
     options: EventQueryOptions = {}
-  ): Promise<{ events: IEvent[]; total: number; page: number; pageSize: number }> {
+  ): Promise<{ events: any[]; total: number; page: number; pageSize: number }> {
     const {
       page = 1,
       pageSize = 20,
@@ -276,19 +276,19 @@ export class EventService {
     
     // Create audit log with changed fields
     const changedFields: any = {};
-    Object.keys(data).forEach(key => {
-      if (originalValues.hasOwnProperty(key) && originalValues[key] !== data[key]) {
+    Object.keys(data).forEach((key) => {
+      if (originalValues.hasOwnProperty(key) && (originalValues as any)[key] !== (data as any)[key]) {
         changedFields[key] = {
-          from: originalValues[key],
-          to: data[key],
+          from: (originalValues as any)[key],
+          to: (data as any)[key],
         };
       }
     });
     
     await AuditLog.create({
       action: AuditAction.EVENT_UPDATED,
-      entityType: 'Event',
-      entityId: event._id,
+      resourceType: 'Event',
+      resourceId: event._id,
       companyId,
       userId: updatedById,
       details: {
@@ -340,8 +340,8 @@ export class EventService {
     // Create audit log
     await AuditLog.create({
       action: AuditAction.EVENT_STATUS_CHANGED,
-      entityType: 'Event',
-      entityId: event._id,
+      resourceType: 'Event',
+      resourceId: event._id,
       companyId,
       userId: updatedById,
       details: {
@@ -391,8 +391,8 @@ export class EventService {
     // Create audit log
     await AuditLog.create({
       action: AuditAction.REPORT_LINKED_TO_EVENT,
-      entityType: 'Event',
-      entityId: event._id,
+      resourceType: 'Event',
+      resourceId: event._id,
       companyId,
       userId: updatedById,
       details: {
@@ -442,8 +442,8 @@ export class EventService {
     // Create audit log
     await AuditLog.create({
       action: AuditAction.REPORT_UNLINKED_FROM_EVENT,
-      entityType: 'Event',
-      entityId: event._id,
+      resourceType: 'Event',
+      resourceId: event._id,
       companyId,
       userId: updatedById,
       details: {
@@ -467,7 +467,7 @@ export class EventService {
     latitude: number,
     maxDistanceMeters: number = 1000,
     limit: number = 50
-  ): Promise<IEvent[]> {
+  ): Promise<any[]> {
     return Event.find({
       companyId,
       location: {

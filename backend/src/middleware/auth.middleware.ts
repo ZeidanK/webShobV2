@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
-import { User } from '../models';
+import { User, UserRole } from '../models';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -18,26 +18,17 @@ declare global {
   }
 }
 
-export type UserRole =
-  | 'citizen'
-  | 'first_responder'
-  | 'operator'
-  | 'admin'
-  | 'company_admin'
-  | 'super_admin';
-
 /**
  * Role hierarchy for permission checking
  * Higher index = higher permissions
  */
 const ROLE_HIERARCHY: Record<UserRole, number> = {
-  citizen: 0,
-  first_responder: 1,
-  operator: 2,
-  admin: 3,
-  company_admin: 4,
-  super_admin: 5,
-};
+  [UserRole.CITIZEN]: 0,
+  [UserRole.FIRST_RESPONDER]: 1,
+  [UserRole.VIEWER]: 1,
+  [UserRole.OPERATOR]: 2,
+  [UserRole.ADMIN]: 3,
+  [UserRole.COMPANY_ADMIN]: 4,  [UserRole.SUPER_ADMIN]: 5,};
 
 /**
  * JWT Authentication Middleware
@@ -72,8 +63,8 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
 
     logger.debug({
       action: 'auth.jwt.success',
-      userId: req.user.id,
-      companyId: req.user.companyId,
+      userId: req.user!.id,
+      companyId: req.user!.companyId,
       correlationId: req.correlationId,
     });
 
@@ -116,8 +107,8 @@ export async function authenticateApiKey(req: Request, _res: Response, next: Nex
 
     logger.debug({
       action: 'auth.apikey.success',
-      userId: req.user.id,
-      companyId: req.user.companyId,
+      userId: req.user!.id,
+      companyId: req.user!.companyId,
       correlationId: req.correlationId,
     });
 

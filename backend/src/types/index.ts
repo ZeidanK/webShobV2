@@ -3,6 +3,7 @@
  */
 
 import { Request } from 'express';
+import { UserRole } from '../models/user.model';
 
 /**
  * Extended Express Request with app-specific properties
@@ -16,17 +17,6 @@ export interface AppRequest extends Request {
     email: string;
   };
 }
-
-/**
- * User roles in the system
- */
-export type UserRole =
-  | 'citizen'
-  | 'first_responder'
-  | 'operator'
-  | 'admin'
-  | 'company_admin'
-  | 'super_admin';
 
 /**
  * Event status lifecycle
