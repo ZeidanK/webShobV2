@@ -4,6 +4,7 @@ import { EventType, IEventType } from '../models/event-type.model';
 import { Report } from '../models/report.model';
 import { AuditLog, AuditAction } from '../models/audit-log.model';
 import { AppError } from '../utils/errors';
+import { websocketService } from './websocket.service';
 
 /**
  * Event Creation Data
@@ -123,7 +124,25 @@ export class EventService {
       correlationId,
     });
     
-    return event.populate(['eventTypeId', 'createdBy', 'reportIds']);
+    const populatedEvent = await event.populate(['eventTypeId', 'createdBy', 'reportIds']);
+    
+    // Broadcast event:created to company room
+    websocketService.broadcastEventCreated(companyId.toString(), {
+      _id: populatedEvent._id,
+      title: populatedEvent.title,
+      description: populatedEvent.description,
+      status: populatedEvent.status,
+      priority: populatedEvent.priority,
+      eventTypeId: populatedEvent.eventTypeId,
+      location: populatedEvent.location,
+      locationDescription: populatedEvent.locationDescription,
+      createdBy: populatedEvent.createdBy,
+      reportIds: populatedEvent.reportIds,
+      createdAt: populatedEvent.createdAt,
+      correlationId,
+    });
+    
+    return populatedEvent;
   }
   
   /**
@@ -297,7 +316,26 @@ export class EventService {
       correlationId,
     });
     
-    return this.getEventById(eventId, companyId);
+    const updatedEvent = await this.getEventById(eventId, companyId);
+    
+    // Broadcast event:updated to company room
+    websocketService.broadcastEventUpdated(companyId.toString(), {
+      _id: updatedEvent._id,
+      title: updatedEvent.title,
+      description: updatedEvent.description,
+      status: updatedEvent.status,
+      priority: updatedEvent.priority,
+      eventTypeId: updatedEvent.eventTypeId,
+      location: updatedEvent.location,
+      locationDescription: updatedEvent.locationDescription,
+      assignedTo: updatedEvent.assignedTo,
+      reportIds: updatedEvent.reportIds,
+      updatedAt: updatedEvent.updatedAt,
+      changes: changedFields,
+      correlationId,
+    });
+    
+    return updatedEvent;
   }
   
   /**
@@ -353,7 +391,23 @@ export class EventService {
       correlationId,
     });
     
-    return this.getEventById(eventId, companyId);
+    const updatedEvent = await this.getEventById(eventId, companyId);
+    
+    // Broadcast event:updated to company room
+    websocketService.broadcastEventUpdated(companyId.toString(), {
+      _id: updatedEvent._id,
+      title: updatedEvent.title,
+      status: updatedEvent.status,
+      priority: updatedEvent.priority,
+      statusTransition: {
+        from: oldStatus,
+        to: newStatus,
+      },
+      updatedAt: updatedEvent.updatedAt,
+      correlationId,
+    });
+    
+    return updatedEvent;
   }
   
   /**

@@ -3,6 +3,7 @@ import { config } from './config/index';
 import { connectDatabase } from './config/database';
 import { logger } from './utils/logger';
 import { EventTypeService } from './services/event-type.service';
+import { websocketService } from './services/websocket.service';
 
 async function bootstrap() {
   try {
@@ -28,12 +29,18 @@ async function bootstrap() {
       logger.info(`API docs available at http://localhost:${config.port}/api/docs`);
     });
 
+    // Initialize WebSocket server
+    websocketService.initialize(server);
+
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received, shutting down gracefully`, {
         action: 'server.shutdown.initiated',
         context: { signal },
       });
+
+      // Close WebSocket connections
+      await websocketService.close();
 
       server.close(async () => {
         logger.info('HTTP server closed', {

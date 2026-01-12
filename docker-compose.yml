@@ -25,7 +25,7 @@ services:
     container_name: emp_backend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3000:3000"  # HTTP API + WebSocket Server (Socket.IO)
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -77,6 +77,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=/api
+      - VITE_WS_URL=http://localhost:3000  # WebSocket connection URL
     volumes:
       - ./frontend:/app
       - /app/node_modules

@@ -12,6 +12,7 @@ import { User } from '../models/user.model';
 import { AuditLog, AuditAction } from '../models';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { websocketService } from './websocket.service';
 
 /**
  * Report Service
@@ -97,6 +98,26 @@ export class ReportService {
           reportId: report._id.toString(),
           type: report.type 
         },
+        correlationId: data.correlationId,
+      });
+
+      // Broadcast report:created to company room
+      websocketService.broadcastReportCreated(data.companyId, {
+        _id: report._id,
+        title: report.title,
+        description: report.description,
+        type: report.type,
+        status: report.status,
+        source: report.source,
+        location: report.location,
+        locationDescription: report.locationDescription,
+        reportedBy: {
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        reporterName: report.reporterName,
+        createdAt: report.createdAt,
         correlationId: data.correlationId,
       });
 
