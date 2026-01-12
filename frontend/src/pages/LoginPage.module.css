@@ -1,0 +1,90 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  text-align: center;
+  color: #888;
+  margin-bottom: 2rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.field input {
+  width: 100%;
+}
+
+.error {
+  padding: 0.75rem;
+  background: rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.875rem;
+}
+
+.button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.button:hover {
+  background: #535bf2;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: #888;
+}
+
+@media (prefers-color-scheme: light) {
+  .card {
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
