@@ -25,8 +25,17 @@ export {
 } from './report.model';
 
 // Slice 4: Event Management
-// export { Event } from './event.model';
-// export { EventType } from './event-type.model';
+export { 
+  Event, 
+  EventStatus, 
+  EventPriority, 
+  IEvent 
+} from './event.model';
+export { 
+  EventType, 
+  SYSTEM_EVENT_TYPES, 
+  IEventType 
+} from './event-type.model';
 
 // Slice 7: Camera Management
 // export { Camera } from './camera.model';

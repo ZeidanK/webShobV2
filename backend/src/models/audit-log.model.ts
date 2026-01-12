@@ -37,6 +37,11 @@ export enum AuditAction {
   EVENT_RESOLVED = 'event.resolved',
   EVENT_CLOSED = 'event.closed',
   
+  // Event type actions
+  EVENT_TYPE_CREATED = 'event_type.created',
+  EVENT_TYPE_UPDATED = 'event_type.updated',
+  EVENT_TYPE_DELETED = 'event_type.deleted',
+  
   // Report actions
   REPORT_CREATED = 'report.created',
   REPORT_UPDATED = 'report.updated',

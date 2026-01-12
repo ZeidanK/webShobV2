@@ -16,8 +16,8 @@ export { UserService } from './user.service';
 export { ReportService } from './report.service';
 
 // Slice 4: Event Management
-// export { EventService } from './event.service';
-// export { EventTypeService } from './event-type.service';
+export { EventService } from './event.service';
+export { EventTypeService } from './event-type.service';
 // export { AuditService } from './audit.service';
 
 // Slice 5: Real-Time Foundation

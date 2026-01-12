@@ -2,11 +2,15 @@ import { createApp } from './app';
 import { config } from './config/index';
 import { connectDatabase } from './config/database';
 import { logger } from './utils/logger';
+import { EventTypeService } from './services/event-type.service';
 
 async function bootstrap() {
   try {
     // Connect to database
     await connectDatabase();
+
+    // Seed system default event types
+    await EventTypeService.seedSystemDefaults();
 
     // Create Express app
     const app = createApp();
