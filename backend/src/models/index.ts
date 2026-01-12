@@ -10,7 +10,7 @@ export { User, UserRole, IUser, IUserModel } from './user.model';
 export { AuditLog, AuditAction, IAuditLog } from './audit-log.model';
 
 // Slice 2: Company & User CRUD
-// export { Company } from './company.model';
+export { Company, CompanyType, CompanyStatus, ICompany, ICompanySettings } from './company.model';
 
 // Slice 3: Report Submission
 // export { Report } from './report.model';

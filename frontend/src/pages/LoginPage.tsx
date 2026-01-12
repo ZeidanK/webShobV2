@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
@@ -14,21 +15,13 @@ export function LoginPage() {
     setError('');
     setLoading(true);
 
-    // TODO: Implement actual login in Slice 1
-    // For now, just show a placeholder message
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Placeholder: Login not implemented yet
-      setError('Login not implemented yet. Coming in Slice 1.');
-      
-      // When implemented:
-      // const response = await apiClient.post('/auth/login', { email, password });
-      // localStorage.setItem('token', response.data.accessToken);
-      // navigate('/dashboard');
-    } catch (err) {
-      setError('Login failed. Please try again.');
+      const response = await api.auth.login(email, password);
+      localStorage.setItem('accessToken', response.accessToken);
+      localStorage.setItem('refreshToken', response.refreshToken);
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,61 +1,77 @@
+import { Link } from 'react-router-dom';
+import { getCurrentUser } from '../utils/auth';
+import { canManageUsers, canManageCompanySettings, canManageAllCompanies, UserRole } from '../utils/rbac';
 import styles from './DashboardPage.module.css';
 
 export function DashboardPage() {
+  const currentUser = getCurrentUser();
+  const userRole = currentUser?.role as UserRole;
+
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>Event Monitoring Dashboard</h1>
-        <div className={styles.userInfo}>
-          <span>Operator</span>
-          <button className={styles.logoutButton}>Logout</button>
-        </div>
-      </header>
+      <h2>Dashboard</h2>
+      <p className={styles.subtitle}>Welcome to the Event Monitoring Platform</p>
 
-      <div className={styles.content}>
-        <aside className={styles.sidebar}>
-          <nav className={styles.nav}>
-            <a href="#" className={styles.navItem}>
-              📊 Dashboard
-            </a>
-            <a href="#" className={styles.navItem}>
-              🗺️ Map View
-            </a>
-            <a href="#" className={styles.navItem}>
-              📋 Events
-            </a>
-            <a href="#" className={styles.navItem}>
-              📝 Reports
-            </a>
-            <a href="#" className={styles.navItem}>
-              📹 Cameras
-            </a>
-            <a href="#" className={styles.navItem}>
-              👥 Users
-            </a>
-            <a href="#" className={styles.navItem}>
-              ⚙️ Settings
-            </a>
-          </nav>
-        </aside>
+      <div className={styles.cards}>
+        {/* Operators see event monitoring cards */}
+        {userRole === 'operator' && (
+          <>
+            <Link to="/events" className={styles.card}>
+              <span className={styles.cardIcon}>🚨</span>
+              <h3>Events</h3>
+              <p>Monitor and manage incidents</p>
+            </Link>
 
-        <main className={styles.main}>
-          <div className={styles.placeholder}>
-            <h2>Dashboard Coming Soon</h2>
-            <p>
-              This dashboard will include:
-            </p>
-            <ul>
-              <li>Interactive map with event and camera markers</li>
-              <li>Real-time event list with filtering</li>
-              <li>Quick actions for event management</li>
-              <li>Live video preview</li>
-              <li>First responder locations</li>
-            </ul>
-            <p className={styles.note}>
-              Implementation begins in Slice 6 (Map & Dashboard UI)
-            </p>
-          </div>
-        </main>
+            <Link to="/reports" className={styles.card}>
+              <span className={styles.cardIcon}>📝</span>
+              <h3>Reports</h3>
+              <p>View all incoming reports</p>
+            </Link>
+
+            <Link to="/cameras" className={styles.card}>
+              <span className={styles.cardIcon}>📹</span>
+              <h3>Cameras</h3>
+              <p>Live video streams</p>
+            </Link>
+          </>
+        )}
+
+        {/* Admins see user management and settings */}
+        {canManageUsers(userRole) && (
+          <Link to="/users" className={styles.card}>
+            <span className={styles.cardIcon}>👥</span>
+            <h3>User Management</h3>
+            <p>Create, edit, and manage users</p>
+          </Link>
+        )}
+
+        {canManageCompanySettings(userRole) && (
+          <Link to="/company-settings" className={styles.card}>
+            <span className={styles.cardIcon}>⚙️</span>
+            <h3>Company Settings</h3>
+            <p>Configure company settings and API keys</p>
+          </Link>
+        )}
+
+        {/* Super Admin sees companies */}
+        {canManageAllCompanies(userRole) && (
+          <Link to="/companies" className={styles.card}>
+            <span className={styles.cardIcon}>🏢</span>
+            <h3>Companies</h3>
+            <p>Manage all platform companies</p>
+          </Link>
+        )}
+      </div>
+
+      <div className={styles.placeholder}>
+        <h3>Coming Soon</h3>
+        <ul>
+          <li>Interactive map with event markers</li>
+          <li>Real-time event list with live updates</li>
+          <li>Live video preview grid</li>
+          <li>First responder location tracking</li>
+          <li>Event analytics and reporting</li>
+        </ul>
       </div>
     </div>
   );

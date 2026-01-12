@@ -155,7 +155,7 @@ All responses use a consistent envelope:
       { name: 'AI', description: 'AI detection integration' },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/routes/**/*.ts'],
+  apis: ['./src/routes/*.ts', './src/routes/**/*.ts', './dist/routes/*.js', './dist/routes/**/*.js'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

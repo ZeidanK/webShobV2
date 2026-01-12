@@ -18,6 +18,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await teardownTestDB();
+  // Give Jest time to close all handles
+  await new Promise(resolve => setTimeout(resolve, 500));
 });
 
 afterEach(async () => {

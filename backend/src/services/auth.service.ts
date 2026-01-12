@@ -463,6 +463,13 @@ export class AuthService {
   }
 
   /**
+   * Generate token for testing (public method to allow test access)
+   */
+  static generateToken(payload: JWTPayload): string {
+    return jwt.sign(payload, this.JWT_SECRET, { expiresIn: this.JWT_EXPIRES_IN as any });
+  }
+
+  /**
    * Generate refresh token
    */
   private static generateRefreshToken(user: IUser): string {

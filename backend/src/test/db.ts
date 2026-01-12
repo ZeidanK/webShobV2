@@ -7,6 +7,11 @@ let mongod: MongoMemoryServer;
  * Connect to the in-memory database.
  */
 export async function setupTestDB(): Promise<void> {
+  // Close existing connection if any
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
+  
   mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
   await mongoose.connect(uri);

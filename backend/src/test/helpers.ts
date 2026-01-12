@@ -1,6 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 // import { faker } from '@faker-js/faker';
 
+// Export test DB helpers
+export { setupTestDB, teardownTestDB, clearTestDB as clearDatabase } from './db';
+
 // TODO: Add model imports when they are created
 // import { Company } from '../models/company.model';
 // import { User } from '../models/user.model';

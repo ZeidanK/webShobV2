@@ -8,3 +8,15 @@ export {
   authorizeCompany,
   UserRole,
 } from './auth.middleware';
+export {
+  requireRole,
+  requireAnyRole,
+  validateRoleAssignment,
+  enforceTenantIsolation,
+  hasMinimumRole,
+  canAssignRole,
+  isSuperAdmin,
+  isAdmin,
+  isSameCompany,
+  ROLE_HIERARCHY,
+} from './rbac.middleware';

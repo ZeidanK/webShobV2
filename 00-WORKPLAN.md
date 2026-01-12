@@ -155,47 +155,47 @@ Implement user authentication: registration, login, JWT tokens, password reset, 
 - ❌ Do NOT implement session management beyond JWT
 
 ### Backend Tasks
-- [ ] Create User model (Mongoose schema)
-- [ ] Implement password hashing (bcrypt)
-- [ ] Implement `POST /api/auth/register`
-- [ ] Implement `POST /api/auth/login` (returns JWT)
-- [ ] Implement `POST /api/auth/refresh` (refresh token)
-- [ ] Implement `POST /api/auth/forgot-password`
-- [ ] Implement `POST /api/auth/reset-password`
-- [ ] Implement JWT validation middleware
-- [ ] Implement API key validation middleware
-- [ ] Add auth endpoints to OpenAPI spec
-- [ ] Implement account lockout after 5 failed attempts (CONFIGURABLE DEFAULT)
+- [x] Create User model (Mongoose schema)
+- [x] Implement password hashing (bcrypt)
+- [x] Implement `POST /api/auth/register`
+- [x] Implement `POST /api/auth/login` (returns JWT)
+- [x] Implement `POST /api/auth/refresh` (refresh token)
+- [x] Implement `POST /api/auth/forgot-password`
+- [x] Implement `POST /api/auth/reset-password`
+- [x] Implement JWT validation middleware
+- [x] Implement API key validation middleware
+- [x] Add auth endpoints to OpenAPI spec
+- [x] Implement account lockout after 5 failed attempts (CONFIGURABLE DEFAULT)
 
 ### Frontend Tasks
-- [ ] Create login form with validation
-- [ ] Create registration form
+- [x] Create login form with validation
+- [x] Create registration form
 - [ ] Create forgot password form
 - [ ] Implement auth context/store
 - [ ] Implement protected route wrapper
-- [ ] Store JWT in secure storage
+- [x] Store JWT in secure storage
 
 ### API/Swagger Tasks
-- [ ] Document all auth endpoints in OpenAPI
-- [ ] Add security schemes (Bearer JWT, API Key)
-- [ ] Add request/response examples
+- [x] Document all auth endpoints in OpenAPI
+- [x] Add security schemes (Bearer JWT, API Key)
+- [x] Add request/response examples
 
 ### Tests
-- [ ] Unit: password hashing
-- [ ] Unit: JWT generation/validation
-- [ ] Integration: registration flow
-- [ ] Integration: login flow
-- [ ] Integration: invalid credentials (401)
-- [ ] Integration: account lockout
+- [x] Unit: password hashing
+- [x] Unit: JWT generation/validation
+- [x] Integration: registration flow
+- [x] Integration: login flow
+- [x] Integration: invalid credentials (401)
+- [x] Integration: account lockout
 
 ### Definition of Done (Slice 1)
-- [ ] User can register with email/password
-- [ ] User can login and receive JWT
-- [ ] Protected endpoints reject requests without valid JWT
-- [ ] API key authentication works for mobile endpoints
-- [ ] All auth endpoints documented in Swagger
-- [ ] All tests pass
-- [ ] Audit log entries created for auth events
+- [x] User can register with email/password
+- [x] User can login and receive JWT
+- [x] Protected endpoints reject requests without valid JWT
+- [x] API key authentication works for mobile endpoints
+- [x] All auth endpoints documented in Swagger
+- [x] All tests pass
+- [x] Audit log entries created for auth events
 
 ### Dependencies
 - Slice 0 (Foundation)
@@ -213,44 +213,44 @@ Implement multi-tenant company management and user CRUD with role-based access c
 - ❌ Do NOT implement user location tracking yet
 
 ### Backend Tasks
-- [ ] Create Company model (Mongoose schema)
-- [ ] Implement `POST /api/companies` (super_admin only)
-- [ ] Implement `GET /api/companies/:id`
-- [ ] Implement `PATCH /api/companies/:id/settings`
-- [ ] Implement `POST /api/companies/:id/regenerate-api-key`
-- [ ] Implement `GET /api/users` (company-scoped)
-- [ ] Implement `POST /api/users` (admin creates users)
-- [ ] Implement `GET /api/users/:id`
-- [ ] Implement `PATCH /api/users/:id`
-- [ ] Implement `DELETE /api/users/:id` (soft delete)
-- [ ] Implement RBAC middleware with role checks
-- [ ] Add companyId filter to all queries (tenant isolation)
+- [x] Create Company model (Mongoose schema)
+- [x] Implement `POST /api/companies` (super_admin only)
+- [x] Implement `GET /api/companies/:id`
+- [x] Implement `PATCH /api/companies/:id/settings`
+- [x] Implement `POST /api/companies/:id/regenerate-api-key`
+- [x] Implement `GET /api/users` (company-scoped)
+- [x] Implement `POST /api/users` (admin creates users)
+- [x] Implement `GET /api/users/:id`
+- [x] Implement `PATCH /api/users/:id`
+- [x] Implement `DELETE /api/users/:id` (soft delete)
+- [x] Implement RBAC middleware with role checks
+- [x] Add companyId filter to all queries (tenant isolation)
 
 ### Frontend Tasks
-- [ ] Create admin user list page
-- [ ] Create user create/edit form
-- [ ] Create company settings page (admin only)
-- [ ] Implement role-based UI visibility
+- [x] Create admin user list page
+- [x] Create user create/edit form
+- [x] Create company settings page (admin only)
+- [x] Implement role-based UI visibility
 
 ### API/Swagger Tasks
-- [ ] Document all company endpoints
-- [ ] Document all user endpoints
-- [ ] Add role requirements to endpoint docs
+- [x] Document all company endpoints
+- [x] Document all user endpoints
+- [x] Add role requirements to endpoint docs
 
 ### Tests
-- [ ] Unit: RBAC permission checks
-- [ ] Integration: company creation
-- [ ] Integration: user CRUD
-- [ ] Integration: tenant isolation (cannot access other company's data)
-- [ ] Integration: role hierarchy enforcement
+- [x] Unit: RBAC permission checks
+- [x] Integration: company creation
+- [x] Integration: user CRUD
+- [x] Integration: tenant isolation (cannot access other company's data)
+- [x] Integration: role hierarchy enforcement
 
 ### Definition of Done (Slice 2)
-- [ ] Super admin can create companies
-- [ ] Company admin can manage users
-- [ ] Users cannot see other companies' data
-- [ ] Role hierarchy enforced (cannot create higher role)
-- [ ] All endpoints documented in Swagger
-- [ ] Tenant isolation tested
+- [x] Super admin can create companies
+- [x] Company admin can manage users
+- [x] Users cannot see other companies' data
+- [x] Role hierarchy enforced (cannot create higher role)
+- [x] All endpoints documented in Swagger
+- [x] Tenant isolation tested
 
 ### Dependencies
 - Slice 1 (Auth Core)

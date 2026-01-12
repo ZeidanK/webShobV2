@@ -9,8 +9,8 @@
 export { AuthService } from './auth.service';
 
 // Slice 2: Company & User CRUD
-// export { CompanyService } from './company.service';
-// export { UserService } from './user.service';
+export { CompanyService } from './company.service';
+export { UserService } from './user.service';
 
 // Slice 3: Report Submission
 // export { ReportService } from './report.service';
