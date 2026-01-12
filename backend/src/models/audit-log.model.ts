@@ -39,6 +39,7 @@ export enum AuditAction {
   
   // Report actions
   REPORT_CREATED = 'report.created',
+  REPORT_UPDATED = 'report.updated',
   REPORT_LINKED_TO_EVENT = 'report.linked',
   REPORT_UNLINKED_FROM_EVENT = 'report.unlinked',
   REPORT_VERIFIED = 'report.verified',

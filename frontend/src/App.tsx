@@ -10,6 +10,8 @@ import CompaniesPage from './pages/CompaniesPage';
 import CompanySettingsPage from './pages/CompanySettingsPage';
 import EventsPage from './pages/EventsPage';
 import ReportsPage from './pages/ReportsPage';
+import ReportSubmissionPage from './pages/ReportSubmissionPage';
+import ReportDetailPage from './pages/ReportDetailPage';
 import CamerasPage from './pages/CamerasPage';
 
 function App() {
@@ -50,8 +52,24 @@ function App() {
         <Route 
           path="reports" 
           element={
-            <ProtectedRoute requiredRole="operator">
+            <ProtectedRoute requiredRole="citizen">
               <ReportsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="reports/new" 
+          element={
+            <ProtectedRoute requiredRole="citizen">
+              <ReportSubmissionPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="reports/:id" 
+          element={
+            <ProtectedRoute requiredRole="citizen">
+              <ReportDetailPage />
             </ProtectedRoute>
           } 
         />

@@ -60,7 +60,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/users:
+ * /users:
  *   post:
  *     summary: Create a new user
  *     tags: [Users]
@@ -143,7 +143,7 @@ router.post(
 
 /**
  * @swagger
- * /api/users:
+ * /users:
  *   get:
  *     summary: Get users (company-scoped)
  *     tags: [Users]
@@ -254,7 +254,7 @@ router.get(
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /users/{id}:
  *   get:
  *     summary: Get user by ID
  *     tags: [Users]
@@ -309,7 +309,7 @@ router.get(
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /users/{id}:
  *   patch:
  *     summary: Update user
  *     tags: [Users]
@@ -391,7 +391,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /users/{id}:
  *   delete:
  *     summary: Delete user (soft delete)
  *     tags: [Users]

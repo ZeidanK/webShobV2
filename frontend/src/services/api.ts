@@ -32,6 +32,53 @@ interface ApiError {
   correlationId: string;
 }
 
+// Report types for Slice 3
+interface ReportLocation {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
+interface ReportAttachment {
+  _id: string;
+  filename: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  type: 'image' | 'video' | 'audio' | 'document';
+  thumbnailUrl?: string;
+  uploadedAt: string;
+}
+
+interface Report {
+  _id: string;
+  title: string;
+  description: string;
+  type: string;
+  source: string;
+  status: 'pending' | 'verified' | 'rejected';
+  companyId: string;
+  location: ReportLocation;
+  locationDescription?: string;
+  reportedBy: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  reporterName?: string;
+  attachments: ReportAttachment[];
+  verifiedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  verifiedAt?: string;
+  rejectionReason?: string;
+  eventId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -158,6 +205,25 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<T>(response);
+  }
+
+  async uploadFiles<T>(path: string, formData: FormData): Promise<T> {
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    const headers: Record<string, string> = {};
+
+    // Add auth token if available
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
 
     return this.handleResponse<T>(response);
@@ -341,13 +407,44 @@ export const api = {
     regenerateApiKey: (id: string) => apiClient.post<{ apiKey: string }>(`/companies/${id}/regenerate-api-key`),
   },
 
-  // Reports (Slice 4)
+  // Reports (Slice 3)
   reports: {
-    list: (params?: { page?: number; limit?: number; status?: string }) =>
-      apiClient.get<unknown[]>('/reports', params),
-    get: (id: string) => apiClient.get<unknown>(`/reports/${id}`),
-    create: (data: unknown) => apiClient.post<unknown>('/reports', data),
-    update: (id: string, data: unknown) => apiClient.patch<unknown>(`/reports/${id}`, data),
+    list: (params?: { 
+      page?: number; 
+      pageSize?: number; 
+      status?: string;
+      type?: string;
+      reportedBy?: string;
+      startDate?: string;
+      endDate?: string;
+    }) => apiClient.getPaginated<Report[]>('/reports', params),
+    
+    get: (id: string) => apiClient.get<Report>(`/reports/${id}`),
+    
+    create: (data: {
+      title: string;
+      description: string;
+      type: string;
+      location: {
+        longitude: number;
+        latitude: number;
+      };
+      locationDescription?: string;
+    }) => apiClient.post<Report>('/reports', data),
+    
+    addAttachments: (id: string, files: File[]) => {
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      return apiClient.uploadFiles<Report>(`/reports/${id}/attachments`, formData);
+    },
+    
+    verify: (id: string) => apiClient.patch<Report>(`/reports/${id}/verify`, {}),
+    
+    reject: (id: string, rejectionReason: string) => 
+      apiClient.patch<Report>(`/reports/${id}/reject`, { rejectionReason }),
   },
 
   // Events (Slice 5)

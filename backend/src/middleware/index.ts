@@ -20,3 +20,9 @@ export {
   isSameCompany,
   ROLE_HIERARCHY,
 } from './rbac.middleware';
+export {
+  uploadReportAttachments,
+  handleMulterError,
+  ensureUploadDirs,
+  getAttachmentTypeFromMime,
+} from './upload.middleware';

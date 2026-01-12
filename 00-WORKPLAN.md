@@ -269,44 +269,44 @@ Implement citizen report submission with attachments and verification workflow.
 - ❌ Do NOT implement anonymous reports yet
 
 ### Backend Tasks
-- [ ] Create Report model (Mongoose schema)
-- [ ] Create Attachment subdocument schema
-- [ ] Implement file upload middleware (multer)
-- [ ] Implement `POST /api/reports` (citizen report)
-- [ ] Implement `GET /api/reports` (company-scoped, paginated)
-- [ ] Implement `GET /api/reports/:id`
-- [ ] Implement `POST /api/reports/:id/attachments`
-- [ ] Implement `PATCH /api/reports/:id/verify` (operator)
-- [ ] Implement `PATCH /api/reports/:id/reject` (operator)
-- [ ] Store attachments (local storage MVP, S3 later)
-- [ ] Generate thumbnails for images
+- [x] Create Report model (Mongoose schema)
+- [x] Create Attachment subdocument schema
+- [x] Implement file upload middleware (multer)
+- [x] Implement `POST /api/reports` (citizen report)
+- [x] Implement `GET /api/reports` (company-scoped, paginated)
+- [x] Implement `GET /api/reports/:id`
+- [x] Implement `POST /api/reports/:id/attachments`
+- [x] Implement `PATCH /api/reports/:id/verify` (operator)
+- [x] Implement `PATCH /api/reports/:id/reject` (operator)
+- [x] Store attachments (local storage MVP, S3 later)
+- [x] Generate thumbnails for images
 
 ### Frontend Tasks
-- [ ] Create report submission form
-- [ ] Implement file upload with preview
-- [ ] Create report list view (operator)
-- [ ] Create report detail view
-- [ ] Implement verification UI for operators
+- [x] Create report submission form
+- [x] Implement file upload with preview
+- [x] Create report list view (operator)
+- [x] Create report detail view
+- [x] Implement verification UI for operators
 
 ### API/Swagger Tasks
-- [ ] Document report endpoints
-- [ ] Document file upload (multipart/form-data)
-- [ ] Add attachment URL patterns
+- [x] Document report endpoints
+- [x] Document file upload (multipart/form-data)
+- [x] Add attachment URL patterns
 
 ### Tests
-- [ ] Unit: attachment validation
-- [ ] Integration: report submission
-- [ ] Integration: file upload
-- [ ] Integration: verification workflow
-- [ ] Integration: tenant isolation
+- [x] Unit: attachment validation
+- [x] Integration: report submission
+- [x] Integration: file upload
+- [x] Integration: verification workflow
+- [x] Integration: tenant isolation
 
 ### Definition of Done (Slice 3)
-- [ ] Citizen can submit report with title, description, location, type
-- [ ] Citizen can attach images/videos
-- [ ] Operator can view all reports
-- [ ] Operator can verify/reject reports
-- [ ] Attachments stored and retrievable
-- [ ] All tests pass
+- [x] Citizen can submit report with title, description, location, type
+- [x] Citizen can attach images/videos
+- [x] Operator can view all reports
+- [x] Operator can verify/reject reports
+- [x] Attachments stored and retrievable
+- [x] All tests pass
 
 ### Dependencies
 - Slice 2 (Company & User CRUD)

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 
 import { config } from './config/index';
 import { swaggerSpec } from './config/swagger';
@@ -13,10 +14,14 @@ import {
   requestLoggerMiddleware,
   errorHandlerMiddleware,
   notFoundHandler,
+  ensureUploadDirs,
 } from './middleware/index';
 
 export function createApp(): Express {
   const app = express();
+
+  // Ensure upload directories exist
+  ensureUploadDirs();
 
   // Security middleware
   app.use(
@@ -86,6 +91,9 @@ export function createApp(): Express {
   app.get('/api/docs/spec', (_req, res) => {
     res.json(swaggerSpec);
   });
+
+  // Static file serving for uploads (MVP - local storage)
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // API routes
   app.use('/api', apiRoutes);

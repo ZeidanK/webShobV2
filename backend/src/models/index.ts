@@ -13,7 +13,16 @@ export { AuditLog, AuditAction, IAuditLog } from './audit-log.model';
 export { Company, CompanyType, CompanyStatus, ICompany, ICompanySettings } from './company.model';
 
 // Slice 3: Report Submission
-// export { Report } from './report.model';
+export { 
+  Report, 
+  ReportSource, 
+  ReportType, 
+  ReportStatus, 
+  AttachmentType,
+  IReport, 
+  IAttachment,
+  ILocation 
+} from './report.model';
 
 // Slice 4: Event Management
 // export { Event } from './event.model';

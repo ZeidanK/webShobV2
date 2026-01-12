@@ -13,7 +13,7 @@ export { CompanyService } from './company.service';
 export { UserService } from './user.service';
 
 // Slice 3: Report Submission
-// export { ReportService } from './report.service';
+export { ReportService } from './report.service';
 
 // Slice 4: Event Management
 // export { EventService } from './event.service';

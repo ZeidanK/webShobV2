@@ -37,14 +37,16 @@ export function Layout() {
               ���� Dashboard
             </Link>
             
-            {/* Operators see Events & Reports (monitoring) */}
+            {/* All users can access Reports */}
+            <Link to="/reports" className={styles.navItem}>
+              📝 Reports
+            </Link>
+            
+            {/* Operators see Events & Cameras (monitoring) */}
             {userRole === 'operator' && (
               <>
                 <Link to="/events" className={styles.navItem}>
                   🚨 Events
-                </Link>
-                <Link to="/reports" className={styles.navItem}>
-                  📝 Reports
                 </Link>
                 <Link to="/cameras" className={styles.navItem}>
                   📹 Cameras

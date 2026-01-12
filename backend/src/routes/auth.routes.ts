@@ -69,7 +69,7 @@ const resetPasswordSchema = Joi.object({
 
 /**
  * @openapi
- * /api/auth/register:
+ * /auth/register:
  *   post:
  *     tags:
  *       - Authentication
@@ -179,7 +179,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
 
 /**
  * @openapi
- * /api/auth/login:
+ * /auth/login:
  *   post:
  *     tags:
  *       - Authentication
@@ -269,7 +269,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 
 /**
  * @openapi
- * /api/auth/refresh:
+ * /auth/refresh:
  *   post:
  *     tags:
  *       - Authentication
@@ -331,7 +331,7 @@ router.post('/refresh', async (req: Request, res: Response, next: NextFunction) 
 
 /**
  * @openapi
- * /api/auth/forgot-password:
+ * /auth/forgot-password:
  *   post:
  *     tags:
  *       - Authentication
@@ -408,7 +408,7 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
 
 /**
  * @openapi
- * /api/auth/reset-password:
+ * /auth/reset-password:
  *   post:
  *     tags:
  *       - Authentication

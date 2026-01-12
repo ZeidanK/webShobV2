@@ -5,7 +5,7 @@ const router = Router();
 
 /**
  * @openapi
- * /api/health:
+ * /health:
  *   get:
  *     summary: Health check endpoint
  *     description: Returns the health status of the API
@@ -53,7 +53,7 @@ router.get('/', (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /api/health/detailed:
+ * /health/detailed:
  *   get:
  *     summary: Detailed health check
  *     description: Returns detailed health status including database connectivity

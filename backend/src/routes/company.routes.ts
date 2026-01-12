@@ -58,7 +58,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/companies:
+ * /companies:
  *   post:
  *     summary: Create a new company
  *     tags: [Companies]
@@ -135,7 +135,7 @@ router.post(
 
 /**
  * @swagger
- * /api/companies/{id}:
+ * /companies/{id}:
  *   get:
  *     summary: Get company by ID
  *     tags: [Companies]
@@ -190,7 +190,7 @@ router.get(
 
 /**
  * @swagger
- * /api/companies/{id}/settings:
+ * /companies/{id}/settings:
  *   patch:
  *     summary: Update company settings
  *     tags: [Companies]
@@ -266,7 +266,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/companies/{id}/regenerate-api-key:
+ * /companies/{id}/regenerate-api-key:
  *   post:
  *     summary: Regenerate company API key
  *     tags: [Companies]
@@ -326,7 +326,7 @@ router.post(
 
 /**
  * @swagger
- * /api/companies:
+ * /companies:
  *   get:
  *     summary: Get all companies
  *     tags: [Companies]
