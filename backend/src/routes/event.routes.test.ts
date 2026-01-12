@@ -278,6 +278,195 @@ describe('Event Routes', () => {
     });
   });
 
+  describe('GET /api/events/geo', () => {
+    let event1: any, event2: any, event3: any;
+
+    beforeEach(async () => {
+      // Event in NYC (company 1)
+      event1 = await Event.create({
+        title: 'NYC Event',
+        description: 'Event in New York City',
+        companyId: company1._id,
+        eventTypeId: eventType1._id,
+        priority: EventPriority.HIGH,
+        status: EventStatus.ACTIVE,
+        location: { type: 'Point', coordinates: [-73.935242, 40.730610] }, // NYC
+        locationDescription: 'New York City',
+        createdBy: admin1._id,
+        reportIds: [],
+      });
+
+      // Event in LA (company 1)
+      event2 = await Event.create({
+        title: 'LA Event',
+        description: 'Event in Los Angeles',
+        companyId: company1._id,
+        eventTypeId: eventType1._id,
+        priority: EventPriority.LOW,
+        status: EventStatus.CREATED,
+        location: { type: 'Point', coordinates: [-118.243683, 34.052235] }, // LA
+        locationDescription: 'Los Angeles',
+        createdBy: admin1._id,
+        reportIds: [],
+      });
+
+      // Event in NYC (company 2)
+      event3 = await Event.create({
+        title: 'NYC Event Company 2',
+        description: 'Event in NYC for company 2',
+        companyId: company2._id,
+        eventTypeId: eventType2._id,
+        priority: EventPriority.MEDIUM,
+        status: EventStatus.ACTIVE,
+        location: { type: 'Point', coordinates: [-73.98, 40.75] }, // NYC area
+        createdBy: admin2._id,
+        reportIds: [],
+      });
+    });
+
+    it('should return events within bounding box', async () => {
+      // Bounding box around NYC
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -74.2,
+          minLat: 40.5,
+          maxLng: -73.7,
+          maxLat: 40.9,
+        })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].title).toBe('NYC Event');
+    });
+
+    it('should enforce tenant isolation in geo queries', async () => {
+      // Bounding box around NYC - company 1 should only see their event
+      const response1 = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -74.2,
+          minLat: 40.5,
+          maxLng: -73.7,
+          maxLat: 40.9,
+        })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response1.body.data).toHaveLength(1);
+      expect(response1.body.data[0].title).toBe('NYC Event');
+
+      // Company 2 should see their event
+      const response2 = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -74.2,
+          minLat: 40.5,
+          maxLng: -73.7,
+          maxLat: 40.9,
+        })
+        .set('Authorization', `Bearer ${token2}`);
+
+      expect(response2.body.data).toHaveLength(1);
+      expect(response2.body.data[0].title).toBe('NYC Event Company 2');
+    });
+
+    it('should filter by status in geo query', async () => {
+      // Large bounding box that includes both NYC and LA
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -125,
+          minLat: 32,
+          maxLng: -70,
+          maxLat: 45,
+          status: 'active',
+        })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].status).toBe(EventStatus.ACTIVE);
+    });
+
+    it('should filter by priority in geo query', async () => {
+      // Large bounding box that includes both NYC and LA
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -125,
+          minLat: 32,
+          maxLng: -70,
+          maxLat: 45,
+          priority: 'high',
+        })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].priority).toBe(EventPriority.HIGH);
+    });
+
+    it('should validate required bounding box parameters', async () => {
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({ minLng: -74, minLat: 40 }) // Missing maxLng and maxLat
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should validate coordinate ranges', async () => {
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -200, // Invalid longitude
+          minLat: 40,
+          maxLng: -73,
+          maxLat: 41,
+        })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should validate bounding box logic', async () => {
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -73,
+          minLat: 40,
+          maxLng: -74, // maxLng < minLng
+          maxLat: 41,
+        })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should include correlationId in response', async () => {
+      const correlationId = 'test-correlation-id';
+      const response = await request(app)
+        .get('/api/events/geo')
+        .query({
+          minLng: -74.2,
+          minLat: 40.5,
+          maxLng: -73.7,
+          maxLat: 40.9,
+        })
+        .set('Authorization', `Bearer ${token1}`)
+        .set('X-Correlation-ID', correlationId);
+
+      expect(response.status).toBe(200);
+      expect(response.body.correlationId).toBe(correlationId);
+      expect(response.headers['x-correlation-id']).toBe(correlationId);
+    });
+  });
+
   describe('GET /api/events/:id', () => {
     let event: any;
 

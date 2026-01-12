@@ -382,6 +382,156 @@ router.get('/',
 
 /**
  * @swagger
+ * /api/events/geo:
+ *   get:
+ *     summary: Get events within a geographic bounding box
+ *     description: Returns events within the specified map bounding box for map visualization
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: minLng
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Minimum longitude (west boundary)
+ *       - in: query
+ *         name: minLat
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Minimum latitude (south boundary)
+ *       - in: query
+ *         name: maxLng
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Maximum longitude (east boundary)
+ *       - in: query
+ *         name: maxLat
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Maximum latitude (north boundary)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [created, active, assigned, resolved, closed]
+ *         description: Filter by event status (can be repeated for multiple statuses)
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, critical]
+ *         description: Filter by event priority (can be repeated for multiple priorities)
+ *       - in: query
+ *         name: eventTypeId
+ *         schema:
+ *           type: string
+ *         description: Filter by event type ID
+ *     responses:
+ *       200:
+ *         description: Events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Event'
+ *                 correlationId:
+ *                   type: string
+ *       400:
+ *         description: Invalid bounding box parameters
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/geo', 
+  authenticate, 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER, UserRole.SUPER_ADMIN), 
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { minLng, minLat, maxLng, maxLat, status, priority, eventTypeId } = req.query;
+      
+      // Validate required parameters
+      if (!minLng || !minLat || !maxLng || !maxLat) {
+        throw new AppError('VALIDATION_ERROR', 'Missing required bounding box parameters: minLng, minLat, maxLng, maxLat', 400);
+      }
+      
+      // Parse and validate coordinates
+      const bounds = {
+        minLng: parseFloat(minLng as string),
+        minLat: parseFloat(minLat as string),
+        maxLng: parseFloat(maxLng as string),
+        maxLat: parseFloat(maxLat as string),
+      };
+      
+      // Validate coordinate ranges
+      if (bounds.minLng < -180 || bounds.minLng > 180 || bounds.maxLng < -180 || bounds.maxLng > 180) {
+        throw new AppError('VALIDATION_ERROR', 'Longitude must be between -180 and 180', 400);
+      }
+      
+      if (bounds.minLat < -90 || bounds.minLat > 90 || bounds.maxLat < -90 || bounds.maxLat > 90) {
+        throw new AppError('VALIDATION_ERROR', 'Latitude must be between -90 and 90', 400);
+      }
+      
+      if (bounds.minLng >= bounds.maxLng || bounds.minLat >= bounds.maxLat) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid bounding box: min values must be less than max values', 400);
+      }
+      
+      // Build filters
+      const filters: any = {};
+      
+      if (status) {
+        filters.status = Array.isArray(status) ? status : [status];
+      }
+      
+      if (priority) {
+        filters.priority = Array.isArray(priority) ? priority : [priority];
+      }
+      
+      if (eventTypeId) {
+        filters.eventTypeId = eventTypeId;
+      }
+      
+      const events = await EventService.getEventsInBoundingBox(
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        bounds,
+        filters
+      );
+      
+      logger.info('Events retrieved for map view', {
+        action: 'event.geo.query',
+        eventCount: events.length,
+        bounds,
+        companyId: req.user!.companyId,
+        correlationId: req.correlationId,
+      });
+      
+      res.status(200).json(successResponse(events, req.correlationId!));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/events/{id}:
  *   get:
  *     summary: Get event by ID

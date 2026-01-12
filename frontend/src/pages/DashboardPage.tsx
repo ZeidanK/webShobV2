@@ -16,6 +16,12 @@ export function DashboardPage() {
         {/* Operators see event monitoring cards */}
         {userRole === 'operator' && (
           <>
+            <Link to="/operator" className={styles.card}>
+              <span className={styles.cardIcon}>🗺️</span>
+              <h3>Operator Dashboard</h3>
+              <p>Interactive map and event monitoring</p>
+            </Link>
+
             <Link to="/events" className={styles.card}>
               <span className={styles.cardIcon}>🚨</span>
               <h3>Events</h3>
@@ -64,10 +70,14 @@ export function DashboardPage() {
       </div>
 
       <div className={styles.placeholder}>
+        <h3>Recently Implemented</h3>
+        <ul>
+          <li>✅ Interactive map with event markers</li>
+          <li>✅ Real-time event list with live updates</li>
+          <li>✅ Operator Dashboard with map view</li>
+        </ul>
         <h3>Coming Soon</h3>
         <ul>
-          <li>Interactive map with event markers</li>
-          <li>Real-time event list with live updates</li>
           <li>Live video preview grid</li>
           <li>First responder location tracking</li>
           <li>Event analytics and reporting</li>

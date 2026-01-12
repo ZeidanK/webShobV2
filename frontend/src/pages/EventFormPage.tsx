@@ -85,6 +85,10 @@ export default function EventFormPage() {
       newErrors.eventTypeId = 'Event type is required';
     }
 
+    if (formData.location.longitude === 0 && formData.location.latitude === 0) {
+      newErrors.location = 'Location is required. Use "Get Current Location" or enter coordinates manually.';
+    }
+
     if (formData.location.longitude < -180 || formData.location.longitude > 180) {
       newErrors.longitude = 'Longitude must be between -180 and 180';
     }
@@ -257,6 +261,7 @@ export default function EventFormPage() {
           >
             {gettingLocation ? '📍 Getting location...' : '📍 Use Current Location'}
           </button>
+          {errors.location && <div className={styles.errorMessage}>{errors.location}</div>}
           <div className={styles.locationInputs}>
             <div>
               <input

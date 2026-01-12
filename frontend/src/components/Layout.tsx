@@ -43,8 +43,11 @@ export function Layout() {
             </Link>
             
             {/* Operators see Events & Cameras (monitoring) */}
-            {userRole === 'operator' && (
+            {(userRole === 'operator' || userRole === 'admin' || userRole === 'company_admin' || userRole === 'super_admin') && (
               <>
+                <Link to="/operator" className={styles.navItem}>
+                  🗺️ Map View
+                </Link>
                 <Link to="/events" className={styles.navItem}>
                   🚨 Events
                 </Link>

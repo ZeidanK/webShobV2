@@ -538,4 +538,54 @@ export class EventService {
       .limit(limit)
       .lean();
   }
+
+  /**
+   * Get events within a bounding box (for map views)
+   * Bounding box format: [minLng, minLat, maxLng, maxLat]
+   */
+  static async getEventsInBoundingBox(
+    companyId: mongoose.Types.ObjectId,
+    bounds: {
+      minLng: number;
+      minLat: number;
+      maxLng: number;
+      maxLat: number;
+    },
+    filters?: {
+      status?: EventStatus | EventStatus[];
+      priority?: EventPriority | EventPriority[];
+      eventTypeId?: string;
+    }
+  ): Promise<any[]> {
+    const query: any = {
+      companyId,
+      location: {
+        $geoWithin: {
+          $box: [
+            [bounds.minLng, bounds.minLat], // bottom-left corner
+            [bounds.maxLng, bounds.maxLat], // top-right corner
+          ],
+        },
+      },
+    };
+
+    // Apply optional filters
+    if (filters?.status) {
+      query.status = Array.isArray(filters.status) ? { $in: filters.status } : filters.status;
+    }
+
+    if (filters?.priority) {
+      query.priority = Array.isArray(filters.priority) ? { $in: filters.priority } : filters.priority;
+    }
+
+    if (filters?.eventTypeId) {
+      query.eventTypeId = filters.eventTypeId;
+    }
+
+    return Event.find(query)
+      .populate('eventTypeId', 'name color icon')
+      .populate('createdBy', 'firstName lastName')
+      .select('_id title status priority location locationDescription createdAt updatedAt reportIds')
+      .lean();
+  }
 }

@@ -545,4 +545,83 @@ export class ReportService {
       throw error;
     }
   }
+
+  /**
+   * Get reports within a geographic bounding box
+   * Supports filtering by status and type
+   */
+  static async getReportsInBoundingBox(params: {
+    companyId: string;
+    minLng: number;
+    minLat: number;
+    maxLng: number;
+    maxLat: number;
+    status?: ReportStatus | ReportStatus[];
+    type?: ReportType | ReportType[];
+    correlationId: string;
+  }): Promise<IReport[]> {
+    try {
+      const { companyId, minLng, minLat, maxLng, maxLat, status, type, correlationId } = params;
+
+      logger.info({
+        action: 'report.geo.query.start',
+        context: { companyId, bounds: { minLng, minLat, maxLng, maxLat }, filters: { status, type } },
+        correlationId,
+      });
+
+      // Build query
+      const query: any = {
+        companyId,
+        location: {
+          $geoWithin: {
+            $box: [
+              [minLng, minLat], // Southwest corner
+              [maxLng, maxLat], // Northeast corner
+            ],
+          },
+        },
+      };
+
+      // Apply status filter
+      if (status) {
+        if (Array.isArray(status)) {
+          query.status = { $in: status };
+        } else {
+          query.status = status;
+        }
+      }
+
+      // Apply type filter
+      if (type) {
+        if (Array.isArray(type)) {
+          query.type = { $in: type };
+        } else {
+          query.type = type;
+        }
+      }
+
+      // Execute query with populated fields
+      const reports = await Report.find(query)
+        .populate('reportedBy', 'firstName lastName email')
+        .select('title description type status source location locationDescription attachments createdAt reportedBy')
+        .sort({ createdAt: -1 });
+
+      logger.info({
+        action: 'report.geo.query.success',
+        context: { companyId, reportCount: reports.length },
+        correlationId,
+      });
+
+      return reports;
+    } catch (error) {
+      logger.error({
+        action: 'report.geo.query.failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        context: { companyId: params.companyId },
+        correlationId: params.correlationId,
+      });
+
+      throw error;
+    }
+  }
 }

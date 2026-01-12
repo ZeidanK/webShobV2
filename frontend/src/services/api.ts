@@ -540,6 +540,48 @@ export const api = {
     
     reject: (id: string, rejectionReason: string) => 
       apiClient.patch<Report>(`/reports/${id}/reject`, { rejectionReason }),
+
+    // Get reports within geographic bounds
+    getInBounds: (params: {
+      minLng: number;
+      minLat: number;
+      maxLng: number;
+      maxLat: number;
+      status?: string | string[];
+      type?: string | string[];
+    }) => {
+      const queryParams: Record<string, string> = {
+        minLng: params.minLng.toString(),
+        minLat: params.minLat.toString(),
+        maxLng: params.maxLng.toString(),
+        maxLat: params.maxLat.toString(),
+      };
+
+      // Handle array filters
+      if (params.status) {
+        if (Array.isArray(params.status)) {
+          // For arrays, we need to add multiple query params with the same key
+          params.status.forEach((s, index) => {
+            queryParams[`status[${index}]`] = s;
+          });
+        } else {
+          queryParams.status = params.status;
+        }
+      }
+
+      if (params.type) {
+        if (Array.isArray(params.type)) {
+          // For arrays, we need to add multiple query params with the same key
+          params.type.forEach((t, index) => {
+            queryParams[`type[${index}]`] = t;
+          });
+        } else {
+          queryParams.type = params.type;
+        }
+      }
+
+      return apiClient.get<Report[]>('/reports/geo', queryParams);
+    },
   },
 
   // Events (Slice 4)
@@ -600,6 +642,46 @@ export const api = {
 
     unlinkReport: (eventId: string, reportId: string) =>
       apiClient.delete<Event>(`/events/${eventId}/reports/${reportId}`),
+
+    // Geo query for map views (Slice 6)
+    getInBounds: (bounds: {
+      minLng: number;
+      minLat: number;
+      maxLng: number;
+      maxLat: number;
+      status?: string | string[];
+      priority?: string | string[];
+      eventTypeId?: string;
+    }) => {
+      const params: Record<string, string | number> = {
+        minLng: bounds.minLng,
+        minLat: bounds.minLat,
+        maxLng: bounds.maxLng,
+        maxLat: bounds.maxLat,
+      };
+
+      if (bounds.status) {
+        if (Array.isArray(bounds.status)) {
+          bounds.status.forEach(s => params[`status`] = s);
+        } else {
+          params.status = bounds.status;
+        }
+      }
+
+      if (bounds.priority) {
+        if (Array.isArray(bounds.priority)) {
+          bounds.priority.forEach(p => params[`priority`] = p);
+        } else {
+          params.priority = bounds.priority;
+        }
+      }
+
+      if (bounds.eventTypeId) {
+        params.eventTypeId = bounds.eventTypeId;
+      }
+
+      return apiClient.get<Event[]>('/events/geo', params);
+    },
   },
 
   // Event Types (Slice 4)

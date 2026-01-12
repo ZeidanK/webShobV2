@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { OperatorDashboard } from './pages/OperatorDashboard';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import UsersPage from './pages/UsersPage';
@@ -75,6 +76,16 @@ function App() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+        
+        {/* Operator Dashboard with Map */}
+        <Route 
+          path="operator" 
+          element={
+            <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
+              <OperatorDashboard />
+            </ProtectedRoute>
+          } 
+        />
         
         {/* Operator+ routes */}
         <Route 

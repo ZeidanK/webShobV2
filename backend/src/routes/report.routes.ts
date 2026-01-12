@@ -3,6 +3,7 @@ import { ReportService } from '../services';
 import { 
   authenticate, 
   requireRole,
+  requireAnyRole,
   uploadReportAttachments,
   handleMulterError,
   getAttachmentTypeFromMime
@@ -328,6 +329,160 @@ router.get(
         hasNextPage: result.page < result.totalPages,
         hasPrevPage: result.page > 1,
       }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/reports/geo:
+ *   get:
+ *     summary: Get reports within geographic bounding box
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: minLng
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Minimum longitude (west)
+ *       - in: query
+ *         name: minLat
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Minimum latitude (south)
+ *       - in: query
+ *         name: maxLng
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Maximum longitude (east)
+ *       - in: query
+ *         name: maxLat
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Maximum latitude (north)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ReportStatus'
+ *         description: Filter by status (can provide multiple)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ReportType'
+ *         description: Filter by type (can provide multiple)
+ *     responses:
+ *       200:
+ *         description: List of reports within bounds
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Report'
+ *                 correlationId:
+ *                   type: string
+ *       400:
+ *         description: Invalid parameters
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/geo',
+  authenticate,
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { minLng, minLat, maxLng, maxLat, status, type } = req.query;
+
+      // Validate required parameters
+      if (!minLng || !minLat || !maxLng || !maxLat) {
+        throw new AppError(
+          'VALIDATION_ERROR',
+          'Missing required parameters: minLng, minLat, maxLng, maxLat',
+          400
+        );
+      }
+
+      // Parse and validate coordinates
+      const parsedMinLng = parseFloat(minLng as string);
+      const parsedMinLat = parseFloat(minLat as string);
+      const parsedMaxLng = parseFloat(maxLng as string);
+      const parsedMaxLat = parseFloat(maxLat as string);
+
+      if (
+        isNaN(parsedMinLng) ||
+        isNaN(parsedMinLat) ||
+        isNaN(parsedMaxLng) ||
+        isNaN(parsedMaxLat)
+      ) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid coordinate values', 400);
+      }
+
+      // Validate coordinate ranges
+      if (parsedMinLng < -180 || parsedMinLng > 180 || parsedMaxLng < -180 || parsedMaxLng > 180) {
+        throw new AppError('VALIDATION_ERROR', 'Longitude must be between -180 and 180', 400);
+      }
+
+      if (parsedMinLat < -90 || parsedMinLat > 90 || parsedMaxLat < -90 || parsedMaxLat > 90) {
+        throw new AppError('VALIDATION_ERROR', 'Latitude must be between -90 and 90', 400);
+      }
+
+      // Validate min < max
+      if (parsedMinLng >= parsedMaxLng) {
+        throw new AppError('VALIDATION_ERROR', 'minLng must be less than maxLng', 400);
+      }
+
+      if (parsedMinLat >= parsedMaxLat) {
+        throw new AppError('VALIDATION_ERROR', 'minLat must be less than maxLat', 400);
+      }
+
+      // Parse optional filters
+      const filters: any = {};
+
+      if (status) {
+        filters.status = Array.isArray(status) ? status : [status];
+      }
+
+      if (type) {
+        filters.type = Array.isArray(type) ? type : [type];
+      }
+
+      const reports = await ReportService.getReportsInBoundingBox({
+        companyId: req.user!.companyId,
+        minLng: parsedMinLng,
+        minLat: parsedMinLat,
+        maxLng: parsedMaxLng,
+        maxLat: parsedMaxLat,
+        ...filters,
+        correlationId: req.correlationId!,
+      });
+
+      res.json(successResponse(reports, req.correlationId!));
     } catch (error) {
       next(error);
     }
