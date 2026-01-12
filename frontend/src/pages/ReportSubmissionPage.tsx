@@ -184,10 +184,12 @@ const ReportSubmissionPage: React.FC = () => {
         type: formData.type,
         ...(formData.location && {
           location: {
-            type: 'Point' as const,
-            coordinates: [formData.location.lng, formData.location.lat],
-            accuracy: formData.location.accuracy,
+            longitude: formData.location.lng,
+            latitude: formData.location.lat,
           },
+        }),
+        ...(formData.locationDescription && {
+          locationDescription: formData.locationDescription.trim(),
         }),
       };
 
