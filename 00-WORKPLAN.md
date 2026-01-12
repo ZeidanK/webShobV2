@@ -30,7 +30,7 @@ These constraints MUST be honored in every slice. Violation = drift.
 - Backend: Node.js 18 LTS + TypeScript + Express
 - Database: MongoDB 5.0+
 - Frontend: React 18+ + TypeScript
-- Mobile: React Native + TypeScript (Phase 2)
+- Mobile: API-only (external team builds mobile apps)
 - AI Service: Python 3.9+ + FastAPI
 
 ### API Conventions
@@ -63,16 +63,16 @@ These constraints MUST be honored in every slice. Violation = drift.
 | 4 | Event Management | Event CRUD, lifecycle, report linking | 2-3 days |
 | 5 | Real-Time Foundation | WebSocket server, company rooms, broadcasts | 1-2 days |
 | 6 | Map & Dashboard UI | React map integration, event markers, list views | 2-3 days |
-| 7 | Camera Management | Camera CRUD, status monitoring | 2 days |
-| 8 | Live Video Streaming | RTSP→HLS, web player integration | 2-3 days |
-| 9 | VMS Adapters | Adapter pattern, direct RTSP, playback stubs | 2-3 days |
-| 10 | Historical Playback | Time-aligned video, multi-camera sync | 2-3 days |
-| 11 | AI Service Integration | Detection callback, camera report creation | 2-3 days |
-| 12 | First Responder Mobile | React Native app, assignments, location | 3-4 days |
-| 13 | Citizen Mobile | React Native app, report submission | 2-3 days |
+| 7 | Mobile API Integration | API endpoints for external mobile team | 2-3 days |
+| 8 | Mobile Testing & Docs | Mobile team support, documentation | 1-2 days |
+| 9 | Camera Management | Camera CRUD, status monitoring | 2 days |
+| 10 | Live Video Streaming | RTSP→HLS, web player integration | 2-3 days |
+| 11 | VMS Adapters | Adapter pattern, direct RTSP, playback stubs | 2-3 days |
+| 12 | Historical Playback | Time-aligned video, multi-camera sync | 2-3 days |
+| 13 | AI Service Integration | Detection callback, camera report creation | 2-3 days |
 | 14 | Polish & Hardening | Error handling, edge cases, performance | 2-3 days |
 
-**Total Estimated Duration**: 28-40 days
+**Total Estimated Duration**: 26-38 days
 
 ---
 
@@ -461,7 +461,107 @@ Implement interactive map with event markers and operator dashboard.
 
 ---
 
-## Slice 7: Camera Management
+## Slice 7: Mobile API Integration
+
+### Goal
+Implement mobile-specific API endpoints and API key management for external mobile development team.
+
+### No Scope Creep
+- ❌ Do NOT build any mobile apps (React Native or otherwise)
+- ❌ Do NOT implement push notifications (mobile team responsibility)
+- ❌ Do NOT implement offline sync
+- ❌ Do NOT implement mobile SDK
+
+### Backend Tasks
+- [ ] Add `mobile_partner` company type to Company model
+- [ ] Implement API key scoping (restrict endpoints per key)
+- [ ] Create rate limiting for mobile endpoints
+- [ ] Implement `POST /api/mobile/auth/login` (API key + user credentials)
+- [ ] Implement `POST /api/mobile/auth/refresh`
+- [ ] Implement `GET /api/mobile/reports` (citizen's own reports)
+- [ ] Implement `POST /api/mobile/reports` (citizen submission)
+- [ ] Implement `POST /api/mobile/reports/:id/attachments`
+- [ ] Implement `GET /api/mobile/events/assignments` (responder view)
+- [ ] Implement `PATCH /api/mobile/events/:id/status` (responder update)
+- [ ] Implement `POST /api/mobile/users/location` (responder location)
+- [ ] Add mobile-specific validation rules
+- [ ] Emit `responder:location` WebSocket event
+
+### API/Swagger Tasks
+- [ ] Create separate OpenAPI spec for mobile APIs
+- [ ] Document mobile authentication flow
+- [ ] Add mobile endpoint examples
+- [ ] Document file upload for mobile (multipart)
+- [ ] Create Postman collection for mobile team
+
+### Tests
+- [ ] Integration: mobile auth flow (API key + credentials)
+- [ ] Integration: API key scope validation
+- [ ] Integration: mobile report submission
+- [ ] Integration: mobile assignment workflow
+- [ ] Integration: rate limiting enforcement
+- [ ] Integration: responder location update
+
+### Definition of Done (Slice 7)
+- [ ] Mobile team can authenticate with API key + credentials
+- [ ] Citizens can submit reports via mobile API
+- [ ] Responders can get assignments via mobile API
+- [ ] Responders can update event status via mobile API
+- [ ] Responder locations broadcast to operators
+- [ ] Rate limiting prevents API abuse
+- [ ] All mobile endpoints documented in Swagger
+
+### Dependencies
+- Slice 6 (Map & Dashboard UI)
+
+---
+
+## Slice 8: Mobile Testing & Documentation
+
+### Goal
+Create comprehensive testing tools and documentation for mobile development team.
+
+### No Scope Creep
+- ❌ Do NOT build mobile SDK or client libraries
+- ❌ Do NOT implement mobile-specific business logic beyond API
+- ❌ Do NOT provide mobile UI components
+
+### Backend Tasks
+- [ ] Create mobile API testing dashboard (optional admin page)
+- [ ] Implement API usage analytics/logging per API key
+- [ ] Create webhook test endpoints for mobile team
+- [ ] Add API versioning headers (X-API-Version)
+- [ ] Implement deprecation warning headers
+
+### Documentation Tasks
+- [ ] Create Mobile Integration Guide (Markdown)
+- [ ] Document all mobile API endpoints with examples
+- [ ] Create mobile authentication guide
+- [ ] Document all error codes and handling
+- [ ] Create mobile API changelog template
+- [ ] Document rate limits and quotas
+- [ ] Create mobile team onboarding checklist
+
+### Testing Tasks
+- [ ] Create automated mobile API contract tests
+- [ ] Create mobile API load tests (k6 or similar)
+- [ ] Test mobile API backward compatibility
+- [ ] Validate Postman collection works end-to-end
+
+### Definition of Done (Slice 8)
+- [ ] Mobile team has complete API documentation
+- [ ] Mobile APIs have contract tests
+- [ ] Mobile team can test endpoints independently
+- [ ] API versioning strategy documented
+- [ ] Mobile integration guide complete
+- [ ] Postman collection validated
+
+### Dependencies
+- Slice 7 (Mobile API Integration)
+
+---
+
+## Slice 9: Camera Management
 
 ### Goal
 Implement camera CRUD and status monitoring (no video streaming yet).
@@ -493,18 +593,18 @@ Implement camera CRUD and status monitoring (no video streaming yet).
 - [ ] Integration: geo-spatial query
 - [ ] Unit: status monitoring logic
 
-### Definition of Done (Slice 7)
+### Definition of Done (Slice 9)
 - [ ] Admin can add/edit/remove cameras
 - [ ] Cameras appear on map
 - [ ] Camera status updates broadcast
 - [ ] Geo-spatial queries work
 
 ### Dependencies
-- Slice 6 (Map & Dashboard UI)
+- Slice 8 (Mobile Testing & Documentation)
 
 ---
 
-## Slice 8: Live Video Streaming
+## Slice 10: Live Video Streaming
 
 ### Goal
 Implement RTSP to HLS transcoding and web video player.
@@ -532,18 +632,18 @@ Implement RTSP to HLS transcoding and web video player.
 - [ ] Integration: stream URL generation
 - [ ] Manual: HLS playback in browser
 
-### Definition of Done (Slice 8)
+### Definition of Done (Slice 10)
 - [ ] Operator can click camera and see live video
 - [ ] HLS stream plays in browser
 - [ ] Stream is authenticated
 - [ ] Graceful error handling for offline cameras
 
 ### Dependencies
-- Slice 7 (Camera Management)
+- Slice 9 (Camera Management)
 
 ---
 
-## Slice 9: VMS Adapters
+## Slice 11: VMS Adapters
 
 ### Goal
 Implement VMS adapter pattern with stubs for Milestone/Genetec.
@@ -566,18 +666,18 @@ Implement VMS adapter pattern with stubs for Milestone/Genetec.
 - [ ] Unit: adapter factory
 - [ ] Unit: adapter interface compliance
 
-### Definition of Done (Slice 9)
+### Definition of Done (Slice 11)
 - [ ] Adapter pattern implemented
 - [ ] DirectRTSPAdapter works for live video
 - [ ] Stub adapters return appropriate errors
 - [ ] Cameras can be configured for different VMS types
 
 ### Dependencies
-- Slice 8 (Live Video Streaming)
+- Slice 10 (Live Video Streaming)
 
 ---
 
-## Slice 10: Historical Playback
+## Slice 12: Historical Playback
 
 ### Goal
 Implement time-aligned video playback for events.
@@ -605,18 +705,18 @@ Implement time-aligned video playback for events.
 - [ ] Integration: playback URL generation
 - [ ] Integration: camera selection by location
 
-### Definition of Done (Slice 10)
+### Definition of Done (Slice 12)
 - [ ] Operator can view video from event timestamp
 - [ ] Multiple cameras shown if available
 - [ ] Playback is synchronized
 - [ ] Graceful handling when no recording exists
 
 ### Dependencies
-- Slice 9 (VMS Adapters)
+- Slice 11 (VMS Adapters)
 
 ---
 
-## Slice 11: AI Service Integration
+## Slice 13: AI Service Integration
 
 ### Goal
 Implement AI detection callback that creates camera reports.
@@ -647,88 +747,14 @@ Implement AI detection callback that creates camera reports.
 - [ ] Integration: snapshot stored
 - [ ] Unit: debouncing logic
 
-### Definition of Done (Slice 11)
+### Definition of Done (Slice 13)
 - [ ] AI service can process camera stream
 - [ ] Detections create camera reports
 - [ ] Reports appear in operator dashboard
 - [ ] Debouncing prevents duplicate detections
 
 ### Dependencies
-- Slice 10 (Historical Playback)
-
----
-
-## Slice 12: First Responder Mobile
-
-### Goal
-Implement React Native app for first responders.
-
-### No Scope Creep
-- ❌ Do NOT implement offline mode
-- ❌ Do NOT implement push notifications
-- ❌ Do NOT implement navigation/routing
-
-### Mobile Tasks
-- [ ] Set up React Native project
-- [ ] Implement login screen
-- [ ] Implement assignment list
-- [ ] Implement assignment detail
-- [ ] Implement status update
-- [ ] Implement location sharing
-- [ ] Implement field report submission
-
-### Backend Tasks
-- [ ] Implement `GET /api/assignments` (for responder)
-- [ ] Implement `PATCH /api/events/:id/assign`
-- [ ] Implement `POST /api/users/:id/location`
-- [ ] Emit `responder:location` WebSocket event
-
-### Tests
-- [ ] Integration: assignment flow
-- [ ] Integration: location update
-
-### Definition of Done (Slice 12)
-- [ ] Responder can login with credentials
-- [ ] Responder sees assigned events
-- [ ] Responder can update event status
-- [ ] Responder location visible to operators
-- [ ] Responder can submit field reports
-
-### Dependencies
-- Slice 11 (AI Service Integration)
-
----
-
-## Slice 13: Citizen Mobile
-
-### Goal
-Implement React Native app for citizens.
-
-### No Scope Creep
-- ❌ Do NOT implement anonymous reports yet
-- ❌ Do NOT implement push notifications
-- ❌ Do NOT implement offline queue
-
-### Mobile Tasks
-- [ ] Set up citizen app variant
-- [ ] Implement login/registration
-- [ ] Implement report submission form
-- [ ] Implement photo/video capture
-- [ ] Implement report status tracking
-- [ ] Implement GPS location capture
-
-### Tests
-- [ ] Integration: report submission from mobile
-- [ ] Integration: attachment upload
-
-### Definition of Done (Slice 13)
-- [ ] Citizen can register and login
-- [ ] Citizen can submit report with attachments
-- [ ] Citizen can track report status
-- [ ] Location captured automatically
-
-### Dependencies
-- Slice 12 (First Responder Mobile)
+- Slice 12 (Historical Playback)
 
 ---
 
@@ -756,7 +782,7 @@ Fix edge cases, improve error handling, performance optimization.
 - [ ] Documentation complete
 
 ### Dependencies
-- All previous slices
+- Slice 13 (AI Service Integration)
 
 ---
 
@@ -806,6 +832,7 @@ Use this checklist after completing each slice:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-12 | AI-Assisted | Initial work breakdown structure |
+| 1.1 | 2026-01-12 | AI-Assisted | Replaced mobile app slices (12-13) with Mobile API Integration slices (7-8), renumbered all subsequent slices |
 
 ---
 
