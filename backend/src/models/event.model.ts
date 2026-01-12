@@ -238,6 +238,18 @@ EventSchema.methods.getAuditContext = function(): any {
 EventSchema.index({ location: '2dsphere' });
 
 /**
+ * Virtual for linkedReports (alias for reportIds)
+ * Used by frontend for consistency
+ */
+EventSchema.virtual('linkedReports').get(function() {
+  return this.reportIds;
+});
+
+// Ensure virtuals are included in toJSON
+EventSchema.set('toJSON', { virtuals: true });
+EventSchema.set('toObject', { virtuals: true });
+
+/**
  * Export the model
  */
 export const Event = mongoose.model<IEvent>('Event', EventSchema);

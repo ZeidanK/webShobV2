@@ -9,6 +9,9 @@ import UsersPage from './pages/UsersPage';
 import CompaniesPage from './pages/CompaniesPage';
 import CompanySettingsPage from './pages/CompanySettingsPage';
 import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
+import EventFormPage from './pages/EventFormPage';
+import SuperAdminEventsPage from './pages/SuperAdminEventsPage';
 import ReportsPage from './pages/ReportsPage';
 import ReportSubmissionPage from './pages/ReportSubmissionPage';
 import ReportDetailPage from './pages/ReportDetailPage';
@@ -77,8 +80,32 @@ function App() {
         <Route 
           path="events" 
           element={
-            <ProtectedRoute requiredRole="operator">
+            <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
               <EventsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="events/new" 
+          element={
+            <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
+              <EventFormPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="events/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
+              <EventDetailPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="events/:id/edit" 
+          element={
+            <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
+              <EventFormPage />
             </ProtectedRoute>
           } 
         />
@@ -134,6 +161,14 @@ function App() {
         />
         
         {/* Super Admin only routes */}
+        <Route 
+          path="admin/events" 
+          element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <SuperAdminEventsPage />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="companies" 
           element={

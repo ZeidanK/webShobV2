@@ -199,7 +199,7 @@ const router = express.Router();
  */
 router.post('/', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { title, description, eventTypeId, priority, location, locationDescription, reportIds } = req.body;
@@ -337,7 +337,7 @@ router.post('/',
  */
 router.get('/', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const {
@@ -416,7 +416,7 @@ router.get('/',
  */
 router.get('/:id', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const event = await EventService.getEventById(req.params.id, new mongoose.Types.ObjectId(req.user!.companyId));
@@ -498,7 +498,7 @@ router.get('/:id',
  */
 router.patch('/:id', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { title, description, eventTypeId, priority, location, locationDescription } = req.body;
@@ -587,7 +587,7 @@ router.patch('/:id',
  */
 router.patch('/:id/status', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { status } = req.body;
@@ -670,7 +670,7 @@ router.patch('/:id/status',
  */
 router.post('/:id/reports', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { reportId } = req.body;
@@ -750,7 +750,7 @@ router.post('/:id/reports',
  */
 router.delete('/:id/reports/:reportId', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const event = await EventService.unlinkReport(

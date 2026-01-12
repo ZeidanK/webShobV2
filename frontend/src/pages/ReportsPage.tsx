@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { api, Report, PaginatedResponse } from '../services/api';
+import { api, Report } from '../services/api';
 import styles from './ReportsPage.module.css';
 
 interface LocationState {
@@ -27,6 +27,8 @@ const ReportsPage: React.FC = () => {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   useEffect(() => {
     // Show success message from location state
@@ -44,7 +46,7 @@ const ReportsPage: React.FC = () => {
 
   useEffect(() => {
     loadReports();
-  }, [currentPage, statusFilter, typeFilter]);
+  }, [currentPage, statusFilter, typeFilter, startDate, endDate]);
 
   const loadReports = async () => {
     try {
@@ -64,12 +66,20 @@ const ReportsPage: React.FC = () => {
         params.type = typeFilter;
       }
 
-      const response = await api.reports.list(params) as PaginatedResponse<Report>;
+      if (startDate) {
+        params.startDate = startDate;
+      }
+
+      if (endDate) {
+        params.endDate = endDate;
+      }
+
+      const response = await api.reports.list(params);
       
       setReports(response.data);
-      setCurrentPage(response.meta.page);
-      setTotalPages(response.meta.totalPages);
-      setTotalReports(response.meta.total);
+      setCurrentPage(response.meta?.page || currentPage);
+      setTotalPages(response.meta?.totalPages || 0);
+      setTotalReports(response.meta?.total || 0);
     } catch (err) {
       console.error('Error loading reports:', err);
       setError('Failed to load reports. Please try again.');
@@ -207,6 +217,32 @@ const ReportsPage: React.FC = () => {
           </select>
         </div>
 
+        <div className={styles.filterGroup}>
+          <label htmlFor="startDate">Start Date:</label>
+          <input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label htmlFor="endDate">End Date:</label>
+          <input
+            id="endDate"
+            type="date"
+            value={endDate}
+            onChange={(e) => {
+              setEndDate(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
         <div className={styles.resultsInfo}>
           Showing {reports.length} of {totalReports} reports
         </div>
@@ -239,7 +275,20 @@ const ReportsPage: React.FC = () => {
                   <span className={styles.reportDate}>
                     {formatDate(report.createdAt)}
                   </span>
-                  <span className={styles.reportId}>#{report._id.slice(-6)}</span>
+                  <div className={styles.reportIdContainer}>
+                    <span className={styles.reportId} title={report._id}>ID: {report._id.slice(-8)}</span>
+                    <button
+                      className={styles.copyButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(report._id);
+                        alert('Report ID copied to clipboard!');
+                      }}
+                      title="Copy full report ID"
+                    >
+                      📋
+                    </button>
+                  </div>
                 </div>
               </div>
 

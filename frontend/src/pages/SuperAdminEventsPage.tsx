@@ -2,15 +2,34 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, Event } from '../services/api';
 import { websocketService, WebSocketEvent } from '../services/websocket';
-import styles from './EventsPage.module.css';
+import { getCurrentUser } from '../utils/auth';
+import styles from './SuperAdminEventsPage.module.css';
 
-export default function EventsPage() {
+interface Company {
+  _id: string;
+  name: string;
+  type: string;
+  status: string;
+}
+
+export default function SuperAdminEventsPage() {
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  
+  // Check if user is super_admin
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'super_admin') {
+      navigate('/events');
+    }
+  }, [currentUser, navigate]);
+
   const [events, setEvents] = useState<Event[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Filters
+  const [companyFilter, setCompanyFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -23,6 +42,20 @@ export default function EventsPage() {
   const [total, setTotal] = useState(0);
   const pageSize = 10;
 
+  // Load companies for filter
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        const response = await api.companies.list({ pageSize: 1000 });
+        setCompanies(response.data);
+      } catch (err: any) {
+        console.error('[SuperAdminEventsPage] Error loading companies:', err);
+      }
+    };
+    
+    loadCompanies();
+  }, []);
+
   const loadEvents = async () => {
     try {
       setLoading(true);
@@ -33,6 +66,7 @@ export default function EventsPage() {
         pageSize,
       };
       
+      if (companyFilter) params.companyId = companyFilter;
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
       if (searchQuery) params.search = searchQuery;
@@ -45,7 +79,7 @@ export default function EventsPage() {
       setTotalPages(response.pagination.totalPages);
     } catch (err: any) {
       setError(err.message || 'Failed to load events');
-      console.error('[EventsPage] Error loading events:', err);
+      console.error('[SuperAdminEventsPage] Error loading events:', err);
     } finally {
       setLoading(false);
     }
@@ -53,18 +87,18 @@ export default function EventsPage() {
 
   useEffect(() => {
     loadEvents();
-  }, [currentPage, statusFilter, priorityFilter, searchQuery, startDate, endDate]);
+  }, [currentPage, companyFilter, statusFilter, priorityFilter, searchQuery, startDate, endDate]);
 
   // WebSocket real-time updates
   useEffect(() => {
     const unsubscribeCreated = websocketService.on(WebSocketEvent.EVENT_CREATED, (data: Event) => {
-      console.log('[EventsPage] Event created via WebSocket:', data);
+      console.log('[SuperAdminEventsPage] Event created via WebSocket:', data);
       setEvents(prev => [data, ...prev]);
       setTotal(prev => prev + 1);
     });
 
     const unsubscribeUpdated = websocketService.on(WebSocketEvent.EVENT_UPDATED, (data: Event) => {
-      console.log('[EventsPage] Event updated via WebSocket:', data);
+      console.log('[SuperAdminEventsPage] Event updated via WebSocket:', data);
       setEvents(prev => prev.map(event => event._id === data._id ? data : event));
     });
 
@@ -105,19 +139,39 @@ export default function EventsPage() {
     });
   };
 
+  const getCompanyName = (companyId: string) => {
+    const company = companies.find(c => c._id === companyId);
+    return company ? company.name : 'Unknown Company';
+  };
+
   return (
     <div className={styles.eventsPage}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Events</h1>
-        <button 
-          className={styles.createButton}
-          onClick={() => navigate('/events/new')}
-        >
-          + Create Event
-        </button>
+        <div>
+          <h1 className={styles.title}>All Events (Super Admin)</h1>
+          <p className={styles.subtitle}>Cross-company event monitoring and management</p>
+        </div>
       </div>
 
       <div className={styles.filters}>
+        <div className={styles.filterGroup}>
+          <label>Company</label>
+          <select 
+            value={companyFilter} 
+            onChange={(e) => {
+              setCompanyFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="">All Companies</option>
+            {companies.map(company => (
+              <option key={company._id} value={company._id}>
+                {company.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className={styles.filterGroup}>
           <label>Status</label>
           <select 
@@ -201,10 +255,10 @@ export default function EventsPage() {
       ) : events.length === 0 ? (
         <div className={styles.empty}>
           <p>No events found</p>
-          <p style={{ fontSize: '0.875rem' }}>
-            {statusFilter || priorityFilter || searchQuery
+          <p className={styles.emptySubtext}>
+            {companyFilter || statusFilter || priorityFilter || searchQuery || startDate || endDate
               ? 'Try adjusting your filters'
-              : 'Create your first event to get started'}
+              : 'No events have been created yet'}
           </p>
         </div>
       ) : (
@@ -234,6 +288,9 @@ export default function EventsPage() {
                 </div>
                 
                 <div className={styles.eventDetails}>
+                  <div className={styles.detail}>
+                    <strong>Company:</strong> {getCompanyName(event.companyId)}
+                  </div>
                   <div className={styles.detail}>
                     <strong>Created:</strong> {formatDate(event.createdAt)}
                   </div>

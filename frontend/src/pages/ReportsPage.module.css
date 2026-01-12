@@ -223,10 +223,35 @@
   font-size: 0.9rem;
 }
 
+.reportIdContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .reportId {
   color: #95a5a6;
   font-size: 0.8rem;
   font-family: monospace;
+}
+
+.copyButton {
+  background: #ecf0f1;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copyButton:hover {
+  background: #3498db;
+  border-color: #3498db;
+  transform: scale(1.05);
 }
 
 .reportContent {

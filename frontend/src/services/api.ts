@@ -33,12 +33,12 @@ interface ApiError {
 }
 
 // Report types for Slice 3
-interface ReportLocation {
+export interface ReportLocation {
   type: 'Point';
   coordinates: [number, number]; // [longitude, latitude]
 }
 
-interface ReportAttachment {
+export interface ReportAttachment {
   _id: string;
   filename: string;
   url: string;
@@ -49,7 +49,7 @@ interface ReportAttachment {
   uploadedAt: string;
 }
 
-interface Report {
+export interface Report {
   _id: string;
   title: string;
   description: string;
@@ -77,6 +77,83 @@ interface Report {
   eventId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Event types for Slice 4
+export interface EventType {
+  _id: string;
+  name: string;
+  category: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  icon: string;
+  color: string;
+  isSystemDefault: boolean;
+  companyId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Event {
+  _id: string;
+  title: string;
+  description?: string;
+  status: 'active' | 'assigned' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  eventTypeId: EventType | string;
+  location: ReportLocation;
+  locationDescription?: string;
+  companyId: string;
+  assignedTo?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  assignedAt?: string;
+  resolvedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  resolvedAt?: string;
+  closedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  closedAt?: string;
+  linkedReports: Array<Report | string>;
+  notes?: string;
+  createdBy: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEventInput {
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  eventTypeId: string;
+  location: {
+    longitude: number;
+    latitude: number;
+  };
+  locationDescription?: string;
+  notes?: string;
+}
+
+export interface UpdateEventInput {
+  title?: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  eventTypeId?: string;
+  locationDescription?: string;
+  notes?: string;
 }
 
 class ApiClient {
@@ -373,6 +450,14 @@ export const api = {
 
   // Companies (Slice 2)
   companies: {
+    list: (params?: { page?: number; pageSize?: number; status?: string; }) => 
+      apiClient.getPaginated<{
+        _id: string;
+        name: string;
+        type: string;
+        status: string;
+      }[]>('/companies', params),
+    
     get: (id: string) => apiClient.get<{
       _id: string;
       name: string;
@@ -430,7 +515,17 @@ export const api = {
         latitude: number;
       };
       locationDescription?: string;
-    }) => apiClient.post<Report>('/reports', data),
+    }) => {
+      // Transform location to GeoJSON format expected by backend
+      const payload = {
+        ...data,
+        location: {
+          type: 'Point' as const,
+          coordinates: [data.location.longitude, data.location.latitude],
+        },
+      };
+      return apiClient.post<Report>('/reports', payload);
+    },
     
     addAttachments: (id: string, files: File[]) => {
       const formData = new FormData();
@@ -447,15 +542,80 @@ export const api = {
       apiClient.patch<Report>(`/reports/${id}/reject`, { rejectionReason }),
   },
 
-  // Events (Slice 5)
+  // Events (Slice 4)
   events: {
-    list: (params?: { page?: number; limit?: number; status?: string }) =>
-      apiClient.get<unknown[]>('/events', params),
-    get: (id: string) => apiClient.get<unknown>(`/events/${id}`),
-    updateStatus: (id: string, status: string) =>
-      apiClient.patch<unknown>(`/events/${id}/status`, { status }),
-    assign: (id: string, userId: string) =>
-      apiClient.patch<unknown>(`/events/${id}/assign`, { userId }),
+    list: async (params?: { 
+      page?: number; 
+      pageSize?: number; 
+      status?: string;
+      priority?: string;
+      eventTypeId?: string;
+      assignedTo?: string;
+      startDate?: string;
+      endDate?: string;
+      search?: string;
+    }): Promise<{
+      events: Event[];
+      pagination: {
+        total: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+      };
+    }> => {
+      const response = await apiClient.getPaginated<Event[]>('/events', params as Record<string, string | number>);
+      
+      return {
+        events: response.data || [],
+        pagination: {
+          total: response.meta?.total || 0,
+          page: response.meta?.page || 1,
+          pageSize: response.meta?.pageSize || 20,
+          totalPages: response.meta?.totalPages || 1,
+        },
+      };
+    },
+
+    get: (id: string) => apiClient.get<Event>(`/events/${id}`),
+
+    create: (data: CreateEventInput) => {
+      // Transform location to GeoJSON format expected by backend
+      const payload = {
+        ...data,
+        location: {
+          type: 'Point' as const,
+          coordinates: [data.location.longitude, data.location.latitude],
+        },
+      };
+      return apiClient.post<Event>('/events', payload);
+    },
+
+    update: (id: string, data: UpdateEventInput) => apiClient.patch<Event>(`/events/${id}`, data),
+
+    updateStatus: (id: string, status: 'active' | 'assigned' | 'resolved' | 'closed', notes?: string) =>
+      apiClient.patch<Event>(`/events/${id}/status`, { status, notes }),
+
+    linkReport: (eventId: string, reportId: string) =>
+      apiClient.post<Event>(`/events/${eventId}/reports`, { reportId }),
+
+    unlinkReport: (eventId: string, reportId: string) =>
+      apiClient.delete<Event>(`/events/${eventId}/reports/${reportId}`),
+  },
+
+  // Event Types (Slice 4)
+  eventTypes: {
+    list: (params?: { category?: string; severity?: string }) =>
+      apiClient.get<EventType[]>('/event-types', params),
+
+    get: (id: string) => apiClient.get<EventType>(`/event-types/${id}`),
+
+    create: (data: {
+      name: string;
+      category: string;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      icon: string;
+      color: string;
+    }) => apiClient.post<EventType>('/event-types', data),
   },
 
   // Cameras (Slice 8)

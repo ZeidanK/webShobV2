@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, Report } from '../services/api';
+import { api, Report, Event } from '../services/api';
 import styles from './ReportDetailPage.module.css';
 
 const ReportDetailPage: React.FC = () => {
@@ -11,12 +11,30 @@ const ReportDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string>('');
+  const [availableEvents, setAvailableEvents] = useState<Event[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [showLinkEvent, setShowLinkEvent] = useState(false);
 
   useEffect(() => {
     if (id) {
       loadReport(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (report && report.status === 'verified') {
+      loadAvailableEvents();
+    }
+  }, [report?.status]);
+
+  const loadAvailableEvents = async () => {
+    try {
+      const response = await api.events.list({ pageSize: 100, status: 'active' });
+      setAvailableEvents(response.events);
+    } catch (err) {
+      console.error('Error loading events:', err);
+    }
+  };
 
   const loadReport = async (reportId: string) => {
     try {
@@ -58,6 +76,27 @@ const ReportDetailPage: React.FC = () => {
     } catch (err) {
       console.error(`Error ${action}ing report:`, err);
       setError(`Failed to ${action} report. Please try again.`);
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  const handleLinkToEvent = async () => {
+    if (!report || !selectedEventId) return;
+
+    try {
+      setActionLoading('linking');
+      await api.events.linkReport(selectedEventId, report._id);
+      setShowLinkEvent(false);
+      setSelectedEventId('');
+      alert('Report successfully linked to event!');
+    } catch (err: any) {
+      console.error('Error linking report to event:', err);
+      if (err.message?.includes('already linked')) {
+        alert('This report is already linked to that event.');
+      } else {
+        setError('Failed to link report to event. Please try again.');
+      }
     } finally {
       setActionLoading('');
     }
@@ -177,6 +216,61 @@ const ReportDetailPage: React.FC = () => {
                   </button>
                 </div>
               )}
+
+              {report.status === 'verified' && !report.eventId && (
+                <div className={styles.linkEventSection}>
+                  {!showLinkEvent ? (
+                    <button
+                      onClick={() => setShowLinkEvent(true)}
+                      className={styles.linkEventButton}
+                    >
+                      🔗 Link to Event
+                    </button>
+                  ) : (
+                    <div className={styles.linkEventForm}>
+                      <select
+                        value={selectedEventId}
+                        onChange={(e) => setSelectedEventId(e.target.value)}
+                        className={styles.eventSelect}
+                      >
+                        <option value="">Select an event...</option>
+                        {availableEvents.map(event => (
+                          <option key={event._id} value={event._id}>
+                            {event.title} - {event.status} ({event.priority} priority)
+                          </option>
+                        ))}
+                      </select>
+                      <div className={styles.linkEventActions}>
+                        <button
+                          onClick={handleLinkToEvent}
+                          disabled={!selectedEventId || actionLoading === 'linking'}
+                          className={styles.confirmLinkButton}
+                        >
+                          {actionLoading === 'linking' ? 'Linking...' : 'Link'}
+                        </button>
+                        <button
+                          onClick={() => { setShowLinkEvent(false); setSelectedEventId(''); }}
+                          className={styles.cancelButton}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {report.eventId && (
+                <div className={styles.linkedEventInfo}>
+                  <span>🔗 Linked to event</span>
+                  <button
+                    onClick={() => navigate(`/events/${report.eventId}`)}
+                    className={styles.viewEventButton}
+                  >
+                    View Event
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className={styles.section}>
@@ -194,11 +288,6 @@ const ReportDetailPage: React.FC = () => {
                       {report.location.coordinates[1].toFixed(6)}, {report.location.coordinates[0].toFixed(6)}
                     </span>
                   </div>
-                  {report.location.accuracy && (
-                    <div className={styles.accuracy}>
-                      Accuracy: ±{Math.round(report.location.accuracy)}m
-                    </div>
-                  )}
                   <div className={styles.mapPlaceholder}>
                     📍 Map view would be displayed here
                   </div>
@@ -216,7 +305,7 @@ const ReportDetailPage: React.FC = () => {
                         {attachment.mimeType.startsWith('image/') ? (
                           <img
                             src={attachment.thumbnailUrl || attachment.url}
-                            alt={attachment.originalName}
+                            alt={attachment.filename}
                             className={styles.attachmentImage}
                             onClick={() => window.open(attachment.url, '_blank')}
                           />
@@ -228,7 +317,7 @@ const ReportDetailPage: React.FC = () => {
                       </div>
                       <div className={styles.attachmentInfo}>
                         <div className={styles.attachmentName}>
-                          {attachment.originalName}
+                          {attachment.filename}
                         </div>
                         <div className={styles.attachmentMeta}>
                           {(attachment.size / 1024 / 1024).toFixed(2)} MB
@@ -298,9 +387,6 @@ const ReportDetailPage: React.FC = () => {
                 <div className={styles.userEmail}>
                   {report.reportedBy.email}
                 </div>
-                <div className={styles.userRole}>
-                  Role: {report.reportedBy.role}
-                </div>
               </div>
             </div>
           )}
@@ -313,12 +399,6 @@ const ReportDetailPage: React.FC = () => {
               <div className={styles.userInfo}>
                 <div className={styles.userName}>
                   {report.verifiedBy.firstName} {report.verifiedBy.lastName}
-                </div>
-                <div className={styles.userEmail}>
-                  {report.verifiedBy.email}
-                </div>
-                <div className={styles.userRole}>
-                  Role: {report.verifiedBy.role}
                 </div>
               </div>
             </div>

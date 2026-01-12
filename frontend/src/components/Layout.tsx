@@ -69,9 +69,14 @@ export function Layout() {
             
             {/* Super Admin sees Companies */}
             {canManageAllCompanies(userRole) && (
-              <Link to="/companies" className={styles.navItem}>
-                🏢 Companies
-              </Link>
+              <>
+                <Link to="/admin/events" className={styles.navItem}>
+                  🚨 All Events
+                </Link>
+                <Link to="/companies" className={styles.navItem}>
+                  🏢 Companies
+                </Link>
+              </>
             )}
           </nav>
         </aside>
