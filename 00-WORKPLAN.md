@@ -65,14 +65,15 @@ These constraints MUST be honored in every slice. Violation = drift.
 | 6 | Map & Dashboard UI | React map integration, event markers, list views | 2-3 days |
 | 7 | Mobile API Integration | API endpoints for external mobile team | 2-3 days |
 | 8 | Mobile Testing & Docs | Mobile team support, documentation | 1-2 days |
-| 9 | Camera Management | Camera CRUD, status monitoring | 2 days |
-| 10 | Live Video Streaming | RTSP→HLS, web player integration | 2-3 days |
-| 11 | VMS Adapters | Adapter pattern, direct RTSP, playback stubs | 2-3 days |
+| **9.0** | **VMS Integration (Boaz's Work)** | **Port Shinobi VMS, camera-VMS mapping, HLS streaming** | **3-4 days** |
+| 9 | Camera Management Enhancements | Status monitoring, geospatial, bulk ops | 1-2 days |
+| 10 | Direct RTSP Adapter | FFmpeg transcoding for non-VMS cameras | 2-3 days |
+| 11 | Additional VMS Adapters | Milestone/Genetec stubs, adapter factory | 1-2 days |
 | 12 | Historical Playback | Time-aligned video, multi-camera sync | 2-3 days |
 | 13 | AI Service Integration | Detection callback, camera report creation | 2-3 days |
 | 14 | Polish & Hardening | Error handling, edge cases, performance | 2-3 days |
 
-**Total Estimated Duration**: 26-38 days
+**Total Estimated Duration**: 29-42 days (includes 3-4 days saved by leveraging Boaz's VMS work)
 
 ---
 
@@ -561,158 +562,477 @@ Create comprehensive testing tools and documentation for mobile development team
 
 ---
 
-## Slice 9: Camera Management
+## Slice 9.0: VMS Integration Foundation (Boaz's Work)
 
 ### Goal
-Implement camera CRUD and status monitoring (no video streaming yet).
+Port Boaz's Shinobi VMS integration from the old project as the MVP camera solution. This provides VMS server management, camera-to-VMS mapping, and live video streaming via HLS.
+
+### Source
+This slice ports tested code from `camera-connection-complete.patch` which includes:
+- VMS server CRUD with Shinobi authentication
+- Camera ↔ VMS connection management
+- Stream URL generation (HLS, embed, snapshot)
+- Live video player with hls.js
+- Connection testing for cameras
+- Shinobi Docker setup for testing
 
 ### No Scope Creep
-- ❌ Do NOT implement live streaming
-- ❌ Do NOT implement VMS integration
-- ❌ Do NOT implement AI configuration
+- ❌ Do NOT implement DirectRTSP adapter yet (Slice 10)
+- ❌ Do NOT implement Milestone/Genetec adapters yet (Slice 11)
+- ❌ Do NOT implement historical playback yet (Slice 12)
+- ❌ Do NOT implement AI detection integration (Slice 13)
 
-### Backend Tasks
-- [ ] Create Camera model (Mongoose schema)
-- [ ] Implement `POST /api/cameras`
-- [ ] Implement `GET /api/cameras` (company-scoped)
-- [ ] Implement `GET /api/cameras/:id`
-- [ ] Implement `PATCH /api/cameras/:id`
-- [ ] Implement `DELETE /api/cameras/:id` (soft delete)
-- [ ] Implement `GET /api/cameras/near` (geo-spatial)
-- [ ] Create status monitoring job (cron/interval)
-- [ ] Emit `camera:status` WebSocket event
+### Backend Tasks - Models
+- [ ] Port `VmsServer` model from patch
+  - [ ] Add `companyId` field for multi-tenant isolation
+  - [ ] Keep provider enum: ['shinobi', 'zoneminder', 'agentdvr', 'other']
+  - [ ] Keep auth fields (apiKey, groupKey, username, password)
+  - [ ] Add security transforms to hide auth in JSON responses
+- [ ] Port Camera model VMS extensions from patch
+  - [ ] Add `vms` subdocument: `{ serverId, monitorId }`
+  - [ ] Add `metadata.source` field for demo tracking
+  - [ ] Keep existing Camera fields from your architecture
+
+### Backend Tasks - VMS Controller & Routes
+- [ ] Port `vmsController.ts` from patch
+  - [ ] Add `companyId` filtering to ALL queries (critical for multi-tenant)
+  - [ ] Port `POST /api/vms/servers` (create VMS server)
+  - [ ] Port `GET /api/vms/servers` (list, company-scoped)
+  - [ ] Port `GET /api/vms/servers/:id` (get single)
+  - [ ] Port `PATCH /api/vms/servers/:id` (update)
+  - [ ] Port `DELETE /api/vms/servers/:id` (delete)
+  - [ ] Port `GET /api/vms/servers/:id/monitors` (Shinobi monitor discovery)
+  - [ ] Port `POST /api/vms/servers/:id/monitors/import` (batch import)
+  - [ ] Add audit log entries for VMS operations
+  - [ ] Add correlationId logging
+  - [ ] Add OpenAPI/Swagger annotations
+- [ ] Port `vms.ts` routes from patch
+  - [ ] Mount at `/api/vms`
+  - [ ] Add auth middleware to all routes
+
+### Backend Tasks - Camera Extensions
+- [ ] Port camera-VMS endpoints from patch
+  - [ ] `POST /api/cameras/:id/vms/connect` (link camera to VMS)
+  - [ ] `POST /api/cameras/:id/vms/disconnect` (unlink camera)
+  - [ ] `GET /api/cameras/:id/vms/streams` (get HLS/embed/snapshot URLs)
+  - [ ] `POST /api/cameras/test-connection` (RTSP and VMS connectivity test)
+  - [ ] `DELETE /api/cameras/source/:source` (demo cleanup)
+- [ ] Adapt to use your standard response envelope
+- [ ] Add tenant isolation checks
+- [ ] Add audit logging
+
+### Backend Tasks - Shinobi Adapter
+- [ ] Port Shinobi stream URL generation logic
+  - [ ] `liveHlsUrl`: `{baseUrl}/{apiKey}/hls/{groupKey}/{monitorId}/s.m3u8`
+  - [ ] `liveEmbedUrl`: `{baseUrl}/{apiKey}/embed/{groupKey}/{monitorId}`
+  - [ ] `snapshotUrl`: `{baseUrl}/{apiKey}/jpeg/{groupKey}/{monitorId}/s.jpg`
+- [ ] Port Shinobi monitor discovery
+  - [ ] API call: `GET {baseUrl}/{apiKey}/monitor/{groupKey}`
+  - [ ] Parse response and normalize to camera schema
+- [ ] Port connection testing logic (mode: 'rtsp' vs 'vms')
 
 ### Frontend Tasks
-- [ ] Create camera list page
-- [ ] Create camera create/edit form
-- [ ] Display camera markers on map
-- [ ] Show camera status indicators
+- [ ] Install hls.js: `npm install hls.js @types/hls.js`
+- [ ] Port `LiveView.tsx` from patch
+  - [ ] Implement HLS.js video player
+  - [ ] Add iframe fallback for non-HLS browsers
+  - [ ] Add loading/error states
+  - [ ] Adapt to your component styling
+- [ ] Create VMS server management UI
+  - [ ] VMS server list page
+  - [ ] Add/edit VMS server form
+  - [ ] Test connection button
+  - [ ] Monitor discovery interface
+- [ ] Extend camera management UI from patch
+  - [ ] Add "Connect to VMS" action
+  - [ ] Show VMS connection status
+  - [ ] Add "View Live" button (opens LiveView modal)
+  - [ ] Add demo mode: discover & import Shinobi monitors
+  - [ ] Add demo cleanup action
+
+### Docker/Infrastructure Tasks
+- [ ] Create `vms-lab/` directory for Shinobi testing
+- [ ] Port Shinobi Docker Compose setup
+  - [ ] Shinobi service (port 8080)
+  - [ ] MySQL service for Shinobi
+  - [ ] Add to `.gitignore`
+- [ ] Document Shinobi setup in README
+  - [ ] How to start Shinobi: `cd vms-lab && docker-compose up -d`
+  - [ ] Default credentials and API key generation
+  - [ ] How to create test cameras/monitors
+
+### Documentation Tasks
+- [ ] Create `docs/VMS_INTEGRATION.md`
+  - [ ] Shinobi setup guide
+  - [ ] API endpoints documentation
+  - [ ] Stream URL formats
+  - [ ] Connection testing flow
+- [ ] Update API documentation with VMS endpoints
+- [ ] Add Shinobi testing guide for developers
 
 ### Tests
-- [ ] Integration: camera CRUD
-- [ ] Integration: geo-spatial query
-- [ ] Unit: status monitoring logic
+- [ ] Integration: VMS server CRUD with tenant isolation
+- [ ] Integration: Camera-VMS connect/disconnect
+- [ ] Integration: Stream URL generation for Shinobi
+- [ ] Integration: Monitor discovery and import
+- [ ] Manual: HLS playback in browser
+- [ ] Manual: Shinobi connection test
 
-### Definition of Done (Slice 9)
-- [ ] Admin can add/edit/remove cameras
-- [ ] Cameras appear on map
-- [ ] Camera status updates broadcast
-- [ ] Geo-spatial queries work
+### Definition of Done (Slice 9.0)
+- [ ] VMS server can be registered (Shinobi credentials)
+- [ ] Cameras can be linked to Shinobi monitors
+- [ ] Stream URLs generated correctly (HLS, embed, snapshot)
+- [ ] Live video plays in browser using hls.js
+- [ ] Shinobi monitors can be discovered and imported
+- [ ] Connection testing works for both RTSP and VMS modes
+- [ ] Demo cameras can be bulk imported and cleaned up
+- [ ] All operations are multi-tenant (companyId filtered)
+- [ ] Shinobi Docker environment runs locally for testing
+- [ ] Frontend shows camera status and live video
+- [ ] All tests pass
 
 ### Dependencies
 - Slice 8 (Mobile Testing & Documentation)
 
+### Estimated Duration
+- Backend porting: 1.5 days
+- Frontend porting: 1 day
+- Shinobi Docker setup: 0.5 days
+- Testing & documentation: 0.5 days
+- **Total: 3-4 days**
+
+### Migration Notes
+- This slice provides a complete MVP camera solution using Shinobi
+- Boaz's implementation is production-tested and proven
+- Focus on adapting to multi-tenant architecture (companyId everywhere)
+- Keep security: never expose VMS auth credentials in API responses
+- Use Boaz's connection test logic to validate camera setup
+
 ---
 
-## Slice 10: Live Video Streaming
+## Slice 9: Camera Management Enhancements
 
 ### Goal
-Implement RTSP to HLS transcoding and web video player.
+Enhance camera CRUD beyond Boaz's work with advanced features: status monitoring, geospatial queries, and WebSocket updates.
 
 ### No Scope Creep
-- ❌ Do NOT implement historical playback
-- ❌ Do NOT implement VMS adapters
-- ❌ Do NOT implement multi-camera view
+- ❌ Do NOT implement additional VMS providers yet
+- ❌ Do NOT implement AI configuration yet
+- ❌ Do NOT implement PTZ controls yet
 
 ### Backend Tasks
-- [ ] Create VMS adapter interface
-- [ ] Implement DirectRTSPAdapter
-- [ ] Set up FFmpeg transcoding (RTSP → HLS)
-- [ ] Implement `GET /api/cameras/:id/stream` (returns HLS URL)
-- [ ] Create HLS segment storage/cleanup
-- [ ] Implement stream authentication
+- [ ] Extend Camera model with additional fields
+  - [ ] Add `capabilities` field (PTZ, audio, motion detection)
+  - [ ] Add `maintenanceSchedule` field
+  - [ ] Add `tags` array for categorization
+- [ ] Implement advanced camera queries
+  - [ ] `GET /api/cameras/near?lat=X&lng=Y&radius=Z` (geo-spatial)
+  - [ ] `GET /api/cameras/status/:status` (filter by status)
+  - [ ] `GET /api/cameras/tags/:tag` (filter by tag)
+- [ ] Create status monitoring service
+  - [ ] Background job to check camera health
+  - [ ] Ping RTSP/VMS endpoints periodically
+  - [ ] Update camera status (online, offline, error)
+  - [ ] Emit `camera:status` WebSocket event on changes
+- [ ] Implement bulk operations
+  - [ ] `POST /api/cameras/bulk/update` (bulk status update)
+  - [ ] `POST /api/cameras/bulk/delete` (bulk delete)
+  - [ ] `POST /api/cameras/bulk/tag` (bulk tagging)
 
 ### Frontend Tasks
-- [ ] Integrate HLS.js video player
-- [ ] Create camera video modal
-- [ ] Implement stream loading states
-- [ ] Handle stream errors gracefully
+- [ ] Enhance camera list page
+  - [ ] Add advanced filters (status, tags, VMS)
+  - [ ] Add bulk selection checkboxes
+  - [ ] Add bulk action toolbar
+  - [ ] Show camera health indicators with tooltips
+- [ ] Create camera detail page
+  - [ ] Full camera information display
+  - [ ] Edit capability in place
+  - [ ] Show connection history/logs
+  - [ ] Display maintenance schedule
+- [ ] Add camera search functionality
+  - [ ] Search by name, location, tags
+  - [ ] Auto-complete suggestions
+- [ ] Real-time camera status updates
+  - [ ] Subscribe to `camera:status` WebSocket events
+  - [ ] Update UI when camera status changes
+  - [ ] Show notification on camera offline
 
 ### Tests
-- [ ] Integration: stream URL generation
-- [ ] Manual: HLS playback in browser
+- [ ] Integration: geo-spatial camera query
+- [ ] Unit: status monitoring job logic
+- [ ] Integration: bulk operations with tenant isolation
+- [ ] Integration: WebSocket status updates
+
+### Definition of Done (Slice 9)
+- [ ] Geo-spatial queries return nearby cameras
+- [ ] Camera status monitoring runs automatically
+- [ ] Status changes broadcast via WebSocket
+- [ ] Bulk operations work correctly
+- [ ] Advanced search and filtering functional
+- [ ] Real-time status updates appear in UI
+
+### Dependencies
+- Slice 9.0 (VMS Integration Foundation)
+
+---
+
+## Slice 10: Direct RTSP Adapter (No VMS)
+
+### Goal
+Implement DirectRTSP adapter for cameras without VMS, using FFmpeg for RTSP → HLS transcoding.
+
+### Context
+Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras that stream directly via RTSP without a VMS layer.
+
+### No Scope Creep
+- ❌ Do NOT implement additional VMS providers (wait for Slice 11)
+- ❌ Do NOT implement historical playback (Slice 12)
+- ❌ Do NOT implement multi-camera view (Phase 2)
+- ❌ Do NOT implement video recording/storage
+
+### Backend Tasks
+- [ ] Create VMS adapter interface/base class
+  - [ ] Define `getStreamUrls()` method signature
+  - [ ] Define `testConnection()` method
+  - [ ] Define `getPlaybackUrl(timestamp)` stub for Slice 12
+- [ ] Implement DirectRTSPAdapter
+  - [ ] Accept RTSP URL as input
+  - [ ] Spawn FFmpeg process for RTSP → HLS transcoding
+  - [ ] Store HLS segments in temp directory (`/tmp/hls/{cameraId}/`)
+  - [ ] Generate HLS playlist URL
+  - [ ] Implement segment cleanup (delete old segments)
+  - [ ] Handle FFmpeg process lifecycle (start/stop/restart)
+- [ ] Implement stream session management
+  - [ ] Track active streams per camera
+  - [ ] Auto-stop stream after X minutes of inactivity
+  - [ ] Implement heartbeat endpoint to keep stream alive
+- [ ] Add DirectRTSP configuration to Camera model
+  - [ ] `streamConfig.type: 'direct-rtsp' | 'vms'`
+  - [ ] `streamConfig.rtspUrl` for direct cameras
+- [ ] Implement stream authentication tokens
+  - [ ] Generate time-limited tokens for HLS access
+  - [ ] Validate tokens on HLS segment requests
+  - [ ] Add `/api/cameras/:id/stream/token` endpoint
+
+### Frontend Tasks
+- [ ] Update camera form to support both VMS and Direct RTSP
+  - [ ] Radio button: VMS or Direct RTSP
+  - [ ] Show RTSP URL field for direct mode
+  - [ ] Show VMS selection dropdown for VMS mode
+- [ ] Extend LiveView to handle both stream types
+  - [ ] Check camera type (VMS vs Direct RTSP)
+  - [ ] Request appropriate stream URL
+  - [ ] Display loading state during FFmpeg startup
+- [ ] Add stream heartbeat (keep-alive)
+  - [ ] Ping backend every 30 seconds while viewing
+  - [ ] Prevent auto-stop of active streams
+
+### Infrastructure Tasks
+- [ ] Install FFmpeg in backend Docker container
+  - [ ] Add to Dockerfile: `RUN apt-get install -y ffmpeg`
+- [ ] Create HLS segment storage directory
+  - [ ] Add volume mount for `/tmp/hls` in docker-compose
+  - [ ] Implement cleanup cron job (delete segments >1 hour old)
+- [ ] Add FFmpeg to backend dependencies documentation
+
+### Tests
+- [ ] Unit: DirectRTSPAdapter stream URL generation
+- [ ] Integration: FFmpeg process spawning and cleanup
+- [ ] Integration: HLS segment creation and serving
+- [ ] Integration: Stream token generation and validation
+- [ ] Integration: Stream auto-stop after inactivity
+- [ ] Manual: Direct RTSP stream playback in browser
 
 ### Definition of Done (Slice 10)
-- [ ] Operator can click camera and see live video
-- [ ] HLS stream plays in browser
-- [ ] Stream is authenticated
-- [ ] Graceful error handling for offline cameras
+- [ ] Cameras can be configured as Direct RTSP (without VMS)
+- [ ] FFmpeg transcodes RTSP to HLS automatically
+- [ ] HLS streams accessible via authenticated URLs
+- [ ] Stream tokens prevent unauthorized access
+- [ ] Inactive streams stop automatically to save resources
+- [ ] Both VMS and Direct RTSP cameras work in LiveView
+- [ ] All tests pass
 
 ### Dependencies
-- Slice 9 (Camera Management)
+- Slice 9 (Camera Management Enhancements)
+
+### Estimated Duration
+- 2-3 days
 
 ---
 
-## Slice 11: VMS Adapters
+## Slice 11: Additional VMS Adapters (Milestone/Genetec Stubs)
 
 ### Goal
-Implement VMS adapter pattern with stubs for Milestone/Genetec.
+Extend VMS adapter pattern with stubs for Milestone XProtect and Genetec Security Center.
+
+### Context
+Slice 9.0 provides Shinobi adapter. Slice 10 provides Direct RTSP. This slice adds adapter stubs for enterprise VMS systems (implementation deferred to Phase 2).
 
 ### No Scope Creep
-- ❌ Do NOT implement full Milestone/Genetec integration
+- ❌ Do NOT implement full Milestone/Genetec integration (Phase 2)
 - ❌ Do NOT implement video export
-- ❌ Do NOT implement playback sync
+- ❌ Do NOT implement advanced VMS features (PTZ, bookmarks, etc.)
+- ❌ Do NOT implement VMS SDK integration
 
 ### Backend Tasks
-- [ ] Define VMS adapter interface fully
-- [ ] Implement adapter factory
+- [ ] Create VMS adapter factory pattern
+  - [ ] `VmsAdapterFactory.create(vmsServer)` returns correct adapter
+  - [ ] Support: 'shinobi', 'direct-rtsp', 'milestone', 'genetec', 'other'
 - [ ] Create MilestoneAdapter stub
+  - [ ] Implement interface methods (throw "Not Implemented" errors)
+  - [ ] Document Milestone API requirements in comments
+  - [ ] Add placeholder for authentication flow
+  - [ ] Add `getStreamUrls()` stub → returns error message
 - [ ] Create GenetecAdapter stub
-- [ ] Add vmsConfig to Camera model
-- [ ] Implement adapter selection per camera
-- [ ] Add VMS connection status to camera status
-
-### Tests
-- [ ] Unit: adapter factory
-- [ ] Unit: adapter interface compliance
-
-### Definition of Done (Slice 11)
-- [ ] Adapter pattern implemented
-- [ ] DirectRTSPAdapter works for live video
-- [ ] Stub adapters return appropriate errors
-- [ ] Cameras can be configured for different VMS types
-
-### Dependencies
-- Slice 10 (Live Video Streaming)
-
----
-
-## Slice 12: Historical Playback
-
-### Goal
-Implement time-aligned video playback for events.
-
-### No Scope Creep
-- ❌ Do NOT implement video forensic search
-- ❌ Do NOT implement clip export
-- ❌ Do NOT implement annotation
-
-### Backend Tasks
-- [ ] Extend VMS adapter with `getPlaybackUrl(timestamp)`
-- [ ] Implement `GET /api/events/:id/video-playback`
-- [ ] Find cameras near event location
-- [ ] Generate playback URLs for event timestamp
-- [ ] Handle "no recording available" gracefully
+  - [ ] Implement interface methods (throw "Not Implemented" errors)
+  - [ ] Document Genetec SDK requirements in comments
+  - [ ] Add placeholder for connection logic
+  - [ ] Add `getStreamUrls()` stub → returns error message
+- [ ] Update VmsServer model
+  - [ ] Add 'milestone' and 'genetec' to provider enum
+  - [ ] Add `sdkConfig` field for VMS-specific settings
+- [ ] Update camera VMS connection logic
+  - [ ] Check VMS provider before connecting
+  - [ ] Show helpful error for unsupported VMS types
+  - [ ] Return capability flags: `{ supportsLive, supportsPlayback, supportsExport }`
+- [ ] Add VMS capability checking endpoint
+  - [ ] `GET /api/vms/servers/:id/capabilities`
+  - [ ] Returns what the VMS adapter supports
 
 ### Frontend Tasks
-- [ ] Create event video playback view
-- [ ] Implement multi-camera video layout
-- [ ] Add timeline scrubber
-- [ ] Synchronize playback across cameras
-- [ ] Link from event detail to playback
+- [ ] Update VMS server form
+  - [ ] Show provider-specific fields based on selection
+  - [ ] Milestone: Server URL, username, password
+  - [ ] Genetec: Server URL, SDK config
+  - [ ] Shinobi: API key, group key (existing)
+- [ ] Add VMS capability indicators
+  - [ ] Show badges: "Live ✓", "Playback ✗", "Export ✗"
+  - [ ] Disable unavailable features in UI
+- [ ] Add "Coming Soon" messages for unsupported VMS
+  - [ ] Show when trying to connect Milestone camera
+  - [ ] Show when trying to view Genetec stream
+
+### Documentation Tasks
+- [ ] Create `docs/VMS_ADAPTER_GUIDE.md`
+  - [ ] How to implement a new VMS adapter
+  - [ ] Interface requirements
+  - [ ] Testing guidelines
+- [ ] Document Milestone integration requirements (Phase 2)
+  - [ ] SDK installation
+  - [ ] API authentication
+  - [ ] Stream URL generation
+- [ ] Document Genetec integration requirements (Phase 2)
+  - [ ] SDK installation
+  - [ ] Server connection
+  - [ ] Stream access patterns
 
 ### Tests
-- [ ] Integration: playback URL generation
-- [ ] Integration: camera selection by location
+- [ ] Unit: VMS adapter factory creates correct adapter
+- [ ] Unit: Milestone stub throws appropriate errors
+- [ ] Unit: Genetec stub throws appropriate errors
+- [ ] Integration: VMS capability endpoint returns correct data
+- [ ] Integration: Unsupported VMS connection shows error
 
-### Definition of Done (Slice 12)
-- [ ] Operator can view video from event timestamp
-- [ ] Multiple cameras shown if available
-- [ ] Playback is synchronized
-- [ ] Graceful handling when no recording exists
+### Definition of Done (Slice 11)
+- [ ] VMS adapter factory pattern implemented
+- [ ] Milestone and Genetec stubs created
+- [ ] Adapter interface documented
+- [ ] VMS capabilities exposed via API
+- [ ] Frontend shows "Coming Soon" for unsupported VMS
+- [ ] Clear path for Phase 2 VMS implementation
+- [ ] All tests pass
 
 ### Dependencies
-- Slice 11 (VMS Adapters)
+- Slice 10 (Direct RTSP Adapter)
+
+### Estimated Duration
+- 1-2 days
+
+---
+
+## Slice 12: Historical Video Playback
+
+### Goal
+Implement time-aligned video playback for events, allowing operators to review recorded footage from the time of an incident.
+
+### Context
+Slices 9.0-11 provide live streaming. This slice adds historical/recorded video playback tied to event timestamps.
+
+### No Scope Creep
+- ❌ Do NOT implement video forensic search (Phase 2)
+- ❌ Do NOT implement clip export/download (Phase 2)
+- ❌ Do NOT implement video annotation (Phase 2)
+- ❌ Do NOT implement frame-by-frame analysis
+- ❌ Do NOT implement video editing
+
+### Backend Tasks
+- [ ] Extend VMS adapter interface with playback methods
+  - [ ] `getPlaybackUrl(timestamp, duration)` → returns playback stream URL
+  - [ ] `checkRecordingAvailability(timestamp)` → boolean
+  - [ ] `getRecordingRange()` → returns available date range
+- [ ] Implement playback for Shinobi adapter
+  - [ ] Shinobi playback URL format research
+  - [ ] Generate time-aligned playback URLs
+  - [ ] Handle "no recording" gracefully
+- [ ] Implement playback stub for Direct RTSP
+  - [ ] Return "Recording not available" (no storage in MVP)
+  - [ ] Document Phase 2 recording storage requirements
+- [ ] Implement event video playback endpoint
+  - [ ] `GET /api/events/:id/video-playback`
+  - [ ] Find cameras near event location (geo-spatial query)
+  - [ ] Generate playback URLs for each camera at event timestamp
+  - [ ] Return array of `{ cameraId, cameraName, playbackUrl, available }`
+- [ ] Add recording configuration to Camera model
+  - [ ] `recording.enabled` boolean
+  - [ ] `recording.retentionDays` integer
+  - [ ] `recording.vmsHandled` boolean (true for VMS-based recording)
+
+### Frontend Tasks
+- [ ] Create EventVideoPlayback component
+  - [ ] Triggered from event detail page
+  - [ ] "View Video" button (disabled if no cameras nearby)
+- [ ] Implement multi-camera playback layout
+  - [ ] Grid view: 1x1, 2x2, 3x3 layouts
+  - [ ] Each camera in separate video player
+  - [ ] Show camera name and status
+- [ ] Add timeline scrubber
+  - [ ] Horizontal timeline with event marker
+  - [ ] Seek to specific time
+  - [ ] Show current playback time
+- [ ] Synchronize playback across cameras
+  - [ ] Play/pause all cameras together
+  - [ ] Sync seek operations
+  - [ ] Show sync status indicator
+- [ ] Handle "no recording" gracefully
+  - [ ] Show message: "Recording not available for this camera"
+  - [ ] Suggest enabling recording or checking VMS
+- [ ] Link from event detail to playback
+  - [ ] "View Video" button in event detail
+  - [ ] Badge showing # of cameras with recording
+
+### Tests
+- [ ] Integration: playback URL generation for Shinobi
+- [ ] Integration: camera selection by event location
+- [ ] Integration: no recording handling
+- [ ] Manual: Multi-camera playback synchronization
+- [ ] Manual: Timeline scrubber functionality
+
+### Definition of Done (Slice 12)
+- [ ] Operator can access playback from event detail page
+- [ ] Playback URLs generated for cameras with recording
+- [ ] Multiple cameras shown in grid layout
+- [ ] Playback synchronized across cameras
+- [ ] Timeline scrubber allows seeking
+- [ ] Graceful handling when no recording exists
+- [ ] UI shows which cameras have recording available
+- [ ] All tests pass
+
+### Dependencies
+- Slice 11 (Additional VMS Adapters)
+
+### Estimated Duration
+- 2-3 days
 
 ---
 
