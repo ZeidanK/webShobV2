@@ -131,4 +131,70 @@ export const Errors = {
 
   rateLimitExceeded: (retryAfter: number) =>
     new AppError(ErrorCodes.RATE_LIMIT_EXCEEDED, 'Too many requests', 429, { retryAfter }),
+
+  externalService: (service: string, message: string) =>
+    new AppError(ErrorCodes.VMS_CONNECTION_FAILED, message, 502, { service }),
 };
+
+/**
+ * Convenience error classes for cleaner service code
+ */
+export class NotFoundError extends Error {
+  public readonly statusCode = 404;
+  public readonly code = ErrorCodes.RESOURCE_NOT_FOUND;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
+
+export class ValidationError extends Error {
+  public readonly statusCode = 400;
+  public readonly code = ErrorCodes.VALIDATION_ERROR;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+export class ConflictError extends Error {
+  public readonly statusCode = 409;
+  public readonly code = ErrorCodes.RESOURCE_ALREADY_EXISTS;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConflictError';
+  }
+}
+
+export class ExternalServiceError extends Error {
+  public readonly statusCode = 502;
+  public readonly code = ErrorCodes.VMS_CONNECTION_FAILED;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ExternalServiceError';
+  }
+}
+
+export class UnauthorizedError extends Error {
+  public readonly statusCode = 401;
+  public readonly code = ErrorCodes.INVALID_CREDENTIALS;
+
+  constructor(message: string = 'Authentication required') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+export class ForbiddenError extends Error {
+  public readonly statusCode = 403;
+  public readonly code = ErrorCodes.INSUFFICIENT_PERMISSIONS;
+
+  constructor(message: string = 'Insufficient permissions') {
+    super(message);
+    this.name = 'ForbiddenError';
+  }
+}

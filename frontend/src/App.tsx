@@ -17,6 +17,7 @@ import ReportsPage from './pages/ReportsPage';
 import ReportSubmissionPage from './pages/ReportSubmissionPage';
 import ReportDetailPage from './pages/ReportDetailPage';
 import CamerasPage from './pages/CamerasPage';
+import VmsSettingsPage from './pages/VmsSettingsPage';
 import { websocketService } from './services/websocket';
 import { ToastContainer, useToast } from './components/Toast';
 import { useEventCreated, useReportCreated } from './hooks/useWebSocket';
@@ -149,6 +150,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="operator">
               <CamerasPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="vms-settings" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <VmsSettingsPage />
             </ProtectedRoute>
           } 
         />

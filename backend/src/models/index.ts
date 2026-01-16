@@ -37,5 +37,17 @@ export {
   IEventType 
 } from './event-type.model';
 
-// Slice 7: Camera Management
-// export { Camera } from './camera.model';
+// Slice 7: Camera Management (implemented in Slice 9.0)
+export { 
+  Camera, 
+  CameraType, 
+  CameraStatus, 
+  ICamera 
+} from './camera.model';
+
+// Slice 9: VMS Integration
+export { 
+  VmsServer, 
+  VmsProvider, 
+  IVmsServer 
+} from './vms-server.model';
