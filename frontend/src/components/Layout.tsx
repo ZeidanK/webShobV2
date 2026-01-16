@@ -54,6 +54,9 @@ export function Layout() {
                 <Link to="/cameras" className={styles.navItem}>
                   📹 Cameras
                 </Link>
+                <Link to="/monitor" className={styles.navItem}>
+                  📺 Monitor Wall
+                </Link>
               </>
             )}
             

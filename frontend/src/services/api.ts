@@ -915,5 +915,15 @@ export const api = {
 
     discoverMonitors: (id: string) =>
       apiClient.get<VmsMonitor[]>(`/vms/${id}/monitors`),
+
+    importMonitors: (id: string, data: {
+      monitorIds?: string[];
+      defaultLocation?: { coordinates: [number, number]; address?: string };
+      source?: string;
+    }) =>
+      apiClient.post<any[]>(`/vms/${id}/monitors/import`, data),
   },
+
+  deleteCamerasBySource: (source: string) =>
+    apiClient.delete<{ deletedCount: number }>(`/cameras/source/${source}`),
 };

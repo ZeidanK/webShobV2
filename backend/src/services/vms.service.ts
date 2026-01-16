@@ -10,7 +10,7 @@
  */
 
 import mongoose from 'mongoose';
-import { VmsServer, IVmsServer, VmsProvider } from '../models';
+import { VmsServer, IVmsServer, VmsProvider, Camera } from '../models';
 import { NotFoundError, ValidationError, ExternalServiceError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -454,6 +454,120 @@ class VmsService {
     }
 
     await VmsServer.updateOne({ _id: serverId }, update);
+  }
+
+  /**
+   * Import monitors from VMS as cameras
+   * 
+   * @param serverId - VMS server ID
+   * @param monitorIds - Optional array of monitor IDs to import (if empty, imports all)
+   * @param defaultLocation - Default location for cameras (coordinates and optional address)
+   * @param source - Metadata source tag for bulk cleanup (e.g., 'vms-import', 'shinobi-demo')
+   * @param companyId - Company ID for multi-tenant isolation
+   * @param userId - User ID of the creator
+   * @returns Array of created camera documents
+   */
+  async importMonitors(
+    serverId: mongoose.Types.ObjectId,
+    monitorIds: string[] | undefined,
+    defaultLocation: { coordinates: [number, number]; address?: string } | undefined,
+    source: string | undefined,
+    companyId: mongoose.Types.ObjectId,
+    userId: mongoose.Types.ObjectId
+  ): Promise<any[]> {
+    const server = await VmsServer.findOne({ _id: serverId, companyId, isDeleted: false });
+    
+    if (!server) {
+      throw new NotFoundError('VMS server not found');
+    }
+
+    if (server.provider !== 'shinobi') {
+      throw new ValidationError('Monitor import currently supports Shinobi only');
+    }
+
+    // Discover all monitors
+    const monitors = await this.discoverMonitors(serverId, companyId);
+
+    // Filter to selected monitors if specified
+    const selectedMonitors = monitorIds && monitorIds.length > 0
+      ? monitors.filter(m => monitorIds.includes(m.id))
+      : monitors;
+
+    if (selectedMonitors.length === 0) {
+      return [];
+    }
+
+    // Check which monitors are already imported
+    const existingCameras = await Camera.find({
+      companyId,
+      isDeleted: false,
+      'vms.serverId': serverId,
+      'vms.monitorId': { $in: selectedMonitors.map(m => m.id) },
+    }).select('vms.monitorId');
+
+    const existingMonitorIds = new Set(existingCameras.map(c => c.vms?.monitorId).filter(Boolean));
+
+    // Prepare location
+    const location = defaultLocation?.coordinates?.length === 2
+      ? defaultLocation
+      : { coordinates: [0, 0] as [number, number], address: 'Imported from VMS' };
+
+    // Create camera documents for new monitors
+    const camerasToCreate = selectedMonitors
+      .filter(m => !existingMonitorIds.has(m.id))
+      .map(monitor => {
+        const streamUrls = this.getShinobiStreamUrls(server, monitor.id);
+        
+        return {
+          companyId,
+          name: monitor.name || `Monitor ${monitor.id}`,
+          description: `Imported from VMS - ${monitor.status || 'unknown status'}`.slice(0, 500),
+          streamUrl: streamUrls.hls || '',
+          type: 'ip',
+          status: monitor.status === 'online' ? 'online' : 'offline',
+          location: {
+            type: 'Point',
+            coordinates: location.coordinates,
+            address: location.address,
+          },
+          settings: {
+            resolution: '1920x1080',
+            fps: 30,
+            recordingEnabled: false,
+          },
+          metadata: {
+            source: source || 'vms-import',
+            vmsMonitorDetails: {
+              mode: monitor.mode,
+              host: monitor.host,
+              type: monitor.type,
+            },
+          },
+          vms: {
+            provider: server.provider,
+            serverId: server._id,
+            monitorId: monitor.id,
+            lastSyncAt: new Date(),
+          },
+          createdBy: userId,
+        };
+      });
+
+    if (camerasToCreate.length === 0) {
+      logger.info('No new monitors to import', { serverId, companyId });
+      return [];
+    }
+
+    const createdCameras = await Camera.insertMany(camerasToCreate);
+    
+    logger.info('Imported monitors as cameras', {
+      serverId,
+      companyId,
+      count: createdCameras.length,
+      monitorIds: createdCameras.map(c => c.vms?.monitorId),
+    });
+
+    return createdCameras;
   }
 }
 

@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { EventService, CreateEventData, UpdateEventData } from '../services/event.service';
+import { cameraService } from '../services/camera.service';
 import { EventStatus, EventPriority } from '../models/event.model';
 import { authenticate, requireAnyRole } from '../middleware';
 import { UserRole } from '../models/user.model';
@@ -921,6 +922,97 @@ router.delete('/:id/reports/:reportId',
       });
       
       res.status(200).json(successResponse(event, req.correlationId!));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/events/{id}/video-playback:
+ *   get:
+ *     summary: Get cameras for event video playback
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: number
+ *           default: 500
+ *         description: Search radius in meters
+ *     responses:
+ *       200:
+ *         description: Cameras with playback information
+ */
+router.get(
+  '/:id/video-playback',
+  authenticate,
+  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { radius = 500 } = req.query;
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+
+      // Get the event
+      const event = await EventService.getEventById(id, companyId);
+      
+      if (!event) {
+        throw new AppError('EVENT_NOT_FOUND', 'Event not found', 404);
+      }
+
+      // Find nearby cameras (super admins can see all companies' cameras)
+      const searchCompanyId = req.user!.role === UserRole.SUPER_ADMIN 
+        ? null 
+        : companyId;
+
+      const nearbyCameras = await cameraService.findNearby(
+        searchCompanyId,
+        event.location.coordinates,
+        parseInt(radius as string, 10),
+        16 // Max 16 cameras for 4x4 grid
+      );
+
+      // Format camera data for playback
+      const playbackCameras = nearbyCameras.map((camera: any) => ({
+        cameraId: camera._id,
+        name: camera.name,
+        streamUrl: camera.streamUrl,
+        hasRecording: !!camera.vms?.serverId,
+        location: camera.location,
+        status: camera.status,
+      }));
+
+      logger.info('event.video_playback', {
+        eventId: id,
+        camerasFound: playbackCameras.length,
+        radius: parseInt(radius as string, 10),
+        correlationId: req.correlationId,
+      });
+
+      res.json(
+        successResponse(
+          {
+            event: {
+              id: event._id,
+              title: event.title,
+              timestamp: event.createdAt,
+              location: event.location,
+            },
+            cameras: playbackCameras,
+          },
+          req.correlationId!
+        )
+      );
     } catch (error) {
       next(error);
     }

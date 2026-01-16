@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, Event, Report } from '../services/api';
 import { websocketService, WebSocketEvent } from '../services/websocket';
+import { EventVideoPlayback } from '../components/EventVideoPlayback';
 import styles from './EventDetailPage.module.css';
 
 export default function EventDetailPage() {
@@ -17,6 +18,7 @@ export default function EventDetailPage() {
   const [loadingReports, setLoadingReports] = useState(false);
   const [useManualInput, setUseManualInput] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [showVideoPlayback, setShowVideoPlayback] = useState(false);
 
   const loadEvent = async () => {
     if (!id) return;
@@ -260,6 +262,13 @@ export default function EventDetailPage() {
               Reopen
             </button>
           )}
+          <button 
+            className={styles.secondaryButton}
+            onClick={() => setShowVideoPlayback(true)}
+            title="View cameras near event location"
+          >
+            📹 View Cameras
+          </button>
         </div>
       </div>
 
@@ -436,6 +445,13 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
+
+      {showVideoPlayback && (
+        <EventVideoPlayback
+          eventId={event._id}
+          onClose={() => setShowVideoPlayback(false)}
+        />
+      )}
     </div>
   );
 }

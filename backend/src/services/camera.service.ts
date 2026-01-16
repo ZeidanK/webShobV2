@@ -493,14 +493,15 @@ class CameraService {
 
   /**
    * Find cameras near a location
+   * If companyId is null/undefined, returns cameras for all companies (super_admin only)
    */
   async findNearby(
-    companyId: mongoose.Types.ObjectId,
+    companyId: mongoose.Types.ObjectId | null | undefined,
     coordinates: [number, number],
-    maxDistanceMeters: number = 5000
+    maxDistanceMeters: number = 5000,
+    limit: number = 10
   ): Promise<ICamera[]> {
-    return Camera.find({
-      companyId,
+    const query: Record<string, unknown> = {
       isDeleted: false,
       location: {
         $near: {
@@ -511,7 +512,56 @@ class CameraService {
           $maxDistance: maxDistanceMeters,
         },
       },
-    }).lean() as unknown as Promise<ICamera[]>;
+    };
+
+    // Only filter by companyId if provided (null/undefined = super_admin viewing all)
+    if (companyId) {
+      query.companyId = companyId;
+    }
+
+    return Camera.find(query)
+      .limit(limit)
+      .lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * Bulk delete cameras by metadata.source (soft delete)
+   * 
+   * Used for cleaning up demo/test cameras that were imported from VMS.
+   * 
+   * @param source - Metadata source tag to match (e.g., 'vms-import', 'shinobi-demo')
+   * @param companyId - Company ID for multi-tenant isolation
+   * @returns Number of cameras soft-deleted
+   */
+  async deleteCamerasBySource(
+    source: string,
+    companyId: mongoose.Types.ObjectId
+  ): Promise<number> {
+    if (!source || source.trim() === '') {
+      throw new ValidationError('Source parameter is required');
+    }
+
+    const result = await Camera.updateMany(
+      {
+        companyId,
+        isDeleted: false,
+        'metadata.source': source,
+      },
+      {
+        $set: {
+          isDeleted: true,
+          lastModified: new Date(),
+        },
+      }
+    );
+
+    logger.info('Bulk deleted cameras by source', {
+      source,
+      companyId,
+      count: result.modifiedCount,
+    });
+
+    return result.modifiedCount || 0;
   }
 }
 

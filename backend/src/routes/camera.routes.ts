@@ -632,8 +632,11 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
-      const { lng, lat, maxDistance } = req.query;
+      // Super admins can see all cameras, others see only their company's cameras
+      const companyId = req.user!.role === UserRole.SUPER_ADMIN 
+        ? null 
+        : new mongoose.Types.ObjectId(req.user!.companyId);
+      const { lng, lat, maxDistance, limit } = req.query;
 
       if (!lng || !lat) {
         throw new ValidationError('lng and lat query parameters are required');
@@ -642,10 +645,54 @@ router.get(
       const cameras = await cameraService.findNearby(
         companyId,
         [parseFloat(lng as string), parseFloat(lat as string)],
-        maxDistance ? parseInt(maxDistance as string, 10) : 5000
+        maxDistance ? parseInt(maxDistance as string, 10) : 5000,
+        limit ? parseInt(limit as string, 10) : 10
       );
 
       res.json(successResponse(cameras, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/source/{source}:
+ *   delete:
+ *     summary: Bulk delete cameras by metadata.source (soft delete)
+ *     description: Used for cleaning up demo/test cameras that were imported from VMS
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: source
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Metadata source tag (e.g., 'vms-import', 'shinobi-demo')
+ *     responses:
+ *       200:
+ *         description: Cameras deleted successfully
+ */
+router.delete(
+  '/source/:source',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const { source } = req.params;
+
+      const deletedCount = await cameraService.deleteCamerasBySource(source, companyId);
+
+      res.json(
+        successResponse(
+          { deletedCount },
+          req.correlationId
+        )
+      );
     } catch (error) {
       next(error);
     }

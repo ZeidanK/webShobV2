@@ -363,4 +363,82 @@ router.get(
   }
 );
 
+/**
+ * @swagger
+ * /vms/{id}/monitors/import:
+ *   post:
+ *     summary: Batch import monitors from VMS as cameras
+ *     tags: [VMS]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               monitorIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional array of monitor IDs to import (imports all if empty)
+ *               defaultLocation:
+ *                 type: object
+ *                 properties:
+ *                   coordinates:
+ *                     type: array
+ *                     items:
+ *                       type: number
+ *                     minItems: 2
+ *                     maxItems: 2
+ *                   address:
+ *                     type: string
+ *               source:
+ *                 type: string
+ *                 description: Metadata source tag for bulk cleanup (e.g., 'vms-import', 'shinobi-demo')
+ *     responses:
+ *       201:
+ *         description: Monitors imported successfully
+ *       400:
+ *         description: Invalid request or unsupported provider
+ */
+router.post(
+  '/:id/monitors/import',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
+      const serverId = new mongoose.Types.ObjectId(req.params.id);
+      const { monitorIds, defaultLocation, source } = req.body;
+
+      const cameras = await vmsService.importMonitors(
+        serverId,
+        monitorIds,
+        defaultLocation,
+        source,
+        companyId,
+        userId
+      );
+
+      res.status(201).json(
+        successResponse(
+          cameras,
+          req.correlationId
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;

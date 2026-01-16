@@ -212,6 +212,12 @@
   margin-bottom: 1rem;
 }
 
+.monitorsHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .monitorsTitle {
   font-size: 0.875rem;
   font-weight: 600;

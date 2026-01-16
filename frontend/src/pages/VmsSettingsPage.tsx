@@ -179,20 +179,53 @@ export default function VmsSettingsPage() {
     }
   };
 
-  // Import camera from VMS
+  // Import single camera from VMS
   const handleImportCamera = async (server: VmsServer, monitor: VmsMonitor) => {
     try {
-      await api.cameras.batchImportFromVms(server._id, [{
-        monitorId: monitor.id,
-        name: monitor.name,
-        location: { coordinates: [0, 0] },
-      }]);
+      await api.vms.importMonitors(server._id, {
+        monitorIds: [monitor.id],
+        defaultLocation: {
+          coordinates: [0, 0],
+          address: 'Imported from VMS',
+        },
+        source: 'vms-import',
+      });
       alert(`Camera "${monitor.name}" imported successfully!`);
       // Refresh monitors to update imported status
       handleDiscoverMonitors(server);
     } catch (err) {
       console.error('Failed to import camera:', err);
       alert('Failed to import camera.');
+    }
+  };
+
+  // Batch import all monitors from VMS
+  const handleImportAllMonitors = async (server: VmsServer) => {
+    const serverMonitors = monitors[server._id];
+    if (!serverMonitors || serverMonitors.length === 0) {
+      alert('No monitors discovered. Please discover monitors first.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Import all ${serverMonitors.length} monitor(s) from ${server.name}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const result = await api.vms.importMonitors(server._id, {
+        defaultLocation: {
+          coordinates: [0, 0],
+          address: 'Imported from VMS',
+        },
+        source: 'vms-import',
+      });
+      alert(`Successfully imported ${result.length} camera(s)!`);
+      // Refresh monitors
+      handleDiscoverMonitors(server);
+    } catch (err) {
+      console.error('Failed to batch import:', err);
+      alert('Failed to import cameras.');
     }
   };
 
@@ -315,9 +348,17 @@ export default function VmsSettingsPage() {
                 <div className={styles.monitorsSection}>
                   <div className={styles.monitorsHeader}>
                     <h4 className={styles.monitorsTitle}>Discovered Cameras</h4>
-                    <span className={styles.monitorCount}>
-                      {monitors[server._id].length} found
-                    </span>
+                    <div className={styles.monitorsHeaderActions}>
+                      <span className={styles.monitorCount}>
+                        {monitors[server._id].length} found
+                      </span>
+                      <button
+                        className={`${styles.actionButton} ${styles.primary}`}
+                        onClick={() => handleImportAllMonitors(server)}
+                      >
+                        📥 Import All
+                      </button>
+                    </div>
                   </div>
                   <div className={styles.monitorGrid}>
                     {monitors[server._id].map((monitor) => (
