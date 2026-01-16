@@ -90,8 +90,7 @@ Before running the project, ensure you have the following installed:
 - **Ports**: Ensure these ports are available:
   - `3000` - Backend API
   - `5173` - Frontend Development Server
-  - `8000` - AI Service
-  - `27017` - MongoDB Database
+  - `8000` - AI Service  - `8080` - Shinobi VMS (Video Management System)  - `27017` - MongoDB Database
 
 ---
 
@@ -145,6 +144,7 @@ Open your browser and navigate to:
 - **API Documentation (Swagger)**: http://localhost:3000/api/docs
 - **AI Service**: http://localhost:8000
 
+- **Shinobi VMS**: http://localhost:8080 (default: admin@shinobi.local / admin123)
 ### 6. Verify Everything is Working
 
 Check the health endpoints:
@@ -156,6 +156,67 @@ curl http://localhost:3000/api/health
 # AI Service health check
 curl http://localhost:8000/health
 ```
+
+### 7. Seed Demo Data (Optional)
+
+The project includes database seeding scripts to quickly set up test users and demo data:
+
+**Option 1: Seed Test Users (Recommended for Development)**
+
+Creates a test company with multiple user roles:
+
+```bash
+# From project root
+docker-compose exec backend npm run seed
+
+# Or run locally
+cd backend && npm run seed
+```
+
+**Test Users Created:**
+- **Super Admin**
+  - Email: `admin@test.com`
+  - Password: `Admin123!`
+  - Role: `super_admin` (system-wide access)
+
+- **Company Admin**
+  - Email: `companyadmin@test.com`
+  - Password: `Admin123!`
+  - Role: `company_admin` (manage company and users)
+
+- **Operator**
+  - Email: `operator@test.com`
+  - Password: `Operator123!`
+  - Role: `operator` (dashboard access for monitoring)
+
+**Option 2: Seed Demo Cameras and VMS Setup**
+
+Creates demo users, VMS server, and test camera with working stream:
+
+```bash
+# From project root
+docker-compose exec backend npm run seed:demo
+
+# Or run locally
+cd backend && npm run seed:demo
+```
+
+**Demo Users Created:**
+- **Admin**
+  - Email: `admin@demo.local`
+  - Password: `admin123`
+  - Role: `admin` (full camera management)
+
+- **Operator**
+  - Email: `operator@demo.local`
+  - Password: `operator123`
+  - Role: `operator` (view and edit cameras)
+
+**Demo Data Includes:**
+- Demo Company configured for cameras, events, and reports
+- VMS Server connected to local Shinobi (localhost:8080)
+- Test camera with working public HLS stream
+- Geo-located camera in Tel Aviv coordinates
 
 ---
 
@@ -316,6 +377,36 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ---
 
 ## 🧪 Testing
+
+### Database Seeding
+
+Before running tests, you may want to seed the database with test data:
+
+```bash
+# Seed test users (super_admin, company_admin, operator)
+docker-compose exec backend npm run seed
+
+# OR seed demo cameras and VMS setup
+docker-compose exec backend npm run seed:demo
+```
+
+**Available Seed Scripts:**
+
+| Script | Command | Purpose | Users Created |
+|--------|---------|---------|---------------|
+| **Test Data** | `npm run seed` | Basic test users for development | super_admin, company_admin, operator |
+| **Demo Cameras** | `npm run seed:demo` | Full demo with cameras and VMS | admin, operator + VMS server + test camera |
+
+**Test User Credentials:**
+
+After running `npm run seed`:
+- Super Admin: `admin@test.com` / `Admin123!`
+- Company Admin: `companyadmin@test.com` / `Admin123!`
+- Operator: `operator@test.com` / `Operator123!`
+
+After running `npm run seed:demo`:
+- Admin: `admin@demo.local` / `admin123`
+- Operator: `operator@demo.local` / `operator123`
 
 ### Run All Tests
 
@@ -511,8 +602,10 @@ See also the main design documents:
 1. Clone repository: `git clone <repo-url> && cd webShobV2`
 2. Start services: `docker-compose up --build -d`
 3. Wait for services to be healthy: `docker-compose ps`
-4. Access dashboard: http://localhost:5173
-5. View API docs: http://localhost:3000/api/docs
+4. Seed test data: `docker-compose exec backend npm run seed`
+5. Access dashboard: http://localhost:5173
+6. Login with test credentials: `admin@test.com` / `Admin123!`
+7. View API docs: http://localhost:3000/api/docs
 
 ### Regular Development
 

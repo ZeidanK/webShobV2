@@ -156,6 +156,146 @@ export interface UpdateEventInput {
   notes?: string;
 }
 
+// VMS types for Slice 9.0
+export type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
+
+export interface VmsServer {
+  _id: string;
+  companyId: string;
+  name: string;
+  provider: VmsProvider;
+  baseUrl: string;
+  isActive: boolean;
+  connectionStatus?: 'connected' | 'disconnected' | 'error' | 'unknown';
+  lastConnectedAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VmsMonitor {
+  id: string;
+  name: string;
+  mode?: string;
+  status?: string;
+  host?: string;
+  type?: string;
+}
+
+export interface CreateVmsServerInput {
+  name: string;
+  provider: VmsProvider;
+  baseUrl: string;
+  auth?: {
+    apiKey?: string;
+    groupKey?: string;
+    username?: string;
+    password?: string;
+  };
+  isActive?: boolean;
+}
+
+export interface UpdateVmsServerInput {
+  name?: string;
+  baseUrl?: string;
+  auth?: {
+    apiKey?: string;
+    groupKey?: string;
+    username?: string;
+    password?: string;
+  };
+  isActive?: boolean;
+}
+
+// Camera types for Slice 9.0
+export type CameraType = 'ip' | 'analog' | 'usb';
+export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
+
+export interface Camera {
+  _id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  streamUrl?: string;
+  type: CameraType;
+  status: CameraStatus;
+  location: {
+    type: 'Point';
+    coordinates: [number, number];
+    address?: string;
+  };
+  settings: {
+    resolution?: string;
+    fps?: number;
+    recordingEnabled?: boolean;
+  };
+  vms?: {
+    provider?: VmsProvider;
+    serverId?: string;
+    monitorId?: string;
+    lastSyncAt?: string;
+  };
+  metadata?: {
+    source?: string;
+    externalId?: string;
+    tags?: string[];
+  };
+  lastSeen?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StreamUrls {
+  hls?: string;
+  embed?: string;
+  snapshot?: string;
+  raw?: string;
+}
+
+export interface CameraWithStreams extends Camera {
+  streams?: StreamUrls;
+}
+
+export interface CreateCameraInput {
+  name: string;
+  description?: string;
+  streamUrl?: string;
+  type?: CameraType;
+  status?: CameraStatus;
+  location: {
+    coordinates: [number, number];
+    address?: string;
+  };
+  settings?: {
+    resolution?: string;
+    fps?: number;
+    recordingEnabled?: boolean;
+  };
+  vms?: {
+    serverId?: string;
+    monitorId?: string;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateCameraInput {
+  name?: string;
+  description?: string;
+  streamUrl?: string;
+  type?: CameraType;
+  status?: CameraStatus;
+  location?: {
+    coordinates?: [number, number];
+    address?: string;
+  };
+  settings?: {
+    resolution?: string;
+    fps?: number;
+    recordingEnabled?: boolean;
+  };
+  metadata?: Record<string, unknown>;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -700,11 +840,90 @@ export const api = {
     }) => apiClient.post<EventType>('/event-types', data),
   },
 
-  // Cameras (Slice 8)
+  // Cameras (Slice 9.0)
   cameras: {
-    list: (params?: { page?: number; limit?: number }) =>
-      apiClient.get<unknown[]>('/cameras', params),
-    get: (id: string) => apiClient.get<unknown>(`/cameras/${id}`),
-    getStream: (id: string) => apiClient.get<{ streamUrl: string }>(`/cameras/${id}/stream`),
+    list: (params?: { 
+      page?: number; 
+      limit?: number; 
+      status?: CameraStatus;
+      vmsServerId?: string;
+      hasVms?: boolean;
+      search?: string;
+    }) => apiClient.get<Camera[]>('/cameras', params as Record<string, string | number>),
+
+    get: (id: string, includeStreams?: boolean) => 
+      apiClient.get<CameraWithStreams>(`/cameras/${id}`, includeStreams ? { includeStreams: 'true' } : undefined),
+
+    create: (data: CreateCameraInput) => 
+      apiClient.post<Camera>('/cameras', data),
+
+    update: (id: string, data: UpdateCameraInput) => 
+      apiClient.put<Camera>(`/cameras/${id}`, data),
+
+    delete: (id: string) => 
+      apiClient.delete<{ message: string }>(`/cameras/${id}`),
+
+    getStreams: (id: string) => 
+      apiClient.get<StreamUrls>(`/cameras/${id}/streams`),
+
+    connectToVms: (id: string, serverId: string, monitorId: string) =>
+      apiClient.post<Camera>(`/cameras/${id}/vms/connect`, { serverId, monitorId }),
+
+    disconnectFromVms: (id: string) =>
+      apiClient.post<Camera>(`/cameras/${id}/vms/disconnect`),
+
+    batchImportFromVms: (serverId: string, monitors: Array<{
+      monitorId: string;
+      name: string;
+      location: { coordinates: [number, number]; address?: string };
+    }>) => apiClient.post<{ created: number; skipped: number; cameras: Camera[] }>('/cameras/vms/import', { 
+      serverId, 
+      monitors 
+    }),
+
+    getAvailableMonitors: (serverId: string) =>
+      apiClient.get<VmsMonitor[]>('/cameras/vms/available', { serverId }),
+
+    findNearby: (lng: number, lat: number, maxDistance?: number) =>
+      apiClient.get<Camera[]>('/cameras/nearby', { lng, lat, ...(maxDistance ? { maxDistance } : {}) }),
   },
+
+  // VMS Servers (Slice 9.0)
+  vms: {
+    list: (params?: {
+      page?: number;
+      limit?: number;
+      provider?: VmsProvider;
+      isActive?: boolean;
+      search?: string;
+    }) => apiClient.get<VmsServer[]>('/vms', params as Record<string, string | number>),
+
+    get: (id: string) => 
+      apiClient.get<VmsServer>(`/vms/${id}`),
+
+    create: (data: CreateVmsServerInput) => 
+      apiClient.post<VmsServer>('/vms', data),
+
+    update: (id: string, data: UpdateVmsServerInput) => 
+      apiClient.put<VmsServer>(`/vms/${id}`, data),
+
+    delete: (id: string) => 
+      apiClient.delete<{ message: string }>(`/vms/${id}`),
+
+    testConnection: (id: string) =>
+      apiClient.post<{ success: boolean; message: string; monitors?: number }>(`/vms/${id}/test`),
+
+    discoverMonitors: (id: string) =>
+      apiClient.get<VmsMonitor[]>(`/vms/${id}/monitors`),
+
+    importMonitors: (id: string, data: {
+      monitorIds?: string[];
+      defaultLocation?: { coordinates: [number, number]; address?: string };
+      source?: string;
+    }) =>
+      apiClient.post<any[]>(`/vms/${id}/monitors/import`, data),
+  },
+
+  deleteCamerasBySource: (source: string) =>
+    apiClient.delete<{ deletedCount: number }>(`/cameras/source/${source}`),
 };

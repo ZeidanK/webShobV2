@@ -1,7 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError, ErrorCodes } from '../utils/errors';
+import { 
+  AppError, 
+  ErrorCodes, 
+  NotFoundError, 
+  ValidationError, 
+  ConflictError, 
+  ExternalServiceError,
+  UnauthorizedError,
+  ForbiddenError
+} from '../utils/errors';
 import { errorResponse } from '../utils/response';
 import { createRequestLogger } from '../utils/logger';
+
+/**
+ * Check if error is one of our custom error classes
+ */
+function isCustomError(err: Error): boolean {
+  return err instanceof NotFoundError ||
+    err instanceof ValidationError ||
+    err instanceof ConflictError ||
+    err instanceof ExternalServiceError ||
+    err instanceof UnauthorizedError ||
+    err instanceof ForbiddenError;
+}
 
 /**
  * Global error handler middleware
@@ -16,14 +37,14 @@ export function errorHandlerMiddleware(
   const logger = createRequestLogger(req.correlationId);
 
   // Determine if this is an operational (expected) error
-  const isOperational = err instanceof AppError && err.isOperational;
+  const isOperational = (err instanceof AppError && err.isOperational) || isCustomError(err);
 
   // Log the error
   if (isOperational) {
     logger.warn('Operational error', {
       action: 'error.operational',
       error: {
-        code: (err as AppError).code,
+        code: (err as AppError).code || err.name,
         message: err.message,
         details: (err as AppError).details,
       },
@@ -44,6 +65,19 @@ export function errorHandlerMiddleware(
   if (err instanceof AppError) {
     res.status(err.statusCode).json(
       errorResponse(err.code, err.message, req.correlationId, err.details)
+    );
+  } else if (isCustomError(err)) {
+    // Handle our custom error classes
+    const customErr = err as NotFoundError | ValidationError | ConflictError | ExternalServiceError;
+    res.status(customErr.statusCode).json(
+      errorResponse(customErr.code, customErr.message, req.correlationId)
+    );
+  } else if (err.name === 'ValidationError' && 'errors' in err) {
+    // Mongoose validation error
+    const mongooseErr = err as Error & { errors: Record<string, { message: string }> };
+    const messages = Object.values(mongooseErr.errors).map(e => e.message).join(', ');
+    res.status(400).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, messages, req.correlationId)
     );
   } else {
     // For unexpected errors, don't leak internal details

@@ -23,10 +23,10 @@ export { EventTypeService } from './event-type.service';
 // Slice 5: Real-Time Foundation
 // export { WebSocketService } from './websocket.service';
 
-// Slice 7: Camera Management
-// export { CameraService } from './camera.service';
+// Slice 7: Camera Management (implemented in Slice 9.0)
+export { cameraService } from './camera.service';
 
-// Slice 9: VMS Adapters
-// export { VMSAdapterService } from './vms-adapter.service';
+// Slice 9: VMS Integration
+export { vmsService, type VmsMonitor, type StreamUrls } from './vms.service';
 
 export {};
