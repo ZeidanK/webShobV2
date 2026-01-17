@@ -27,6 +27,9 @@ export interface IVmsServer extends Document {
   /** Base URL of the VMS server (http://host:port) */
   baseUrl: string;
   
+  // TEST-ONLY: Public base URL for browser access (optional).
+  publicBaseUrl?: string;
+  
   /** Authentication credentials - provider-specific */
   auth?: {
     /** Shinobi: API Key */
@@ -87,6 +90,17 @@ const VmsServerSchema = new Schema<IVmsServer>(
           return /^https?:\/\/.+/.test(url);
         },
         message: 'Base URL must be a valid HTTP/HTTPS URL',
+      },
+    },
+    publicBaseUrl: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (url?: string) {
+          if (!url) return true;
+          return /^https?:\/\/.+/.test(url);
+        },
+        message: 'Public base URL must be a valid HTTP/HTTPS URL',
       },
     },
     auth: {

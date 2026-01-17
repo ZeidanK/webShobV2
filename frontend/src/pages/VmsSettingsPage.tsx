@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { api, VmsServer, VmsMonitor } from '../services/api';
+import { api, VmsServer, VmsMonitor, ApiRequestError } from '../services/api';
 import styles from './VmsSettingsPage.module.css';
 
 type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
@@ -9,6 +9,8 @@ interface VmsFormData {
   name: string;
   provider: VmsProvider;
   baseUrl: string;
+  // Public base URL for browser stream access (optional).
+  publicBaseUrl: string;
   isActive: boolean;
   apiKey: string;
   groupKey: string;
@@ -20,11 +22,23 @@ const defaultFormData: VmsFormData = {
   name: '',
   provider: 'shinobi',
   baseUrl: '',
+  publicBaseUrl: '',
   isActive: true,
   apiKey: '',
   groupKey: '',
   username: '',
   password: '',
+};
+
+// Normalize API errors to include codes for troubleshooting.
+const formatApiError = (err: unknown, fallback: string) => {
+  if (err instanceof ApiRequestError) {
+    return `${fallback} (${err.code}): ${err.message}`;
+  }
+  if (err instanceof Error) {
+    return `${fallback}: ${err.message}`;
+  }
+  return fallback;
 };
 
 export default function VmsSettingsPage() {
@@ -73,6 +87,7 @@ export default function VmsSettingsPage() {
         name: server.name,
         provider: server.provider,
         baseUrl: server.baseUrl,
+        publicBaseUrl: server.publicBaseUrl || '',
         isActive: server.isActive,
         apiKey: '', // Don't populate - security
         groupKey: '',
@@ -96,7 +111,10 @@ export default function VmsSettingsPage() {
       const serverData = {
         name: formData.name,
         provider: formData.provider,
+        // Single URL support: backend will normalize localhost for Docker.
         baseUrl: formData.baseUrl,
+        // Public base URL for browser stream access (optional).
+        publicBaseUrl: formData.publicBaseUrl || undefined,
         isActive: formData.isActive,
         auth: formData.provider === 'shinobi' ? {
           apiKey: formData.apiKey || undefined,
@@ -117,7 +135,7 @@ export default function VmsSettingsPage() {
       fetchServers();
     } catch (err) {
       console.error('Failed to save VMS server:', err);
-      alert('Failed to save VMS server. Please check your input.');
+      alert(formatApiError(err, 'Failed to save VMS server'));
     } finally {
       setSaving(false);
     }
@@ -134,7 +152,7 @@ export default function VmsSettingsPage() {
       fetchServers();
     } catch (err) {
       console.error('Failed to delete VMS server:', err);
-      alert('Failed to delete VMS server.');
+      alert(formatApiError(err, 'Failed to delete VMS server'));
     }
   };
 
@@ -155,7 +173,7 @@ export default function VmsSettingsPage() {
       setTestResult({
         serverId: server._id,
         success: false,
-        message: errorMessage,
+        message: formatApiError(err, errorMessage),
       });
     } finally {
       setTesting(null);
@@ -173,7 +191,7 @@ export default function VmsSettingsPage() {
       }));
     } catch (err) {
       console.error('Failed to discover monitors:', err);
-      alert('Failed to discover monitors from VMS.');
+      alert(formatApiError(err, 'Failed to discover monitors from VMS'));
     } finally {
       setLoadingMonitors(null);
     }
@@ -195,7 +213,7 @@ export default function VmsSettingsPage() {
       handleDiscoverMonitors(server);
     } catch (err) {
       console.error('Failed to import camera:', err);
-      alert('Failed to import camera.');
+      alert(formatApiError(err, 'Failed to import camera'));
     }
   };
 
@@ -225,7 +243,7 @@ export default function VmsSettingsPage() {
       handleDiscoverMonitors(server);
     } catch (err) {
       console.error('Failed to batch import:', err);
-      alert('Failed to import cameras.');
+      alert(formatApiError(err, 'Failed to import cameras'));
     }
   };
 
@@ -463,7 +481,23 @@ export default function VmsSettingsPage() {
                     placeholder="http://localhost:8080"
                   />
                   <p className={styles.formHint}>
-                    The base URL of your VMS server (no trailing slash)
+                    Single URL is OK for testing; Docker will normalize localhost.
+                  </p>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Public Base URL</label>
+                  <input
+                    type="url"
+                    value={formData.publicBaseUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, publicBaseUrl: e.target.value })
+                    }
+                    className={styles.formInput}
+                    placeholder="http://localhost:8080"
+                  />
+                  <p className={styles.formHint}>
+                    Browser-facing URL used for stream playback (optional)
                   </p>
                 </div>
 

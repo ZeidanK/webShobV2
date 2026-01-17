@@ -158,6 +158,8 @@ router.get(
  *                 enum: [shinobi, zoneminder, agentdvr, other]
  *               baseUrl:
  *                 type: string
+ *               publicBaseUrl:
+ *                 type: string
  *               auth:
  *                 type: object
  *                 properties:
@@ -180,7 +182,7 @@ router.post(
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
       const userId = new mongoose.Types.ObjectId(req.user!.id);
 
-      const { name, provider, baseUrl, auth, isActive } = req.body;
+      const { name, provider, baseUrl, publicBaseUrl, auth, isActive } = req.body;
 
       // Validate required fields
       if (!name || !provider || !baseUrl) {
@@ -191,6 +193,8 @@ router.post(
         name,
         provider,
         baseUrl,
+        // TEST-ONLY: Allow browser-facing base URL for streams.
+        publicBaseUrl,
         auth,
         isActive,
       };
@@ -237,11 +241,13 @@ router.put(
       const userId = new mongoose.Types.ObjectId(req.user!.id);
       const serverId = new mongoose.Types.ObjectId(req.params.id);
 
-      const { name, baseUrl, auth, isActive } = req.body;
+      const { name, baseUrl, publicBaseUrl, auth, isActive } = req.body;
 
       const data: UpdateVmsServerInput = {};
       if (name !== undefined) data.name = name;
       if (baseUrl !== undefined) data.baseUrl = baseUrl;
+      // TEST-ONLY: Allow browser-facing base URL updates.
+      if (publicBaseUrl !== undefined) data.publicBaseUrl = publicBaseUrl;
       if (auth !== undefined) data.auth = auth;
       if (isActive !== undefined) data.isActive = isActive;
 

@@ -61,12 +61,15 @@ export const LiveView: React.FC<LiveViewProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const retryRef = useRef({ network: 0, media: 0 });
   
   const [state, setState] = useState<StreamState>({
     loading: true,
     error: null,
     playing: false,
   });
+
+  const maxRetries = 3;
 
   // Cleanup HLS instance
   const cleanupHls = useCallback(() => {
@@ -79,9 +82,13 @@ export const LiveView: React.FC<LiveViewProps> = ({
   // Initialize HLS stream
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !streamUrl) return;
+    if (!video || !streamUrl) {
+      setState({ loading: false, error: 'Stream URL is missing', playing: false });
+      return;
+    }
 
     cleanupHls();
+    retryRef.current = { network: 0, media: 0 };
     setState({ loading: true, error: null, playing: false });
 
     // Check if native HLS is supported (Safari, iOS)
@@ -144,12 +151,28 @@ export const LiveView: React.FC<LiveViewProps> = ({
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            // Try to recover from network errors
-            hls.startLoad();
+            // TEST-ONLY: limit retries to avoid infinite reconnect loops.
+            if (retryRef.current.network < maxRetries) {
+              retryRef.current.network += 1;
+              hls.startLoad();
+            } else {
+              const errorMsg = 'Stream network error (max retries reached)';
+              setState({ loading: false, error: errorMsg, playing: false });
+              onError?.(errorMsg);
+              cleanupHls();
+            }
             break;
           case Hls.ErrorTypes.MEDIA_ERROR:
-            // Try to recover from media errors
-            hls.recoverMediaError();
+            // TEST-ONLY: limit retries to avoid infinite reconnect loops.
+            if (retryRef.current.media < maxRetries) {
+              retryRef.current.media += 1;
+              hls.recoverMediaError();
+            } else {
+              const errorMsg = 'Stream media error (max retries reached)';
+              setState({ loading: false, error: errorMsg, playing: false });
+              onError?.(errorMsg);
+              cleanupHls();
+            }
             break;
           default:
             const errorMsg = `Stream error: ${data.details}`;

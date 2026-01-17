@@ -488,7 +488,20 @@ class CameraService {
       return {};
     }
 
-    return vmsService.getStreamUrls(server, camera.vms.monitorId);
+    const streams = await vmsService.getStreamUrls(server, camera.vms.monitorId);
+    const status = await vmsService.getMonitorStatus(server, camera.vms.monitorId);
+    if (status && status !== camera.status) {
+      // TEST-ONLY: update camera status when streams are requested.
+      await Camera.updateOne(
+        { _id: cameraId, companyId },
+        {
+          status,
+          lastSeen: status === 'online' ? new Date() : camera.lastSeen,
+        }
+      );
+    }
+
+    return streams;
   }
 
   /**

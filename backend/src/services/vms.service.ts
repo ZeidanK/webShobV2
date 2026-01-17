@@ -10,8 +10,8 @@
  */
 
 import mongoose from 'mongoose';
-import { VmsServer, IVmsServer, VmsProvider, Camera } from '../models';
-import { NotFoundError, ValidationError, ExternalServiceError } from '../utils/errors';
+import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus } from '../models';
+import { AppError, ErrorCodes, NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
 /** Monitor info returned from VMS discovery */
@@ -52,6 +52,8 @@ export interface CreateVmsServerInput {
   name: string;
   provider: VmsProvider;
   baseUrl: string;
+  // TEST-ONLY: Public base URL for browser access (optional).
+  publicBaseUrl?: string;
   auth?: {
     apiKey?: string;
     groupKey?: string;
@@ -65,6 +67,8 @@ export interface CreateVmsServerInput {
 export interface UpdateVmsServerInput {
   name?: string;
   baseUrl?: string;
+  // TEST-ONLY: Public base URL for browser access (optional).
+  publicBaseUrl?: string;
   auth?: {
     apiKey?: string;
     groupKey?: string;
@@ -75,6 +79,38 @@ export interface UpdateVmsServerInput {
 }
 
 class VmsService {
+  // Normalize VMS base URL and derive public URL for browser playback in Docker dev.
+  private normalizeVmsUrls(baseUrl: string, publicBaseUrl?: string): { baseUrl: string; publicBaseUrl?: string } {
+    const trimmedBaseUrl = baseUrl.replace(/\/+$/, '');
+    const trimmedPublicUrl = publicBaseUrl ? publicBaseUrl.replace(/\/+$/, '') : undefined;
+    if (trimmedPublicUrl) {
+      return { baseUrl: trimmedBaseUrl, publicBaseUrl: trimmedPublicUrl };
+    }
+
+    try {
+      const parsed = new URL(trimmedBaseUrl);
+      const isLocalhost = ['localhost', '127.0.0.1'].includes(parsed.hostname);
+      if (isLocalhost) {
+        const internalUrl = `${parsed.protocol}//host.docker.internal${parsed.port ? `:${parsed.port}` : ''}`;
+        return { baseUrl: internalUrl, publicBaseUrl: trimmedBaseUrl };
+      }
+    } catch {
+      // Leave URLs as-is when parsing fails.
+    }
+
+    return { baseUrl: trimmedBaseUrl };
+  }
+  // TEST-ONLY: normalize Shinobi monitor status to a camera status.
+  private mapShinobiStatus(status?: string): CameraStatus {
+    const normalized = (status || '').toLowerCase();
+    if (['watching', 'recording', 'online', 'active', 'connected', 'started'].includes(normalized)) {
+      return 'online';
+    }
+    if (['paused', 'stopped', 'offline', 'disconnected', 'error'].includes(normalized)) {
+      return 'offline';
+    }
+    return 'offline';
+  }
   /**
    * Create a new VMS server
    */
@@ -85,8 +121,11 @@ class VmsService {
   ): Promise<IVmsServer> {
     logger.info('Creating VMS server', { companyId, provider: data.provider, name: data.name });
 
+    const urls = this.normalizeVmsUrls(data.baseUrl, data.publicBaseUrl);
     const server = new VmsServer({
       ...data,
+      baseUrl: urls.baseUrl,
+      publicBaseUrl: urls.publicBaseUrl,
       companyId,
       createdBy: userId,
       updatedBy: userId,
@@ -194,7 +233,11 @@ class VmsService {
 
     // Update fields
     if (data.name !== undefined) server.name = data.name;
-    if (data.baseUrl !== undefined) server.baseUrl = data.baseUrl;
+    if (data.baseUrl !== undefined || data.publicBaseUrl !== undefined) {
+      const urls = this.normalizeVmsUrls(data.baseUrl ?? server.baseUrl, data.publicBaseUrl);
+      server.baseUrl = urls.baseUrl;
+      server.publicBaseUrl = urls.publicBaseUrl;
+    }
     if (data.isActive !== undefined) server.isActive = data.isActive;
     
     // Handle auth updates (merge with existing)
@@ -226,6 +269,12 @@ class VmsService {
       throw new NotFoundError(`VMS server with ID ${serverId} not found`);
     }
 
+    // TEST-ONLY: Soft delete cameras linked to this VMS server.
+    await Camera.updateMany(
+      { companyId, isDeleted: false, 'vms.serverId': serverId },
+      { $set: { isDeleted: true, lastModified: new Date() } }
+    );
+
     logger.info('VMS server deleted', { serverId });
   }
 
@@ -255,8 +304,8 @@ class VmsService {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Connection failed';
-      
-      // Update server status
+
+      // Track last error details for troubleshooting
       await VmsServer.updateOne(
         { _id: serverId, companyId },
         {
@@ -266,7 +315,12 @@ class VmsService {
       );
 
       logger.error('VMS connection test failed', { serverId, error: message });
-      throw new ExternalServiceError(`VMS connection failed: ${message}`);
+      throw new AppError(
+        ErrorCodes.VMS_CONNECTION_FAILED,
+        `VMS connection failed: ${message}`,
+        502,
+        { serverId: serverId.toString(), provider: server.provider }
+      );
     }
   }
 
@@ -297,7 +351,12 @@ class VmsService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Monitor discovery failed';
       logger.error('VMS monitor discovery failed', { serverId, error: message });
-      throw new ExternalServiceError(`Monitor discovery failed: ${message}`);
+      throw new AppError(
+        ErrorCodes.VMS_CONNECTION_FAILED,
+        `Monitor discovery failed: ${message}`,
+        502,
+        { serverId: serverId.toString(), provider: server.provider }
+      );
     }
   }
 
@@ -320,6 +379,25 @@ class VmsService {
     }
   }
 
+  /**
+   * Get monitor status for a VMS camera
+   */
+  async getMonitorStatus(
+    server: IVmsServer,
+    monitorId: string
+  ): Promise<CameraStatus | null> {
+    switch (server.provider) {
+      case 'shinobi': {
+        // TEST-ONLY: fetch Shinobi monitor list and map to camera status.
+        const monitors = await this.discoverShinobiMonitors(server);
+        const monitor = monitors.find((item) => item.id === monitorId);
+        return this.mapShinobiStatus(monitor?.status);
+      }
+      default:
+        return null;
+    }
+  }
+
   // ==================== SHINOBI IMPLEMENTATION ====================
 
   /**
@@ -331,7 +409,12 @@ class VmsService {
     const { baseUrl, auth } = server;
 
     if (!auth?.apiKey || !auth?.groupKey) {
-      throw new ValidationError('Shinobi requires apiKey and groupKey');
+      // Provide explicit VMS auth error for troubleshooting
+      throw new AppError(
+        ErrorCodes.VMS_AUTH_MISSING,
+        'Shinobi requires apiKey and groupKey',
+        400
+      );
     }
 
     // Build URL: /api/{apiKey}/monitor/{groupKey}
@@ -378,7 +461,12 @@ class VmsService {
     const { baseUrl, auth } = server;
 
     if (!auth?.apiKey || !auth?.groupKey) {
-      throw new ValidationError('Shinobi requires apiKey and groupKey');
+      // Provide explicit VMS auth error for troubleshooting
+      throw new AppError(
+        ErrorCodes.VMS_AUTH_MISSING,
+        'Shinobi requires apiKey and groupKey',
+        400
+      );
     }
 
     const url = `${baseUrl}/${auth.apiKey}/monitor/${auth.groupKey}`;
@@ -419,7 +507,7 @@ class VmsService {
    * - Snapshot: {baseUrl}/{apiKey}/jpeg/{groupKey}/{monitorId}/s.jpg
    */
   private getShinobiStreamUrls(server: IVmsServer, monitorId: string): StreamUrls {
-    const { baseUrl, auth } = server;
+    const { baseUrl, auth, publicBaseUrl } = server;
 
     if (!auth?.apiKey || !auth?.groupKey) {
       logger.warn('Missing Shinobi auth for stream URL generation', { serverId: server._id });
@@ -429,10 +517,12 @@ class VmsService {
     const apiKey = auth.apiKey;
     const groupKey = auth.groupKey;
 
+    const streamBaseUrl = publicBaseUrl || baseUrl;
+
     return {
-      hls: `${baseUrl}/${apiKey}/hls/${groupKey}/${monitorId}/s.m3u8`,
-      embed: `${baseUrl}/${apiKey}/embed/${groupKey}/${monitorId}`,
-      snapshot: `${baseUrl}/${apiKey}/jpeg/${groupKey}/${monitorId}/s.jpg`,
+      hls: `${streamBaseUrl}/${apiKey}/hls/${groupKey}/${monitorId}/s.m3u8`,
+      embed: `${streamBaseUrl}/${apiKey}/embed/${groupKey}/${monitorId}`,
+      snapshot: `${streamBaseUrl}/${apiKey}/jpeg/${groupKey}/${monitorId}/s.jpg`,
     };
   }
 
@@ -475,10 +565,17 @@ class VmsService {
     companyId: mongoose.Types.ObjectId,
     userId: mongoose.Types.ObjectId
   ): Promise<any[]> {
-    const server = await VmsServer.findOne({ _id: serverId, companyId, isDeleted: false });
+    // VMS servers do not support soft delete; filter by company only
+    // Ensure the VMS server exists for the current tenant
+    const server = await VmsServer.findOne({ _id: serverId, companyId });
     
     if (!server) {
-      throw new NotFoundError('VMS server not found');
+      throw new AppError(
+        ErrorCodes.VMS_SERVER_NOT_FOUND,
+        'VMS server not found for this company',
+        404,
+        { serverId: serverId.toString(), companyId: companyId.toString() }
+      );
     }
 
     if (server.provider !== 'shinobi') {
@@ -486,7 +583,8 @@ class VmsService {
     }
 
     // Discover all monitors
-    const monitors = await this.discoverMonitors(serverId, companyId);
+    // Maintain discoverMonitors signature: (companyId, serverId)
+    const monitors = await this.discoverMonitors(companyId, serverId);
 
     // Filter to selected monitors if specified
     const selectedMonitors = monitorIds && monitorIds.length > 0
@@ -524,7 +622,7 @@ class VmsService {
           description: `Imported from VMS - ${monitor.status || 'unknown status'}`.slice(0, 500),
           streamUrl: streamUrls.hls || '',
           type: 'ip',
-          status: monitor.status === 'online' ? 'online' : 'offline',
+          status: this.mapShinobiStatus(monitor.status),
           location: {
             type: 'Point',
             coordinates: location.coordinates,

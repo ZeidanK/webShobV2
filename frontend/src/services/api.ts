@@ -167,6 +167,8 @@ export interface VmsServer {
   name: string;
   provider: VmsProvider;
   baseUrl: string;
+  // Public base URL for browser stream access (optional).
+  publicBaseUrl?: string;
   isActive: boolean;
   connectionStatus?: 'connected' | 'disconnected' | 'error' | 'unknown';
   lastConnectedAt?: string;
@@ -188,6 +190,8 @@ export interface CreateVmsServerInput {
   name: string;
   provider: VmsProvider;
   baseUrl: string;
+  // Public base URL for browser stream access (optional).
+  publicBaseUrl?: string;
   auth?: {
     apiKey?: string;
     groupKey?: string;
@@ -200,6 +204,8 @@ export interface CreateVmsServerInput {
 export interface UpdateVmsServerInput {
   name?: string;
   baseUrl?: string;
+  // Public base URL for browser stream access (optional).
+  publicBaseUrl?: string;
   auth?: {
     apiKey?: string;
     groupKey?: string;
