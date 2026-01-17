@@ -7,6 +7,8 @@
  * - Response envelope unwrapping
  */
 
+import { logFrontendIssue } from './testLogger';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface ApiResponse<T> {
@@ -323,6 +325,13 @@ class ApiClient {
 
     if (!response.ok) {
       const error = data as ApiError;
+      // Test logger capture for failed API calls
+      logFrontendIssue({
+        level: 'error',
+        event: 'api.request.failed',
+        message: error.error?.message || 'Request failed',
+        data: { status: response.status, code: error.error?.code },
+      });
       throw new ApiRequestError(
         error.error?.message || 'Request failed',
         error.error?.code || 'UNKNOWN_ERROR',
@@ -341,6 +350,13 @@ class ApiClient {
 
     if (!response.ok) {
       const error = data as ApiError;
+      // Test logger capture for failed paginated API calls
+      logFrontendIssue({
+        level: 'error',
+        event: 'api.request.failed',
+        message: error.error?.message || 'Request failed',
+        data: { status: response.status, code: error.error?.code },
+      });
       throw new ApiRequestError(
         error.error?.message || 'Request failed',
         error.error?.code || 'UNKNOWN_ERROR',

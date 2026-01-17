@@ -58,6 +58,7 @@ export default function CamerasPage() {
   
   // Live view state
   const [liveViewCamera, setLiveViewCamera] = useState<Camera | null>(null);
+  const [streamOverrides, setStreamOverrides] = useState<Record<string, string>>({});
 
   // Fetch cameras and VMS servers
   const fetchData = useCallback(async () => {
@@ -169,26 +170,33 @@ export default function CamerasPage() {
   };
 
   // Open live view
-  const openLiveView = (camera: Camera) => {
+  const openLiveView = async (camera: Camera) => {
     setLiveViewCamera(camera);
+    if (camera.streamUrl || streamOverrides[camera._id]) {
+      return;
+    }
+
+    try {
+      const streams = await api.cameras.getStreams(camera._id);
+      const streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
+      if (streamUrl) {
+        setStreamOverrides((prev) => ({ ...prev, [camera._id]: streamUrl }));
+      }
+    } catch (err) {
+      console.error('Failed to load camera streams:', err);
+    }
   };
 
   // Get stream URL for camera
   const getStreamUrl = (camera: Camera): string | null => {
-    // If camera has direct stream URL
+    if (streamOverrides[camera._id]) {
+      return streamOverrides[camera._id];
+    }
+
     if (camera.streamUrl) {
       return camera.streamUrl;
     }
-    
-    // If connected to VMS, construct URL
-    if (camera.vms?.serverId && camera.vms?.monitorId) {
-      const server = vmsServers.find(s => s._id === camera.vms?.serverId);
-      if (server && server.provider === 'shinobi') {
-        // Shinobi HLS URL pattern
-        return `${server.baseUrl}/${camera.vms.monitorId}/s.m3u8`;
-      }
-    }
-    
+
     return null;
   };
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CameraGrid } from '../components/CameraGrid';
+import { CameraGrid, CameraItem } from '../components/CameraGrid';
 import { api } from '../services/api';
 import styles from './MonitorWallPage.module.css';
 
 type GridSize = '2x2' | '3x3' | '4x4';
 
 export default function MonitorWallPage() {
-  const [cameras, setCameras] = useState<any[]>([]);
+  const [cameras, setCameras] = useState<CameraItem[]>([]);
   const [gridSize, setGridSize] = useState<GridSize>('2x2');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +16,27 @@ export default function MonitorWallPage() {
       setLoading(true);
       setError(null);
       const response = await api.cameras.list({ status: 'online' });
-      setCameras(response || []);
+      const cameraItems = await Promise.all(
+        (response || []).map(async (camera) => {
+          let streamUrl = camera.streamUrl;
+          if (!streamUrl && camera.vms?.serverId) {
+            try {
+              const streams = await api.cameras.getStreams(camera._id);
+              streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
+            } catch (err) {
+              console.error('Failed to load camera streams:', err);
+            }
+          }
+
+          return {
+            id: camera._id,
+            name: camera.name,
+            streamUrl,
+            status: camera.status,
+          } as CameraItem;
+        })
+      );
+      setCameras(cameraItems);
     } catch (err: any) {
       console.error('Failed to load cameras:', err);
       setError(err.message || 'Failed to load cameras');

@@ -11,6 +11,7 @@ import {
 } from '../utils/errors';
 import { errorResponse } from '../utils/response';
 import { createRequestLogger } from '../utils/logger';
+import { testLogger } from '../utils/test-logger';
 
 /**
  * Check if error is one of our custom error classes
@@ -49,6 +50,13 @@ export function errorHandlerMiddleware(
         details: (err as AppError).details,
       },
     });
+    // Test logger capture for operational errors
+    testLogger.warn({
+      source: 'backend',
+      event: 'error.operational',
+      message: err.message,
+      data: { code: (err as AppError).code || err.name, path: req.path },
+    });
   } else {
     // Unexpected errors - log full stack trace
     logger.error('Unexpected error', {
@@ -58,6 +66,13 @@ export function errorHandlerMiddleware(
         stack: err.stack,
         name: err.name,
       },
+    });
+    // Test logger capture for unexpected errors
+    testLogger.error({
+      source: 'backend',
+      event: 'error.unexpected',
+      message: err.message,
+      data: { name: err.name, path: req.path },
     });
   }
 

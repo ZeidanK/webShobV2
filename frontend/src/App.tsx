@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -29,6 +29,7 @@ function App() {
     return !!localStorage.getItem('accessToken');
   });
   const location = useLocation();
+  const navigate = useNavigate();
   const toast = useToast();
 
   // Re-check auth when navigating (in case token was added/removed)
@@ -38,6 +39,12 @@ function App() {
       setIsAuthenticated(hasToken);
     }
   }, [location.pathname, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && location.pathname === '/login') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, location.pathname, navigate]);
 
   // Initialize WebSocket connection when authenticated
   useEffect(() => {
