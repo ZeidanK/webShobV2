@@ -11,6 +11,13 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* TEST-ONLY: Allow the player to fill resizable tile dimensions. */
+.fill {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
 /* Aspect Ratio Classes */
 .aspect16x9 {
   aspect-ratio: 16 / 9;
@@ -56,6 +63,13 @@
   animation: pulse 2s infinite;
 }
 
+/* TEST-ONLY: Right-side header actions (status + resize control). */
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -71,6 +85,11 @@
   height: 100%;
   object-fit: contain;
   background: #000;
+}
+
+/* TEST-ONLY: Fill resizable tiles without letterboxing. */
+.videoFill {
+  object-fit: cover;
 }
 
 /* Overlay (Loading/Error) */

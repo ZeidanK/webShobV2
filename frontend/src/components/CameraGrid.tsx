@@ -5,7 +5,7 @@
  * Supports different layout modes and camera selection.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LiveView } from './LiveView';
 import styles from './CameraGrid.module.css';
 
@@ -33,6 +33,15 @@ interface CameraGridProps {
   /** Show camera status indicators */
   showStatus?: boolean;
   
+  /** Interaction mode for operator wall */
+  interactionMode?: 'both' | 'click' | 'drag';
+  
+  /** Callback when cameras are swapped via drag */
+  onSwap?: (sourceId: string, targetId: string) => void;
+
+  /** Reset token for clearing session-only layout state */
+  resetToken?: number;
+  
   /** Optional CSS class */
   className?: string;
 }
@@ -43,9 +52,39 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   onCameraSelect,
   selectedCameraId,
   showStatus = true,
+  interactionMode = 'both',
+  onSwap,
+  resetToken,
   className,
 }) => {
   const [focusedCameraId, setFocusedCameraId] = useState<string | null>(null);
+  const [draggingCameraId, setDraggingCameraId] = useState<string | null>(null);
+  const [dragOverCameraId, setDragOverCameraId] = useState<string | null>(null);
+  const [hoverResizeId, setHoverResizeId] = useState<string | null>(null);
+  const resizeDragRef = useRef<{
+    id: string;
+    x: number;
+    y: number;
+    startWidth: number;
+    startHeight: number;
+    direction: 'e' | 's' | 'se' | 'ne' | 'sw' | 'nw';
+  } | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const tileRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [tileSizes, setTileSizes] = useState<Record<string, { width: number; height: number }>>({});
+
+  // TEST-ONLY: Reset session-only tile sizes when the grid size changes.
+  useEffect(() => {
+    setTileSizes({});
+  }, [resetToken]);
+
+  // TEST-ONLY: Minimum size keeps tiles usable while allowing free resize.
+  const minTileWidth = 240;
+  const minTileHeight = 135;
+
+  // TEST-ONLY: Allow wall interactions to switch between click, drag, or both.
+  const allowsClick = interactionMode !== 'drag';
+  const allowsDrag = interactionMode !== 'click';
 
   // Calculate grid columns based on layout and camera count
   const gridColumns = useMemo(() => {
@@ -84,6 +123,138 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   // Handle double-click for fullscreen focus
   const handleDoubleClick = (camera: CameraItem) => {
     setFocusedCameraId(prev => prev === camera.id ? null : camera.id);
+  };
+
+  const handleDragStart = (camera: CameraItem, event: React.DragEvent<HTMLDivElement>) => {
+    if (!allowsDrag) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const resizeEdge = target?.closest('[data-resize-edge="true"]');
+    if (resizeEdge) {
+      return;
+    }
+    // TEST-ONLY: Track source camera to enable local swaps in the wall grid.
+    setDraggingCameraId(camera.id);
+    event.dataTransfer.setData('text/plain', camera.id);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (camera: CameraItem, event: React.DragEvent<HTMLDivElement>) => {
+    if (!allowsDrag) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDragOverCameraId(camera.id);
+  };
+
+  const handleDragLeave = (camera: CameraItem) => {
+    if (dragOverCameraId === camera.id) {
+      setDragOverCameraId(null);
+    }
+  };
+
+  const handleDrop = (camera: CameraItem, event: React.DragEvent<HTMLDivElement>) => {
+    if (!allowsDrag) {
+      return;
+    }
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData('text/plain');
+    if (sourceId && sourceId !== camera.id) {
+      onSwap?.(sourceId, camera.id);
+    }
+    setDraggingCameraId(null);
+    setDragOverCameraId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingCameraId(null);
+    setDragOverCameraId(null);
+  };
+
+  const toggleFocus = (cameraId: string) => {
+    setFocusedCameraId((prev) => (prev === cameraId ? null : cameraId));
+  };
+
+  const handleResizePointerDown = (
+    cameraId: string,
+    direction: 'e' | 's' | 'se' | 'ne' | 'sw' | 'nw',
+    event: React.PointerEvent<HTMLDivElement>
+  ) => {
+    if (!allowsDrag) {
+      return;
+    }
+    const tile = tileRefs.current[cameraId];
+    if (!tile) {
+      return;
+    }
+    const rect = tile.getBoundingClientRect();
+    // TEST-ONLY: Track pointer deltas for per-tile size updates.
+    resizeDragRef.current = {
+      id: cameraId,
+      x: event.clientX,
+      y: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      direction,
+    };
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.stopPropagation();
+  };
+
+  const handleResizePointerMove = (cameraId: string, event: React.PointerEvent<HTMLDivElement>) => {
+    if (!allowsDrag) {
+      return;
+    }
+    const start = resizeDragRef.current;
+    if (!start || start.id !== cameraId) {
+      return;
+    }
+    const gridRect = gridRef.current?.getBoundingClientRect();
+    const maxWidth = gridRect ? Math.max(gridRect.width - 8, minTileWidth) : Infinity;
+    const maxHeight = gridRect ? Math.max(gridRect.height * 2, minTileHeight) : Infinity;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    const direction = start.direction;
+    const widthDelta = direction.includes('w') ? -deltaX : deltaX;
+    const heightDelta = direction.includes('n') ? -deltaY : deltaY;
+    const nextWidth = Math.min(
+      Math.max(start.startWidth + widthDelta, minTileWidth),
+      maxWidth
+    );
+    const nextHeight = Math.min(
+      Math.max(start.startHeight + heightDelta, minTileHeight),
+      maxHeight
+    );
+    // TEST-ONLY: Update tile size live while dragging.
+    setTileSizes((prev) => ({
+      ...prev,
+      [cameraId]: { width: nextWidth, height: nextHeight },
+    }));
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleResizePointerUp = (cameraId: string, event: React.PointerEvent<HTMLDivElement>) => {
+    if (!allowsDrag) {
+      return;
+    }
+    resizeDragRef.current = null;
+    event.preventDefault();
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    event.stopPropagation();
+  };
+
+  const handleResizePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    resizeDragRef.current = null;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleResizeClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
   };
 
   // Render focused camera view
@@ -141,38 +312,139 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
           <p>Add cameras or connect to a VMS server to view live streams.</p>
         </div>
       ) : (
-        <div 
+        <div
           className={styles.grid}
-          style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}
+          ref={gridRef}
+          style={{ '--grid-columns': gridColumns } as React.CSSProperties}
         >
-          {cameras.map(camera => (
-            <div
-              key={camera.id}
-              className={`${styles.gridItem} ${selectedCameraId === camera.id ? styles.selected : ''}`}
-              onClick={() => handleCameraClick(camera)}
-              onDoubleClick={() => handleDoubleClick(camera)}
-            >
-              {camera.streamUrl ? (
-                <LiveView
-                  streamUrl={camera.streamUrl}
-                  cameraName={camera.name}
-                  snapshotUrl={camera.snapshotUrl}
-                  showControls={false}
-                  autoPlay={true}
+          {cameras.map(camera => {
+            const tileSize = tileSizes[camera.id];
+            const tileStyle = tileSize
+              ? { width: `${tileSize.width}px`, height: `${tileSize.height}px` }
+              : undefined;
+
+            return (
+              <div
+                key={camera.id}
+                ref={(node) => {
+                  tileRefs.current[camera.id] = node;
+                }}
+                className={`${styles.gridItem} ${selectedCameraId === camera.id ? styles.selected : ''} ${
+                  draggingCameraId === camera.id ? styles.dragging : ''
+                } ${dragOverCameraId === camera.id ? styles.dragOver : ''} ${
+                  hoverResizeId === camera.id ? styles.resizeHover : ''
+                }`}
+                style={tileStyle}
+                onClick={allowsClick ? () => handleCameraClick(camera) : undefined}
+                onDoubleClick={allowsClick ? () => handleDoubleClick(camera) : undefined}
+                draggable={allowsDrag}
+                onDragStart={(event) => handleDragStart(camera, event)}
+                onDragOver={(event) => handleDragOver(camera, event)}
+                onDragLeave={() => handleDragLeave(camera)}
+                onDrop={(event) => handleDrop(camera, event)}
+                onDragEnd={handleDragEnd}
+              >
+                {camera.streamUrl ? (
+                  <LiveView
+                    streamUrl={camera.streamUrl}
+                    cameraName={camera.name}
+                    snapshotUrl={camera.snapshotUrl}
+                    showControls={false}
+                    autoPlay={true}
+                    fillParent={true}
+                  />
+                ) : (
+                  <div className={styles.offline}>
+                    <span className={styles.offlineIcon}>dY"ć</span>
+                    <span className={styles.cameraName}>{camera.name}</span>
+                  </div>
+                )}
+                {showStatus && camera.status && (
+                  <span className={`${styles.statusBadge} ${styles[camera.status]} ${styles.statusOverlay}`}>
+                    {camera.status}
+                  </span>
+                )}
+                <div
+                  className={`${styles.resizeEdge} ${styles.resizeEdgeRight}`}
+                  data-resize-edge="true"
+                  onPointerDown={(event) => handleResizePointerDown(camera.id, 'e', event)}
+                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
+                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerCancel={handleResizePointerCancel}
+                  onClick={handleResizeClick}
+                  onPointerEnter={() => setHoverResizeId(camera.id)}
+                  onPointerLeave={() => setHoverResizeId((prev) => (prev === camera.id ? null : prev))}
+                  title="Drag to resize"
+                  aria-label="Drag to resize"
                 />
-              ) : (
-                <div className={styles.offline}>
-                  <span className={styles.offlineIcon}>📵</span>
-                  <span className={styles.cameraName}>{camera.name}</span>
-                  {showStatus && camera.status && (
-                    <span className={`${styles.statusBadge} ${styles[camera.status]}`}>
-                      {camera.status}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                <div
+                  className={`${styles.resizeEdge} ${styles.resizeEdgeBottom}`}
+                  data-resize-edge="true"
+                  onPointerDown={(event) => handleResizePointerDown(camera.id, 's', event)}
+                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
+                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerCancel={handleResizePointerCancel}
+                  onClick={handleResizeClick}
+                  onPointerEnter={() => setHoverResizeId(camera.id)}
+                  onPointerLeave={() => setHoverResizeId((prev) => (prev === camera.id ? null : prev))}
+                  title="Drag to resize"
+                  aria-label="Drag to resize"
+                />
+                <div
+                  className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerBr}`}
+                  data-resize-edge="true"
+                  onPointerDown={(event) => handleResizePointerDown(camera.id, 'se', event)}
+                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
+                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerCancel={handleResizePointerCancel}
+                  onClick={handleResizeClick}
+                  onPointerEnter={() => setHoverResizeId(camera.id)}
+                  onPointerLeave={() => setHoverResizeId((prev) => (prev === camera.id ? null : prev))}
+                  title="Drag to resize"
+                  aria-label="Drag to resize"
+                />
+                <div
+                  className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerTr}`}
+                  data-resize-edge="true"
+                  onPointerDown={(event) => handleResizePointerDown(camera.id, 'ne', event)}
+                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
+                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerCancel={handleResizePointerCancel}
+                  onClick={handleResizeClick}
+                  onPointerEnter={() => setHoverResizeId(camera.id)}
+                  onPointerLeave={() => setHoverResizeId((prev) => (prev === camera.id ? null : prev))}
+                  title="Drag to resize"
+                  aria-label="Drag to resize"
+                />
+                <div
+                  className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerBl}`}
+                  data-resize-edge="true"
+                  onPointerDown={(event) => handleResizePointerDown(camera.id, 'sw', event)}
+                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
+                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerCancel={handleResizePointerCancel}
+                  onClick={handleResizeClick}
+                  onPointerEnter={() => setHoverResizeId(camera.id)}
+                  onPointerLeave={() => setHoverResizeId((prev) => (prev === camera.id ? null : prev))}
+                  title="Drag to resize"
+                  aria-label="Drag to resize"
+                />
+                <div
+                  className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerTl}`}
+                  data-resize-edge="true"
+                  onPointerDown={(event) => handleResizePointerDown(camera.id, 'nw', event)}
+                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
+                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerCancel={handleResizePointerCancel}
+                  onClick={handleResizeClick}
+                  onPointerEnter={() => setHoverResizeId(camera.id)}
+                  onPointerLeave={() => setHoverResizeId((prev) => (prev === camera.id ? null : prev))}
+                  title="Drag to resize"
+                  aria-label="Drag to resize"
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -180,3 +452,4 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
 };
 
 export default CameraGrid;
+

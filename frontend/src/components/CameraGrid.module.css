@@ -12,10 +12,15 @@
 
 /* Grid Layout */
 .grid {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
   height: 100%;
+  /* TEST-ONLY: Allow resizable tiles to wrap without overlap. */
+  align-content: flex-start;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .gridItem {
@@ -24,6 +29,10 @@
   border-radius: 4px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  /* TEST-ONLY: Default tile size is based on the selected grid columns. */
+  width: calc((100% - (var(--grid-columns) - 1) * 4px) / var(--grid-columns));
+  aspect-ratio: 16 / 9;
+  flex: 0 0 auto;
 }
 
 .gridItem:hover {
@@ -34,6 +43,16 @@
 
 .gridItem.selected {
   box-shadow: 0 0 0 3px #4caf50;
+}
+
+/* TEST-ONLY: Drag swap and status overlay styling for operator wall. */
+.gridItem.dragging {
+  opacity: 0.6;
+}
+
+.gridItem.dragOver {
+  outline: 2px dashed #2196f3;
+  outline-offset: -2px;
 }
 
 /* Focused View */
@@ -162,6 +181,70 @@
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
+}
+
+.statusOverlay {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* TEST-ONLY: Edge resize zones with minimal visual cue on hover. */
+.resizeEdge {
+  position: absolute;
+  z-index: 10;
+  background: transparent;
+}
+
+.resizeEdgeRight {
+  top: 6px;
+  right: 0;
+  width: 10px;
+  height: calc(100% - 12px);
+  cursor: ew-resize;
+}
+
+.resizeEdgeBottom {
+  left: 6px;
+  bottom: 0;
+  width: calc(100% - 12px);
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.resizeEdgeCorner {
+  width: 14px;
+  height: 14px;
+}
+
+.resizeEdgeCornerBr {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.resizeEdgeCornerTr {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.resizeEdgeCornerBl {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+.resizeEdgeCornerTl {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.resizeHover {
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.6) inset;
 }
 
 .statusBadge.online {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LiveView Component
  * 
  * HLS video player for live camera streams from VMS (Shinobi, etc.).
@@ -39,6 +39,12 @@ interface LiveViewProps {
   
   /** Fixed aspect ratio */
   aspectRatio?: '16:9' | '4:3' | '1:1';
+
+  /** Optional header right controls */
+  headerRight?: React.ReactNode;
+
+  /** Fill parent container (for resizable tiles) */
+  fillParent?: boolean;
 }
 
 interface StreamState {
@@ -58,6 +64,8 @@ export const LiveView: React.FC<LiveViewProps> = ({
   onError,
   className,
   aspectRatio = '16:9',
+  headerRight,
+  fillParent = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -209,6 +217,9 @@ export const LiveView: React.FC<LiveViewProps> = ({
 
   // Get aspect ratio CSS class
   const getAspectRatioClass = () => {
+    if (fillParent) {
+      return styles.fill;
+    }
     switch (aspectRatio) {
       case '4:3':
         return styles.aspect4x3;
@@ -225,16 +236,20 @@ export const LiveView: React.FC<LiveViewProps> = ({
       {cameraName && (
         <div className={styles.header}>
           <span className={styles.cameraName}>{cameraName}</span>
-          <span className={`${styles.status} ${state.playing ? styles.live : ''}`}>
-            {state.playing ? '● LIVE' : state.loading ? 'Loading...' : 'Offline'}
-          </span>
+          {/* TEST-ONLY: Optional header actions for wall resize control. */}
+          <div className={styles.headerActions}>
+            <span className={`${styles.status} ${state.playing ? styles.live : ''}`}>
+              {state.playing ? 'ƒ-? LIVE' : state.loading ? 'Loading...' : 'Offline'}
+            </span>
+            {headerRight}
+          </div>
         </div>
       )}
 
       {/* Video player */}
       <video
         ref={videoRef}
-        className={styles.video}
+        className={`${styles.video} ${fillParent ? styles.videoFill : ''}`}
         controls={showControls}
         muted={muted}
         playsInline
@@ -254,7 +269,7 @@ export const LiveView: React.FC<LiveViewProps> = ({
       {/* Error overlay */}
       {state.error && (
         <div className={styles.overlay}>
-          <div className={styles.errorIcon}>⚠️</div>
+          <div className={styles.errorIcon}>âš ï¸</div>
           <span className={styles.errorText}>{state.error}</span>
           <button className={styles.retryButton} onClick={handleRetry}>
             Retry Connection
@@ -266,3 +281,4 @@ export const LiveView: React.FC<LiveViewProps> = ({
 };
 
 export default LiveView;
+
