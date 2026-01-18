@@ -45,6 +45,14 @@ export interface IUser extends Document {
   passwordResetToken?: string;
   passwordResetExpiry?: Date;
   
+  // Location tracking (for responders)
+  location?: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  locationAccuracy?: number; // Accuracy in meters
+  locationUpdatedAt?: Date;
+  
   // Audit fields
   createdAt: Date;
   updatedAt: Date;
@@ -143,6 +151,28 @@ const userSchema = new Schema<IUser>(
       type: Date,
       select: false,
     },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+      },
+      coordinates: {
+        type: [Number],
+        validate: {
+          validator: function (coords: number[]) {
+            return coords.length === 2;
+          },
+          message: 'Location coordinates must contain exactly 2 elements [longitude, latitude]',
+        },
+      },
+    },
+    locationAccuracy: {
+      type: Number,
+      min: [0, 'Location accuracy must be non-negative'],
+    },
+    locationUpdatedAt: {
+      type: Date,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -176,6 +206,11 @@ const userSchema = new Schema<IUser>(
 userSchema.index({ companyId: 1, email: 1 });
 userSchema.index({ companyId: 1, role: 1 });
 userSchema.index({ companyId: 1, isActive: 1 });
+
+/**
+ * Geospatial index for location-based queries
+ */
+userSchema.index({ location: '2dsphere' });
 
 /**
  * Pre-save hook: Hash password if modified

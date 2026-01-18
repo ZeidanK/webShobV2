@@ -4,19 +4,7 @@ import { User, UserRole } from '../models';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
-// Extend Express Request type for user context
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        companyId: string;
-        role: UserRole;
-        email: string;
-      };
-    }
-  }
-}
+// Note: Express Request type extension is now in src/types/express.d.ts
 
 /**
  * Role hierarchy for permission checking

@@ -1,0 +1,951 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="211" failures="33" errors="0" time="251.548">
+  <testsuite name="WebSocket Integration Tests" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="69.577" tests="9">
+    <testcase classname="WebSocket Integration Tests WebSocket Connection should connect with valid JWT token" name="WebSocket Integration Tests WebSocket Connection should connect with valid JWT token" time="2.13">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests WebSocket Connection should reject connection without token" name="WebSocket Integration Tests WebSocket Connection should reject connection without token" time="0.933">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests WebSocket Connection should reject connection with invalid token" name="WebSocket Integration Tests WebSocket Connection should reject connection with invalid token" time="0.791">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests Company Room Isolation should only receive events for own company" name="WebSocket Integration Tests Company Room Isolation should only receive events for own company" time="1.258">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests Company Room Isolation should receive broadcasts for own company only" name="WebSocket Integration Tests Company Room Isolation should receive broadcasts for own company only" time="1.079">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests Event Broadcasts should receive event:created broadcast" name="WebSocket Integration Tests Event Broadcasts should receive event:created broadcast" time="0.505">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests Event Broadcasts should receive event:updated broadcast" name="WebSocket Integration Tests Event Broadcasts should receive event:updated broadcast" time="0.539">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests Event Broadcasts should receive report:created broadcast" name="WebSocket Integration Tests Event Broadcasts should receive report:created broadcast" time="0.597">
+    </testcase>
+    <testcase classname="WebSocket Integration Tests Connection Tracking should track active connections per company" name="WebSocket Integration Tests Connection Tracking should track active connections per company" time="0.703">
+    </testcase>
+  </testsuite>
+  <testsuite name="EventType Routes" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="74.654" tests="28">
+    <testcase classname="EventType Routes GET /api/event-types should return system defaults and company-specific types" name="EventType Routes GET /api/event-types should return system defaults and company-specific types" time="0.217">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types should enforce tenant isolation for company-specific types" name="EventType Routes GET /api/event-types should enforce tenant isolation for company-specific types" time="0.071">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types should require authentication" name="EventType Routes GET /api/event-types should require authentication" time="0.054">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types/company should return only company-specific types" name="EventType Routes GET /api/event-types/company should return only company-specific types" time="0.065">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types/company should return empty array if no company types" name="EventType Routes GET /api/event-types/company should return empty array if no company types" time="0.056">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types/:id should return company-specific event type" name="EventType Routes GET /api/event-types/:id should return company-specific event type" time="0.063">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types/:id should return system default event type" name="EventType Routes GET /api/event-types/:id should return system default event type" time="0.066">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types/:id should enforce tenant isolation" name="EventType Routes GET /api/event-types/:id should enforce tenant isolation" time="0.075">
+    </testcase>
+    <testcase classname="EventType Routes GET /api/event-types/:id should return 404 for non-existent type" name="EventType Routes GET /api/event-types/:id should return 404 for non-existent type" time="0.068">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should create company-specific event type" name="EventType Routes POST /api/event-types should create company-specific event type" time="0.189">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should require admin role" name="EventType Routes POST /api/event-types should require admin role" time="0.056">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should validate required fields" name="EventType Routes POST /api/event-types should validate required fields" time="0.064">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should validate color format" name="EventType Routes POST /api/event-types should validate color format" time="0.083">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should prevent duplicate names (case insensitive)" name="EventType Routes POST /api/event-types should prevent duplicate names (case insensitive)" time="0.109">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should prevent conflicts with system defaults" name="EventType Routes POST /api/event-types should prevent conflicts with system defaults" time="0.06">
+    </testcase>
+    <testcase classname="EventType Routes POST /api/event-types should normalize color to uppercase" name="EventType Routes POST /api/event-types should normalize color to uppercase" time="0.077">
+    </testcase>
+    <testcase classname="EventType Routes PATCH /api/event-types/:id should update company-specific event type" name="EventType Routes PATCH /api/event-types/:id should update company-specific event type" time="0.113">
+    </testcase>
+    <testcase classname="EventType Routes PATCH /api/event-types/:id should prevent updating system defaults" name="EventType Routes PATCH /api/event-types/:id should prevent updating system defaults" time="0.08">
+    </testcase>
+    <testcase classname="EventType Routes PATCH /api/event-types/:id should require admin role" name="EventType Routes PATCH /api/event-types/:id should require admin role" time="0.048">
+    </testcase>
+    <testcase classname="EventType Routes PATCH /api/event-types/:id should enforce tenant isolation" name="EventType Routes PATCH /api/event-types/:id should enforce tenant isolation" time="0.052">
+    </testcase>
+    <testcase classname="EventType Routes PATCH /api/event-types/:id should validate color format" name="EventType Routes PATCH /api/event-types/:id should validate color format" time="0.058">
+    </testcase>
+    <testcase classname="EventType Routes PATCH /api/event-types/:id should prevent name conflicts" name="EventType Routes PATCH /api/event-types/:id should prevent name conflicts" time="0.057">
+    </testcase>
+    <testcase classname="EventType Routes DELETE /api/event-types/:id should soft delete company-specific event type" name="EventType Routes DELETE /api/event-types/:id should soft delete company-specific event type" time="0.074">
+    </testcase>
+    <testcase classname="EventType Routes DELETE /api/event-types/:id should prevent deleting system defaults" name="EventType Routes DELETE /api/event-types/:id should prevent deleting system defaults" time="0.059">
+    </testcase>
+    <testcase classname="EventType Routes DELETE /api/event-types/:id should require admin role" name="EventType Routes DELETE /api/event-types/:id should require admin role" time="0.052">
+    </testcase>
+    <testcase classname="EventType Routes DELETE /api/event-types/:id should enforce tenant isolation" name="EventType Routes DELETE /api/event-types/:id should enforce tenant isolation" time="0.082">
+    </testcase>
+    <testcase classname="EventType Routes DELETE /api/event-types/:id should return 404 for non-existent type" name="EventType Routes DELETE /api/event-types/:id should return 404 for non-existent type" time="0.05">
+    </testcase>
+    <testcase classname="EventType Routes DELETE /api/event-types/:id should return 404 for already deleted type" name="EventType Routes DELETE /api/event-types/:id should return 404 for already deleted type" time="0.078">
+    </testcase>
+  </testsuite>
+  <testsuite name="Company Routes Integration Tests" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="74.602" tests="8">
+    <testcase classname="Company Routes Integration Tests POST /api/companies should create a company as super_admin" name="Company Routes Integration Tests POST /api/companies should create a company as super_admin" time="0.946">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests POST /api/companies should reject company creation from non-super_admin" name="Company Routes Integration Tests POST /api/companies should reject company creation from non-super_admin" time="0.382">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests GET /api/companies/:id should allow user to get their own company" name="Company Routes Integration Tests GET /api/companies/:id should allow user to get their own company" time="0.478">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests GET /api/companies/:id should reject access to another company (tenant isolation)" name="Company Routes Integration Tests GET /api/companies/:id should reject access to another company (tenant isolation)" time="0.614">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests GET /api/companies/:id should allow super_admin to access any company" name="Company Routes Integration Tests GET /api/companies/:id should allow super_admin to access any company" time="0.586">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests PATCH /api/companies/:id/settings should allow admin to update their company settings" name="Company Routes Integration Tests PATCH /api/companies/:id/settings should allow admin to update their company settings" time="0.349">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests PATCH /api/companies/:id/settings should reject settings update from operator" name="Company Routes Integration Tests PATCH /api/companies/:id/settings should reject settings update from operator" time="0.568">
+    </testcase>
+    <testcase classname="Company Routes Integration Tests POST /api/companies/:id/regenerate-api-key should regenerate API key as admin" name="Company Routes Integration Tests POST /api/companies/:id/regenerate-api-key should regenerate API key as admin" time="0.358">
+    </testcase>
+  </testsuite>
+  <testsuite name="Event Routes" errors="0" failures="0" skipped="1" timestamp="2026-01-18T08:54:28" time="75.204" tests="31">
+    <testcase classname="Event Routes POST /api/events should create event with valid data" name="Event Routes POST /api/events should create event with valid data" time="0.518">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events should require authentication" name="Event Routes POST /api/events should require authentication" time="0.062">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events should require operator role or higher" name="Event Routes POST /api/events should require operator role or higher" time="0.301">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events should validate required fields" name="Event Routes POST /api/events should validate required fields" time="0.06">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events should validate location format" name="Event Routes POST /api/events should validate location format" time="0.057">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events should enforce tenant isolation" name="Event Routes POST /api/events should enforce tenant isolation" time="0.055">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events should link initial reports if provided" name="Event Routes POST /api/events should link initial reports if provided" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Event Routes GET /api/events should return events for company with pagination" name="Event Routes GET /api/events should return events for company with pagination" time="0.097">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events should enforce tenant isolation" name="Event Routes GET /api/events should enforce tenant isolation" time="0.125">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events should filter by status" name="Event Routes GET /api/events should filter by status" time="0.084">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events should support search" name="Event Routes GET /api/events should support search" time="0.114">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should return events within bounding box" name="Event Routes GET /api/events/geo should return events within bounding box" time="0.1">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should enforce tenant isolation in geo queries" name="Event Routes GET /api/events/geo should enforce tenant isolation in geo queries" time="0.125">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should filter by status in geo query" name="Event Routes GET /api/events/geo should filter by status in geo query" time="0.096">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should filter by priority in geo query" name="Event Routes GET /api/events/geo should filter by priority in geo query" time="0.089">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should validate required bounding box parameters" name="Event Routes GET /api/events/geo should validate required bounding box parameters" time="0.068">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should validate coordinate ranges" name="Event Routes GET /api/events/geo should validate coordinate ranges" time="0.072">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should validate bounding box logic" name="Event Routes GET /api/events/geo should validate bounding box logic" time="0.058">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/geo should include correlationId in response" name="Event Routes GET /api/events/geo should include correlationId in response" time="0.072">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/:id should return event details" name="Event Routes GET /api/events/:id should return event details" time="0.075">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/:id should enforce tenant isolation" name="Event Routes GET /api/events/:id should enforce tenant isolation" time="0.051">
+    </testcase>
+    <testcase classname="Event Routes GET /api/events/:id should return 404 for non-existent event" name="Event Routes GET /api/events/:id should return 404 for non-existent event" time="0.071">
+    </testcase>
+    <testcase classname="Event Routes PATCH /api/events/:id/status should update event status with valid transition" name="Event Routes PATCH /api/events/:id/status should update event status with valid transition" time="0.132">
+    </testcase>
+    <testcase classname="Event Routes PATCH /api/events/:id/status should reject invalid status transitions" name="Event Routes PATCH /api/events/:id/status should reject invalid status transitions" time="0.074">
+    </testcase>
+    <testcase classname="Event Routes PATCH /api/events/:id/status should require operator role or higher" name="Event Routes PATCH /api/events/:id/status should require operator role or higher" time="0.595">
+    </testcase>
+    <testcase classname="Event Routes PATCH /api/events/:id/status should enforce tenant isolation" name="Event Routes PATCH /api/events/:id/status should enforce tenant isolation" time="0.056">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events/:id/reports should link report to event" name="Event Routes POST /api/events/:id/reports should link report to event" time="0.103">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events/:id/reports should prevent duplicate linking" name="Event Routes POST /api/events/:id/reports should prevent duplicate linking" time="0.111">
+    </testcase>
+    <testcase classname="Event Routes POST /api/events/:id/reports should enforce tenant isolation" name="Event Routes POST /api/events/:id/reports should enforce tenant isolation" time="0.063">
+    </testcase>
+    <testcase classname="Event Routes DELETE /api/events/:id/reports/:reportId should unlink report from event" name="Event Routes DELETE /api/events/:id/reports/:reportId should unlink report from event" time="0.108">
+    </testcase>
+    <testcase classname="Event Routes DELETE /api/events/:id/reports/:reportId should handle report not linked" name="Event Routes DELETE /api/events/:id/reports/:reportId should handle report not linked" time="0.071">
+    </testcase>
+  </testsuite>
+  <testsuite name="RBAC Middleware" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:55:38" time="7.215" tests="14">
+    <testcase classname="RBAC Middleware ROLE_HIERARCHY should have correct hierarchy values" name="RBAC Middleware ROLE_HIERARCHY should have correct hierarchy values" time="0.096">
+    </testcase>
+    <testcase classname="RBAC Middleware ROLE_HIERARCHY should place admin and company_admin at same level" name="RBAC Middleware ROLE_HIERARCHY should place admin and company_admin at same level" time="0.033">
+    </testcase>
+    <testcase classname="RBAC Middleware hasMinimumRole should return true when user has exact required role" name="RBAC Middleware hasMinimumRole should return true when user has exact required role" time="0.031">
+    </testcase>
+    <testcase classname="RBAC Middleware hasMinimumRole should return true when user has higher role" name="RBAC Middleware hasMinimumRole should return true when user has higher role" time="0.038">
+    </testcase>
+    <testcase classname="RBAC Middleware hasMinimumRole should return false when user has lower role" name="RBAC Middleware hasMinimumRole should return false when user has lower role" time="0.034">
+    </testcase>
+    <testcase classname="RBAC Middleware hasMinimumRole should handle admin/company_admin equivalence" name="RBAC Middleware hasMinimumRole should handle admin/company_admin equivalence" time="0.032">
+    </testcase>
+    <testcase classname="RBAC Middleware canAssignRole super_admin should be able to assign any role" name="RBAC Middleware canAssignRole super_admin should be able to assign any role" time="0.031">
+    </testcase>
+    <testcase classname="RBAC Middleware canAssignRole admin/company_admin should be able to assign roles below their level" name="RBAC Middleware canAssignRole admin/company_admin should be able to assign roles below their level" time="0.03">
+    </testcase>
+    <testcase classname="RBAC Middleware canAssignRole admin/company_admin should NOT be able to assign equal or higher roles" name="RBAC Middleware canAssignRole admin/company_admin should NOT be able to assign equal or higher roles" time="0.031">
+    </testcase>
+    <testcase classname="RBAC Middleware canAssignRole lower roles should NOT be able to assign any roles" name="RBAC Middleware canAssignRole lower roles should NOT be able to assign any roles" time="0.031">
+    </testcase>
+    <testcase classname="RBAC Middleware role hierarchy enforcement scenarios should enforce: citizen &lt; first_responder &lt; operator &lt; admin = company_admin &lt; super_admin" name="RBAC Middleware role hierarchy enforcement scenarios should enforce: citizen &lt; first_responder &lt; operator &lt; admin = company_admin &lt; super_admin" time="0.03">
+    </testcase>
+    <testcase classname="RBAC Middleware practical scenarios admin should create operator but not another admin" name="RBAC Middleware practical scenarios admin should create operator but not another admin" time="0.035">
+    </testcase>
+    <testcase classname="RBAC Middleware practical scenarios operator should not be able to create any users" name="RBAC Middleware practical scenarios operator should not be able to create any users" time="0.031">
+    </testcase>
+    <testcase classname="RBAC Middleware practical scenarios super_admin can create another super_admin" name="RBAC Middleware practical scenarios super_admin can create another super_admin" time="0.029">
+    </testcase>
+  </testsuite>
+  <testsuite name="User Routes Integration Tests" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="79.459" tests="12">
+    <testcase classname="User Routes Integration Tests POST /api/users should create a user as admin" name="User Routes Integration Tests POST /api/users should create a user as admin" time="1.178">
+    </testcase>
+    <testcase classname="User Routes Integration Tests POST /api/users should enforce role hierarchy - admin cannot create admin" name="User Routes Integration Tests POST /api/users should enforce role hierarchy - admin cannot create admin" time="0.455">
+    </testcase>
+    <testcase classname="User Routes Integration Tests POST /api/users should reject user creation from operator" name="User Routes Integration Tests POST /api/users should reject user creation from operator" time="0.357">
+    </testcase>
+    <testcase classname="User Routes Integration Tests GET /api/users should list users in same company only" name="User Routes Integration Tests GET /api/users should list users in same company only" time="1.281">
+    </testcase>
+    <testcase classname="User Routes Integration Tests GET /api/users should support pagination" name="User Routes Integration Tests GET /api/users should support pagination" time="2.148">
+    </testcase>
+    <testcase classname="User Routes Integration Tests GET /api/users should filter by role" name="User Routes Integration Tests GET /api/users should filter by role" time="0.867">
+    </testcase>
+    <testcase classname="User Routes Integration Tests GET /api/users/:id should get user by ID in same company" name="User Routes Integration Tests GET /api/users/:id should get user by ID in same company" time="0.561">
+    </testcase>
+    <testcase classname="User Routes Integration Tests GET /api/users/:id should reject access to user in different company" name="User Routes Integration Tests GET /api/users/:id should reject access to user in different company" time="0.52">
+    </testcase>
+    <testcase classname="User Routes Integration Tests PATCH /api/users/:id should update user as admin" name="User Routes Integration Tests PATCH /api/users/:id should update user as admin" time="0.489">
+    </testcase>
+    <testcase classname="User Routes Integration Tests PATCH /api/users/:id should enforce role hierarchy on role change" name="User Routes Integration Tests PATCH /api/users/:id should enforce role hierarchy on role change" time="0.497">
+    </testcase>
+    <testcase classname="User Routes Integration Tests DELETE /api/users/:id should soft delete user as admin" name="User Routes Integration Tests DELETE /api/users/:id should soft delete user as admin" time="0.459">
+    </testcase>
+    <testcase classname="User Routes Integration Tests DELETE /api/users/:id should prevent self-deletion" name="User Routes Integration Tests DELETE /api/users/:id should prevent self-deletion" time="0.231">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth Routes Integration Tests" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="79.466" tests="18">
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/register should register a new user successfully" name="Auth Routes Integration Tests POST /api/auth/register should register a new user successfully" time="0.893">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/register should return 400 for invalid email" name="Auth Routes Integration Tests POST /api/auth/register should return 400 for invalid email" time="0.071">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/register should return 400 for short password" name="Auth Routes Integration Tests POST /api/auth/register should return 400 for short password" time="0.061">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/register should return 409 for duplicate email" name="Auth Routes Integration Tests POST /api/auth/register should return 409 for duplicate email" time="0.332">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/register should create audit log entry" name="Auth Routes Integration Tests POST /api/auth/register should create audit log entry" time="0.457">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/login should login successfully with valid credentials" name="Auth Routes Integration Tests POST /api/auth/login should login successfully with valid credentials" time="0.812">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/login should return 401 for invalid email" name="Auth Routes Integration Tests POST /api/auth/login should return 401 for invalid email" time="0.382">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/login should return 401 for invalid password" name="Auth Routes Integration Tests POST /api/auth/login should return 401 for invalid password" time="0.689">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/login should lock account after 5 failed attempts" name="Auth Routes Integration Tests POST /api/auth/login should lock account after 5 failed attempts" time="2.151">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/login should return 403 for inactive account" name="Auth Routes Integration Tests POST /api/auth/login should return 403 for inactive account" time="0.445">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/refresh should refresh access token successfully" name="Auth Routes Integration Tests POST /api/auth/refresh should refresh access token successfully" time="1.409">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/refresh should return 401 for invalid refresh token" name="Auth Routes Integration Tests POST /api/auth/refresh should return 401 for invalid refresh token" time="0.322">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/forgot-password should generate password reset token" name="Auth Routes Integration Tests POST /api/auth/forgot-password should generate password reset token" time="0.312">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/forgot-password should not reveal if email does not exist" name="Auth Routes Integration Tests POST /api/auth/forgot-password should not reveal if email does not exist" time="0.28">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/reset-password should reset password successfully" name="Auth Routes Integration Tests POST /api/auth/reset-password should reset password successfully" time="0.955">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests POST /api/auth/reset-password should return 400 for invalid token" name="Auth Routes Integration Tests POST /api/auth/reset-password should return 400 for invalid token" time="0.282">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests Tenant isolation should isolate users by companyId" name="Auth Routes Integration Tests Tenant isolation should isolate users by companyId" time="0.445">
+    </testcase>
+    <testcase classname="Auth Routes Integration Tests Tenant isolation should include correlationId in all responses" name="Auth Routes Integration Tests Tenant isolation should include correlationId in all responses" time="0.222">
+    </testcase>
+  </testsuite>
+  <testsuite name="VMS Routes Integration Tests" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="79.375" tests="14">
+    <testcase classname="VMS Routes Integration Tests POST /api/vms should create a VMS server as admin" name="VMS Routes Integration Tests POST /api/vms should create a VMS server as admin" time="1.296">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests POST /api/vms should reject VMS creation from operator" name="VMS Routes Integration Tests POST /api/vms should reject VMS creation from operator" time="0.668">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests POST /api/vms should validate required fields" name="VMS Routes Integration Tests POST /api/vms should validate required fields" time="0.702">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests POST /api/vms should validate provider enum" name="VMS Routes Integration Tests POST /api/vms should validate provider enum" time="0.704">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests GET /api/vms should list VMS servers for company" name="VMS Routes Integration Tests GET /api/vms should list VMS servers for company" time="0.934">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests GET /api/vms should filter by provider" name="VMS Routes Integration Tests GET /api/vms should filter by provider" time="0.626">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests GET /api/vms should not return VMS servers from other companies" name="VMS Routes Integration Tests GET /api/vms should not return VMS servers from other companies" time="0.515">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests GET /api/vms/:id should get VMS server by ID" name="VMS Routes Integration Tests GET /api/vms/:id should get VMS server by ID" time="0.652">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests GET /api/vms/:id should return 404 for non-existent server" name="VMS Routes Integration Tests GET /api/vms/:id should return 404 for non-existent server" time="0.54">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests GET /api/vms/:id should not access VMS server from other company" name="VMS Routes Integration Tests GET /api/vms/:id should not access VMS server from other company" time="0.526">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests PUT /api/vms/:id should update VMS server as admin" name="VMS Routes Integration Tests PUT /api/vms/:id should update VMS server as admin" time="0.479">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests PUT /api/vms/:id should reject update from operator" name="VMS Routes Integration Tests PUT /api/vms/:id should reject update from operator" time="0.48">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests DELETE /api/vms/:id should delete VMS server as admin" name="VMS Routes Integration Tests DELETE /api/vms/:id should delete VMS server as admin" time="0.44">
+    </testcase>
+    <testcase classname="VMS Routes Integration Tests DELETE /api/vms/:id should reject delete from operator" name="VMS Routes Integration Tests DELETE /api/vms/:id should reject delete from operator" time="0.418">
+    </testcase>
+  </testsuite>
+  <testsuite name="Health Routes" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:55:43" time="4.74" tests="6">
+    <testcase classname="Health Routes GET /api/health should return 200 with health status" name="Health Routes GET /api/health should return 200 with health status" time="0.104">
+    </testcase>
+    <testcase classname="Health Routes GET /api/health should include correlationId in response headers" name="Health Routes GET /api/health should include correlationId in response headers" time="0.029">
+    </testcase>
+    <testcase classname="Health Routes GET /api/health should use provided correlationId from request header" name="Health Routes GET /api/health should use provided correlationId from request header" time="0.029">
+    </testcase>
+    <testcase classname="Health Routes GET /api/health/detailed should return detailed health information" name="Health Routes GET /api/health/detailed should return detailed health information" time="0.032">
+    </testcase>
+    <testcase classname="404 Handler should return 404 for unknown routes" name="404 Handler should return 404 for unknown routes" time="0.03">
+    </testcase>
+    <testcase classname="CORS should include CORS headers" name="CORS should include CORS headers" time="0.025">
+    </testcase>
+  </testsuite>
+  <testsuite name="Camera Routes Integration Tests" errors="0" failures="1" skipped="0" timestamp="2026-01-18T08:54:28" time="79.532" tests="14">
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras should create a camera as admin" name="Camera Routes Integration Tests POST /api/cameras should create a camera as admin" time="1.327">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras should create camera with VMS connection" name="Camera Routes Integration Tests POST /api/cameras should create camera with VMS connection" time="0.753">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras should reject camera creation from operator" name="Camera Routes Integration Tests POST /api/cameras should reject camera creation from operator" time="0.766">
+      <failure>Error: expected 403 &quot;Forbidden&quot;, got 201 &quot;Created&quot;
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\camera.routes.test.ts:137:10)
+    at Promise.then.completed (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at _runTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\runTest.js:444:34)
+    at Object.worker (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\testWorker.js:106:12)
+----
+    at Test._assertStatus (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:252:14)
+    at A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:308:13
+    at Test._assertFunction (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:285:13)
+    at Test.assert (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:164:23)
+    at Server.localAssert (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:120:14)
+    at Object.onceWrapper (node:events:622:28)
+    at Server.emit (node:events:508:28)
+    at emitCloseNT (node:net:2419:8)
+    at processTicksAndRejections (node:internal/process/task_queues:88:21)</failure>
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras should validate required location" name="Camera Routes Integration Tests POST /api/cameras should validate required location" time="0.832">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests GET /api/cameras should list cameras for company" name="Camera Routes Integration Tests GET /api/cameras should list cameras for company" time="0.774">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests GET /api/cameras should filter by status" name="Camera Routes Integration Tests GET /api/cameras should filter by status" time="0.55">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests GET /api/cameras should not return deleted cameras" name="Camera Routes Integration Tests GET /api/cameras should not return deleted cameras" time="0.593">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests GET /api/cameras should not return cameras from other companies" name="Camera Routes Integration Tests GET /api/cameras should not return cameras from other companies" time="0.629">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests GET /api/cameras/:id should get camera by ID" name="Camera Routes Integration Tests GET /api/cameras/:id should get camera by ID" time="0.562">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests GET /api/cameras/:id should return 404 for non-existent camera" name="Camera Routes Integration Tests GET /api/cameras/:id should return 404 for non-existent camera" time="0.493">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras/:id/vms/connect should connect camera to VMS" name="Camera Routes Integration Tests POST /api/cameras/:id/vms/connect should connect camera to VMS" time="0.517">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras/:id/vms/connect should reject duplicate monitor connection" name="Camera Routes Integration Tests POST /api/cameras/:id/vms/connect should reject duplicate monitor connection" time="0.485">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests POST /api/cameras/:id/vms/disconnect should disconnect camera from VMS" name="Camera Routes Integration Tests POST /api/cameras/:id/vms/disconnect should disconnect camera from VMS" time="0.445">
+    </testcase>
+    <testcase classname="Camera Routes Integration Tests DELETE /api/cameras/:id should soft delete camera" name="Camera Routes Integration Tests DELETE /api/cameras/:id should soft delete camera" time="0.405">
+    </testcase>
+  </testsuite>
+  <testsuite name="Mobile API Integration" errors="0" failures="12" skipped="0" timestamp="2026-01-18T08:54:28" time="79.98" tests="14">
+    <testcase classname="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should authenticate user with API key + credentials" name="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should authenticate user with API key + credentials" time="1.271">
+      <failure>Error: expected 200 &quot;OK&quot;, got 500 &quot;Internal Server Error&quot;
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:77:12)
+    at Promise.then.completed (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at _runTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\runTest.js:444:34)
+    at Object.worker (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\testWorker.js:106:12)
+----
+    at Test._assertStatus (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:252:14)
+    at A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:308:13
+    at Test._assertFunction (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:285:13)
+    at Test.assert (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:164:23)
+    at Server.localAssert (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:120:14)
+    at Object.onceWrapper (node:events:622:28)
+    at Server.emit (node:events:508:28)
+    at emitCloseNT (node:net:2419:8)
+    at processTicksAndRejections (node:internal/process/task_queues:88:21)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should reject login without API key" name="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should reject login without API key" time="0.699">
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should reject login with invalid credentials" name="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should reject login with invalid credentials" time="0.711">
+      <failure>Error: expected 401 &quot;Unauthorized&quot;, got 500 &quot;Internal Server Error&quot;
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:111:12)
+    at Promise.then.completed (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at _runTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (A:\CityShobV2\webShobV2\backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\runTest.js:444:34)
+    at Object.worker (A:\CityShobV2\webShobV2\backend\node_modules\jest-runner\build\testWorker.js:106:12)
+----
+    at Test._assertStatus (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:252:14)
+    at A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:308:13
+    at Test._assertFunction (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:285:13)
+    at Test.assert (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:164:23)
+    at Server.localAssert (A:\CityShobV2\webShobV2\backend\node_modules\supertest\lib\test.js:120:14)
+    at Object.onceWrapper (node:events:622:28)
+    at Server.emit (node:events:508:28)
+    at emitCloseNT (node:net:2419:8)
+    at processTicksAndRejections (node:internal/process/task_queues:88:21)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should enforce rate limiting" name="Mobile API Integration Mobile Authentication POST /api/mobile/auth/login should enforce rate limiting" time="1.412">
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Authentication POST /api/mobile/auth/refresh should refresh access token with valid refresh token" name="Mobile API Integration Mobile Authentication POST /api/mobile/auth/refresh should refresh access token with valid refresh token" time="0.957">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:148:42)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Reports POST /api/mobile/reports should create new report" name="Mobile API Integration Mobile Reports POST /api/mobile/reports should create new report" time="0.607">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:187:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Reports POST /api/mobile/reports should reject report with invalid location" name="Mobile API Integration Mobile Reports POST /api/mobile/reports should reject report with invalid location" time="0.777">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:187:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Reports GET /api/mobile/reports should get user&apos;s own reports" name="Mobile API Integration Mobile Reports GET /api/mobile/reports should get user&apos;s own reports" time="0.541">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:187:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Reports GET /api/mobile/reports should filter reports by status" name="Mobile API Integration Mobile Reports GET /api/mobile/reports should filter reports by status" time="0.514">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:187:40)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Responder Location POST /api/mobile/users/location should update responder location" name="Mobile API Integration Mobile Responder Location POST /api/mobile/users/location should update responder location" time="0.454">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:312:49)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Responder Location POST /api/mobile/users/location should reject location update from non-responder" name="Mobile API Integration Mobile Responder Location POST /api/mobile/users/location should reject location update from non-responder" time="0.466">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:312:49)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration Mobile Responder Location GET /api/mobile/users/location should get responder current location" name="Mobile API Integration Mobile Responder Location GET /api/mobile/users/location should get responder current location" time="0.435">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;accessToken&apos;)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:312:49)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration API Key Scoping should allow mobile partner access to mobile endpoints" name="Mobile API Integration API Key Scoping should allow mobile partner access to mobile endpoints" time="0.43">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 500
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:413:31)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+    <testcase classname="Mobile API Integration API Key Scoping should allow standard company access to mobile endpoints" name="Mobile API Integration API Key Scoping should allow standard company access to mobile endpoints" time="0.487">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 500
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\routes\mobile.routes.test.ts:437:31)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Report Routes" errors="0" failures="0" skipped="0" timestamp="2026-01-18T08:54:28" time="82.783" tests="23">
+    <testcase classname="Report Routes POST /api/reports should create a report as citizen" name="Report Routes POST /api/reports should create a report as citizen" time="1.215">
+    </testcase>
+    <testcase classname="Report Routes POST /api/reports should reject report with invalid location" name="Report Routes POST /api/reports should reject report with invalid location" time="0.736">
+    </testcase>
+    <testcase classname="Report Routes POST /api/reports should reject report without authentication" name="Report Routes POST /api/reports should reject report without authentication" time="1.452">
+    </testcase>
+    <testcase classname="Report Routes POST /api/reports should reject report with missing required fields" name="Report Routes POST /api/reports should reject report with missing required fields" time="0.954">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports should get all reports for company (operator)" name="Report Routes GET /api/reports should get all reports for company (operator)" time="1.025">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports should filter reports by status" name="Report Routes GET /api/reports should filter reports by status" time="0.564">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports should filter reports by type" name="Report Routes GET /api/reports should filter reports by type" time="0.599">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports should paginate results" name="Report Routes GET /api/reports should paginate results" time="0.608">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports should enforce tenant isolation" name="Report Routes GET /api/reports should enforce tenant isolation" time="0.525">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports should reject access from citizen role" name="Report Routes GET /api/reports should reject access from citizen role" time="0.473">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports/:id should get report by ID" name="Report Routes GET /api/reports/:id should get report by ID" time="0.487">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports/:id should return 404 for non-existent report" name="Report Routes GET /api/reports/:id should return 404 for non-existent report" time="0.44">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports/:id should enforce tenant isolation" name="Report Routes GET /api/reports/:id should enforce tenant isolation" time="0.42">
+    </testcase>
+    <testcase classname="Report Routes GET /api/reports/:id should return 400 for invalid ID format" name="Report Routes GET /api/reports/:id should return 400 for invalid ID format" time="0.325">
+    </testcase>
+    <testcase classname="Report Routes PATCH /api/reports/:id/verify should verify report as operator" name="Report Routes PATCH /api/reports/:id/verify should verify report as operator" time="0.345">
+    </testcase>
+    <testcase classname="Report Routes PATCH /api/reports/:id/verify should reject verification from citizen" name="Report Routes PATCH /api/reports/:id/verify should reject verification from citizen" time="0.306">
+    </testcase>
+    <testcase classname="Report Routes PATCH /api/reports/:id/verify should reject double verification" name="Report Routes PATCH /api/reports/:id/verify should reject double verification" time="0.3">
+    </testcase>
+    <testcase classname="Report Routes PATCH /api/reports/:id/reject should reject report as operator" name="Report Routes PATCH /api/reports/:id/reject should reject report as operator" time="0.264">
+    </testcase>
+    <testcase classname="Report Routes PATCH /api/reports/:id/reject should require rejection reason" name="Report Routes PATCH /api/reports/:id/reject should require rejection reason" time="0.24">
+    </testcase>
+    <testcase classname="Report Routes PATCH /api/reports/:id/reject should reject rejection from citizen" name="Report Routes PATCH /api/reports/:id/reject should reject rejection from citizen" time="0.234">
+    </testcase>
+    <testcase classname="Report Routes POST /api/reports/:id/attachments should add attachment to report" name="Report Routes POST /api/reports/:id/attachments should add attachment to report" time="0.276">
+    </testcase>
+    <testcase classname="Report Routes POST /api/reports/:id/attachments should reject when no files provided" name="Report Routes POST /api/reports/:id/attachments should reject when no files provided" time="0.225">
+    </testcase>
+    <testcase classname="Report Routes POST /api/reports/:id/attachments should enforce 10 attachment limit" name="Report Routes POST /api/reports/:id/attachments should enforce 10 attachment limit" time="0.482">
+    </testcase>
+  </testsuite>
+  <testsuite name="AuthService" errors="0" failures="20" skipped="0" timestamp="2026-01-18T08:54:28" time="249.365" tests="20">
+    <testcase classname="AuthService register should register a new user successfully" name="AuthService register should register a new user successfully" time="10.092">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService register should throw error if email already exists" name="AuthService register should throw error if email already exists" time="10.022">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService register should hash password correctly" name="AuthService register should hash password correctly" time="10.003">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService login should login successfully with valid credentials" name="AuthService login should login successfully with valid credentials" time="10.006">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService login should throw error for invalid email" name="AuthService login should throw error for invalid email" time="10.009">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService login should throw error for invalid password" name="AuthService login should throw error for invalid password" time="10.009">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService login should lock account after 5 failed login attempts" name="AuthService login should lock account after 5 failed login attempts" time="10.001">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService login should reset login attempts after successful login" name="AuthService login should reset login attempts after successful login" time="10.002">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService login should throw error for inactive account" name="AuthService login should throw error for inactive account" time="10.005">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService refreshAccessToken should refresh access token successfully" name="AuthService refreshAccessToken should refresh access token successfully" time="10.01">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService refreshAccessToken should throw error for invalid refresh token" name="AuthService refreshAccessToken should throw error for invalid refresh token" time="10.013">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService refreshAccessToken should throw error if user is inactive" name="AuthService refreshAccessToken should throw error if user is inactive" time="10.001">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService requestPasswordReset should generate password reset token" name="AuthService requestPasswordReset should generate password reset token" time="10.009">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService requestPasswordReset should not reveal if email does not exist" name="AuthService requestPasswordReset should not reveal if email does not exist" time="10.01">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService resetPassword should reset password successfully" name="AuthService resetPassword should reset password successfully" time="10.014">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService resetPassword should throw error for invalid reset token" name="AuthService resetPassword should throw error for invalid reset token" time="10.012">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService resetPassword should throw error for expired reset token" name="AuthService resetPassword should throw error for expired reset token" time="10.031">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService verifyToken should verify valid JWT token" name="AuthService verifyToken should verify valid JWT token" time="10.008">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService verifyToken should throw error for invalid token" name="AuthService verifyToken should throw error for invalid token" time="10.012">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+    <testcase classname="AuthService verifyToken should throw error for expired token" name="AuthService verifyToken should throw error for expired token" time="10.005">
+      <failure>Error: listen EACCES: permission denied 0.0.0.0:57438
+    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:139:12
+    at new Promise (&lt;anonymous&gt;)
+    at tryPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:124:10)
+    at getFreePort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\util\getport\index.ts:90:29)
+    at MongoMemoryServer.getNewPort (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:349:38)
+    at MongoMemoryServer.getStartOptions (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:392:25)
+    at MongoMemoryServer._startUpInstance (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:472:49)
+    at MongoMemoryServer.start (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:298:5)
+    at MongoMemoryServer.create (A:\CityShobV2\webShobV2\backend\node_modules\mongodb-memory-server-core\src\MongoMemoryServer.ts:265:5)
+    at setupTestDB (A:\CityShobV2\webShobV2\backend\src\test\db.ts:15:12)
+    at Object.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\src\test\setup.ts:17:3)</failure>
+      <failure>MongooseError: Operation `event_types.deleteMany()` buffering timed out after 10000ms
+    at Timeout.&lt;anonymous&gt; (A:\CityShobV2\webShobV2\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

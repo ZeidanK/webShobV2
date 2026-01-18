@@ -9,7 +9,8 @@ import { ILocation } from './report.model';
 export enum EventStatus {
   CREATED = 'created',     // Event manually created by operator
   ACTIVE = 'active',       // Event confirmed and active
-  ASSIGNED = 'assigned',   // Event assigned to responder (future slice)
+  ASSIGNED = 'assigned',   // Event assigned to responder
+  IN_PROGRESS = 'in_progress', // Event being actively worked on
   RESOLVED = 'resolved',   // Incident resolved, awaiting closure
   CLOSED = 'closed',       // Event permanently closed
 }
@@ -46,6 +47,14 @@ export interface IEvent extends Document {
   // Event management
   createdBy: mongoose.Types.ObjectId; // Operator who created the event
   assignedTo?: mongoose.Types.ObjectId; // User assigned to handle (future)
+  
+  // Event notes and status updates
+  notes?: Array<{
+    message: string;
+    userId: mongoose.Types.ObjectId;
+    timestamp: Date;
+  }>;
+  respondedAt?: Date; // When first responder acknowledged
   
   // Linked reports
   reportIds: mongoose.Types.ObjectId[]; // Reports linked to this event
@@ -142,6 +151,28 @@ const EventSchema = new Schema<IEvent>({
     default: null,
   },
   
+  // Event notes and status updates
+  notes: [{
+    message: {
+      type: String,
+      required: true,
+      maxlength: [1000, 'Note message cannot exceed 1000 characters'],
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
+  respondedAt: {
+    type: Date,
+    default: null,
+  },
+  
   // Linked reports
   reportIds: [{
     type: Schema.Types.ObjectId,
@@ -177,7 +208,8 @@ EventSchema.pre('save', function(next) {
   const validTransitions: Record<EventStatus, EventStatus[]> = {
     [EventStatus.CREATED]: [EventStatus.ACTIVE, EventStatus.CLOSED],
     [EventStatus.ACTIVE]: [EventStatus.ASSIGNED, EventStatus.RESOLVED, EventStatus.CLOSED],
-    [EventStatus.ASSIGNED]: [EventStatus.RESOLVED, EventStatus.CLOSED],
+    [EventStatus.ASSIGNED]: [EventStatus.IN_PROGRESS, EventStatus.RESOLVED, EventStatus.CLOSED],
+    [EventStatus.IN_PROGRESS]: [EventStatus.RESOLVED, EventStatus.CLOSED],
     [EventStatus.RESOLVED]: [EventStatus.CLOSED, EventStatus.ACTIVE], // Can reopen
     [EventStatus.CLOSED]: [], // Terminal state
   };
