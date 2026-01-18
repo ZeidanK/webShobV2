@@ -44,6 +44,8 @@
 - LiveView now uses `object-fit: cover` when tiles are resized so feeds fill their container.
 - Added resize hotspots for all four corners with proper cursor directions, plus flex alignment fixes to prevent overlap when tiles grow.
 - Current behavior: edge/corner drag resizing is enabled with push-down layout; no overlay is expected for normal use.
+- Map events now offer a "View Nearby Cameras" action that opens the monitor wall in nearby mode.
+- Monitor wall adds "Reset Layout" (positions only) and "Exit Nearby" (restore full wall) controls, with nearby selection stored in session storage.
 
 #### Key changes
 **Monitor wall settings + ordering (frontend)**

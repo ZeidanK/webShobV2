@@ -906,8 +906,14 @@ export const api = {
     getAvailableMonitors: (serverId: string) =>
       apiClient.get<VmsMonitor[]>('/cameras/vms/available', { serverId }),
 
-    findNearby: (lng: number, lat: number, maxDistance?: number) =>
-      apiClient.get<Camera[]>('/cameras/nearby', { lng, lat, ...(maxDistance ? { maxDistance } : {}) }),
+    // Optional limit supports nearby camera wall sizing.
+    findNearby: (lng: number, lat: number, maxDistance?: number, limit?: number) =>
+      apiClient.get<Camera[]>('/cameras/nearby', { 
+        lng, 
+        lat, 
+        ...(maxDistance ? { maxDistance } : {}),
+        ...(limit ? { limit } : {}),
+      }),
   },
 
   // VMS Servers (Slice 9.0)

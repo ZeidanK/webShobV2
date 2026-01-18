@@ -27,6 +27,7 @@ interface EventMapProps {
     maxLat: number;
   }) => void;
   onEventClick?: (event: Event) => void;
+  onEventNearby?: (event: Event) => void;
   onReportClick?: (report: Report) => void;
   selectedEventId?: string;
   center?: [number, number];
@@ -150,6 +151,7 @@ export function EventMap({
   reports = [],
   onBoundsChange,
   onEventClick,
+  onEventNearby,
   onReportClick,
   selectedEventId,
   center = [31.5, 34.8], // Default to Israel
@@ -238,6 +240,15 @@ export function EventMap({
                       </div>
 
                       <div className={styles.popupActions}>
+                        {/* Secondary action keeps map context for nearby camera wall routing. */}
+                        {onEventNearby && (
+                          <button
+                            className={`${styles.popupButton} ${styles.popupButtonSecondary}`}
+                            onClick={() => onEventNearby(event)}
+                          >
+                            View Nearby Cameras
+                          </button>
+                        )}
                         <button
                           className={`${styles.popupButton} ${styles.popupButtonPrimary}`}
                           onClick={() => window.location.href = `/events/${event._id}`}

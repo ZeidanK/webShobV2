@@ -30,6 +30,9 @@ export function OperatorDashboard() {
     maxLat: number;
   } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Nearby camera query defaults for the operator map flow.
+  const nearbyRadiusMeters = 500;
+  const nearbyMaxCameras = 16;
 
   // Load events and/or reports from API based on display mode
   const loadEvents = useCallback(async () => {
@@ -132,6 +135,35 @@ export function OperatorDashboard() {
     console.log('[OperatorDashboard] Event clicked:', event._id);
     setSelectedEventId(prev => prev === event._id ? undefined : event._id);
   }, []);
+
+  const handleViewNearbyCameras = useCallback(async (event: Event) => {
+    if (!event.location?.coordinates) {
+      setError('Event location is missing coordinates');
+      return;
+    }
+
+    try {
+      // Persist nearby selection for the monitor wall session handoff.
+      const [lng, lat] = event.location.coordinates;
+      const nearby = await api.cameras.findNearby(lng, lat, nearbyRadiusMeters, nearbyMaxCameras);
+      sessionStorage.setItem(
+        'monitorWall.nearby',
+        JSON.stringify({
+          eventId: event._id,
+          radius: nearbyRadiusMeters,
+          limit: nearbyMaxCameras,
+          lng,
+          lat,
+          cameras: nearby,
+          createdAt: new Date().toISOString(),
+        })
+      );
+      navigate('/monitor');
+    } catch (err: any) {
+      console.error('[OperatorDashboard] Failed to load nearby cameras:', err);
+      setError(err.message || 'Failed to load nearby cameras');
+    }
+  }, [navigate, nearbyRadiusMeters, nearbyMaxCameras]);
 
   // Handle event card click (toggle: clicking again deselects)
   const handleEventCardClick = useCallback((event: Event) => {
@@ -333,6 +365,7 @@ export function OperatorDashboard() {
           reports={reports}
           onBoundsChange={handleBoundsChange}
           onEventClick={handleEventClick}
+          onEventNearby={handleViewNearbyCameras}
           selectedEventId={selectedEventId}
           center={[31.5, 34.8]} // Israel default
           zoom={8}

@@ -8,8 +8,18 @@ type WallInteractionMode = 'both' | 'click' | 'drag';
 type WallSettings = {
   interactionMode: WallInteractionMode;
 };
+type NearbySelection = {
+  eventId?: string;
+  radius?: number;
+  limit?: number;
+  lng?: number;
+  lat?: number;
+  cameras?: any[];
+  createdAt?: string;
+};
 
 const wallSettingsKey = 'monitorWall.settings';
+const nearbySelectionKey = 'monitorWall.nearby';
 
 const loadWallSettings = (): WallSettings => {
   // TEST-ONLY: Persist per-operator wall settings locally for phase 1.
@@ -36,6 +46,8 @@ export default function MonitorWallPage() {
   const [wallSettings, setWallSettings] = useState<WallSettings>(() => loadWallSettings());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gridResetToken, setGridResetToken] = useState(0);
+  const [nearbySelection, setNearbySelection] = useState<NearbySelection | null>(null);
+  const [nearbyMode, setNearbyMode] = useState(false);
 
   const updateWallSettings = useCallback((updates: Partial<WallSettings>) => {
     // TEST-ONLY: Keep settings changes local for operator-level customization.
@@ -48,6 +60,21 @@ export default function MonitorWallPage() {
       }
       return next;
     });
+  }, []);
+
+  useEffect(() => {
+    // TEST-ONLY: Load nearby selection for the current operator session.
+    try {
+      const stored = sessionStorage.getItem(nearbySelectionKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as NearbySelection;
+        setNearbySelection(parsed);
+        setNearbyMode(true);
+      }
+    } catch (err) {
+      console.warn('Failed to load nearby camera selection:', err);
+      sessionStorage.removeItem(nearbySelectionKey);
+    }
   }, []);
 
   const mergeCameras = useCallback((nextCameras: CameraItem[]) => {
@@ -65,31 +92,35 @@ export default function MonitorWallPage() {
     });
   }, []);
 
+  const buildCameraItems = useCallback(async (cameraList: any[]) => {
+    return Promise.all(
+      (cameraList || []).map(async (camera) => {
+        let streamUrl = camera.streamUrl;
+        if (!streamUrl && camera.vms?.serverId) {
+          try {
+            const streams = await api.cameras.getStreams(camera._id);
+            streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
+          } catch (err) {
+            console.error('Failed to load camera streams:', err);
+          }
+        }
+
+        return {
+          id: camera._id,
+          name: camera.name,
+          streamUrl,
+          status: camera.status,
+        } as CameraItem;
+      })
+    );
+  }, []);
+
   const fetchCameras = useCallback(async (replace = false) => {
     try {
       setLoading(true);
       setError(null);
       const response = await api.cameras.list();
-      const cameraItems = await Promise.all(
-        (response || []).map(async (camera) => {
-          let streamUrl = camera.streamUrl;
-          if (!streamUrl && camera.vms?.serverId) {
-            try {
-              const streams = await api.cameras.getStreams(camera._id);
-              streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
-            } catch (err) {
-              console.error('Failed to load camera streams:', err);
-            }
-          }
-
-          return {
-            id: camera._id,
-            name: camera.name,
-            streamUrl,
-            status: camera.status,
-          } as CameraItem;
-        })
-      );
+      const cameraItems = await buildCameraItems(response || []);
       if (replace) {
         setCameras(cameraItems);
       } else {
@@ -101,15 +132,52 @@ export default function MonitorWallPage() {
     } finally {
       setLoading(false);
     }
-  }, [mergeCameras]);
+  }, [buildCameraItems, mergeCameras]);
+
+  const loadNearbyCameras = useCallback(async (selection: NearbySelection, replace = false) => {
+    if (!selection?.lng || !selection?.lat) {
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const nearby = await api.cameras.findNearby(
+        selection.lng,
+        selection.lat,
+        selection.radius,
+        selection.limit
+      );
+      const cameraItems = await buildCameraItems(nearby || selection.cameras || []);
+      if (replace) {
+        setCameras(cameraItems);
+      } else {
+        mergeCameras(cameraItems);
+      }
+    } catch (err: any) {
+      console.error('Failed to load nearby cameras:', err);
+      setError(err.message || 'Failed to load nearby cameras');
+    } finally {
+      setLoading(false);
+    }
+  }, [buildCameraItems, mergeCameras]);
 
   useEffect(() => {
-    fetchCameras();
-    
+    if (nearbyMode && nearbySelection) {
+      loadNearbyCameras(nearbySelection, true);
+    } else {
+      fetchCameras(true);
+    }
+
     // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchCameras, 30000);
+    const interval = setInterval(() => {
+      if (nearbyMode && nearbySelection) {
+        loadNearbyCameras(nearbySelection, true);
+      } else {
+        fetchCameras();
+      }
+    }, 30000);
     return () => clearInterval(interval);
-  }, [fetchCameras]);
+  }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbySelection]);
 
   useEffect(() => {
     // TEST-ONLY: Reset session-only tile sizes when grid size changes.
@@ -132,9 +200,21 @@ export default function MonitorWallPage() {
     });
   }, []);
 
-  const handleResetWall = useCallback(async () => {
+  const handleResetLayout = useCallback(async () => {
     // TEST-ONLY: Reset ordering and session-only tile sizes.
     setGridResetToken((prev) => prev + 1);
+    if (nearbyMode && nearbySelection) {
+      await loadNearbyCameras(nearbySelection, true);
+    } else {
+      await fetchCameras(true);
+    }
+  }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbySelection]);
+
+  const handleExitNearbyMode = useCallback(async () => {
+    // TEST-ONLY: Return to the full wall without changing layout settings.
+    sessionStorage.removeItem(nearbySelectionKey);
+    setNearbySelection(null);
+    setNearbyMode(false);
     await fetchCameras(true);
   }, [fetchCameras]);
 
@@ -175,9 +255,14 @@ export default function MonitorWallPage() {
           <button onClick={fetchCameras} className={styles.refreshBtn} title="Refresh cameras">
             dY", Refresh
           </button>
-          <button onClick={handleResetWall} className={styles.resetBtn} title="Reset wall layout">
-            Reset Wall
+          <button onClick={handleResetLayout} className={styles.resetBtn} title="Reset wall layout">
+            Reset Layout
           </button>
+          {nearbyMode && (
+            <button onClick={handleExitNearbyMode} className={styles.exitNearbyBtn} title="Exit nearby mode">
+              Exit Nearby
+            </button>
+          )}
           <div className={styles.settings}>
             <button
               type="button"
