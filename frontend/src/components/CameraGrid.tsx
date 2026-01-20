@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CameraGrid Component
  * 
  * Displays multiple camera live views in a responsive grid layout.
@@ -23,6 +23,15 @@ interface CameraGridProps {
   
   /** Grid layout mode */
   layout?: '1x1' | '2x2' | '3x3' | '4x4' | 'auto';
+
+  /** Explicit column count for wall grid sizing */
+  columns?: number;
+
+  /** Explicit row count for fixed wall sizing */
+  rows?: number;
+
+  /** Wall viewport height for fixed row sizing */
+  viewportHeight?: number;
   
   /** Callback when camera is selected */
   onCameraSelect?: (camera: CameraItem) => void;
@@ -49,6 +58,9 @@ interface CameraGridProps {
 export const CameraGrid: React.FC<CameraGridProps> = ({
   cameras,
   layout = 'auto',
+  columns,
+  rows,
+  viewportHeight,
   onCameraSelect,
   selectedCameraId,
   showStatus = true,
@@ -86,8 +98,24 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   const allowsClick = interactionMode !== 'drag';
   const allowsDrag = interactionMode !== 'click';
 
+  // TEST-ONLY: Fixed wall sizing keeps tiles aligned to the selected NxN grid.
+  const baseTileHeight = useMemo(() => {
+    if (!rows || rows <= 0 || !viewportHeight) {
+      return null;
+    }
+    const gridPadding = 8;
+    const gridGap = 4;
+    const available = viewportHeight - gridPadding - (rows - 1) * gridGap;
+    const computed = Math.floor(available / rows);
+    return Math.max(minTileHeight, computed);
+  }, [rows, viewportHeight, minTileHeight]);
+
   // Calculate grid columns based on layout and camera count
   const gridColumns = useMemo(() => {
+    // TEST-ONLY: Respect explicit wall column sizing when provided.
+    if (columns && columns > 0) {
+      return columns;
+    }
     if (layout === 'auto') {
       const count = cameras.length;
       if (count === 1) return 1;
@@ -103,7 +131,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
       case '4x4': return 4;
       default: return 2;
     }
-  }, [layout, cameras.length]);
+  }, [layout, cameras.length, columns]);
 
   // Filter cameras with streams
   const camerasWithStreams = useMemo(() => {
@@ -264,12 +292,13 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
       return (
         <div className={`${styles.container} ${styles.focused} ${className || ''}`}>
           <div className={styles.focusedView}>
+            {/* TEST-ONLY: Keep fullscreen control label ASCII to avoid mojibake. */}
             <button 
               className={styles.exitFocusButton}
               onClick={() => setFocusedCameraId(null)}
               title="Exit fullscreen"
             >
-              ✕ Exit Fullscreen
+              Exit Fullscreen
             </button>
             <LiveView
               streamUrl={focusedCamera.streamUrl}
@@ -307,7 +336,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     <div className={`${styles.container} ${className || ''}`}>
       {cameras.length === 0 ? (
         <div className={styles.empty}>
-          <span className={styles.emptyIcon}>📹</span>
+          {/* TEST-ONLY: ASCII fallback for the empty-state icon label. */}
+          <span className={styles.emptyIcon}>No cameras</span>
           <h3>No cameras configured</h3>
           <p>Add cameras or connect to a VMS server to view live streams.</p>
         </div>
@@ -319,8 +349,11 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
         >
           {cameras.map(camera => {
             const tileSize = tileSizes[camera.id];
+            // TEST-ONLY: Use fixed wall sizing unless an operator resized this tile.
             const tileStyle = tileSize
               ? { width: `${tileSize.width}px`, height: `${tileSize.height}px` }
+              : baseTileHeight
+              ? { height: `${baseTileHeight}px` }
               : undefined;
 
             return (
@@ -355,7 +388,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   />
                 ) : (
                   <div className={styles.offline}>
-                    <span className={styles.offlineIcon}>dY"ć</span>
+                    {/* TEST-ONLY: ASCII fallback for offline indicator text. */}
+                    <span className={styles.offlineIcon}>Offline</span>
                     <span className={styles.cameraName}>{camera.name}</span>
                   </div>
                 )}
@@ -452,4 +486,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
 };
 
 export default CameraGrid;
+
+
+
+
 

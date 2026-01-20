@@ -13,6 +13,7 @@
 import mongoose, { Document } from 'mongoose';
 import { Camera, ICamera, CameraStatus, VmsServer, IVmsServer } from '../models';
 import { vmsService, VmsMonitor, StreamUrls } from './vms.service';
+import { rtspStreamService } from './rtsp-stream.service';
 import { NotFoundError, ValidationError, ConflictError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -38,6 +39,16 @@ export interface CreateCameraInput {
   name: string;
   description?: string;
   streamUrl?: string;
+  // TEST-ONLY: Stream configuration for Direct RTSP scaffolding.
+  streamConfig?: {
+    type: 'vms' | 'direct-rtsp';
+    rtspUrl?: string;
+    transport?: 'tcp' | 'udp';
+    auth?: {
+      username?: string;
+      password?: string;
+    };
+  };
   type?: 'ip' | 'analog' | 'usb';
   status?: CameraStatus;
   location: {
@@ -67,6 +78,16 @@ export interface UpdateCameraInput {
   name?: string;
   description?: string;
   streamUrl?: string;
+  // TEST-ONLY: Stream configuration for Direct RTSP scaffolding.
+  streamConfig?: {
+    type?: 'vms' | 'direct-rtsp';
+    rtspUrl?: string;
+    transport?: 'tcp' | 'udp';
+    auth?: {
+      username?: string;
+      password?: string;
+    };
+  };
   type?: 'ip' | 'analog' | 'usb';
   status?: CameraStatus;
   location?: {
@@ -91,6 +112,70 @@ export interface CameraWithStreams extends CameraData {
 
 class CameraService {
   /**
+   * Validate stream configuration and related fields.
+   */
+  private validateStreamConfigInput(
+    data: CreateCameraInput | UpdateCameraInput,
+    existingCamera?: ICamera | null
+  ) {
+    const hasStreamConfig = data.streamConfig !== undefined;
+    const streamType = data.streamConfig?.type || existingCamera?.streamConfig?.type;
+    if (hasStreamConfig && !streamType) {
+      throw new ValidationError('streamConfig.type is required when streamConfig is provided');
+    }
+    if (!streamType) {
+      return;
+    }
+
+    if (streamType === 'direct-rtsp') {
+      // TEST-ONLY: Enforce required RTSP URL and prevent mixed VMS config.
+      const rtspUrl = data.streamConfig?.rtspUrl || existingCamera?.streamConfig?.rtspUrl;
+      if (!rtspUrl) {
+        throw new ValidationError('streamConfig.rtspUrl is required for direct-rtsp cameras');
+      }
+      const vmsInput = (data as CreateCameraInput).vms;
+      if (vmsInput?.serverId || vmsInput?.monitorId) {
+        throw new ValidationError('direct-rtsp cameras cannot be linked to a VMS server');
+      }
+      if (existingCamera?.vms?.serverId) {
+        throw new ValidationError('Disconnect VMS before switching to direct-rtsp');
+      }
+      if (data.streamUrl) {
+        throw new ValidationError('streamUrl is not supported for direct-rtsp cameras');
+      }
+    }
+  }
+
+  private buildStreamConfig(
+    incoming: UpdateCameraInput['streamConfig'] | CreateCameraInput['streamConfig'] | undefined,
+    existing?: ICamera['streamConfig']
+  ) {
+    if (!incoming && !existing) {
+      return undefined;
+    }
+
+    const resolvedType = incoming?.type || existing?.type || 'vms';
+    const next = {
+      type: resolvedType,
+      rtspUrl: incoming?.rtspUrl ?? existing?.rtspUrl,
+      transport: incoming?.transport ?? existing?.transport,
+      auth: incoming?.auth ?? existing?.auth,
+    };
+
+    if (!next.rtspUrl) {
+      delete (next as { rtspUrl?: string }).rtspUrl;
+    }
+    if (!next.transport) {
+      delete (next as { transport?: string }).transport;
+    }
+    if (!next.auth || (!next.auth.username && !next.auth.password)) {
+      delete (next as { auth?: { username?: string; password?: string } }).auth;
+    }
+
+    return next;
+  }
+
+  /**
    * Create a new camera
    */
   async create(
@@ -99,6 +184,8 @@ class CameraService {
     userId?: mongoose.Types.ObjectId
   ): Promise<ICamera> {
     logger.info('Creating camera', { companyId, name: data.name });
+
+    this.validateStreamConfigInput(data);
 
     // Validate VMS server if specified
     if (data.vms?.serverId) {
@@ -252,10 +339,17 @@ class CameraService {
       throw new NotFoundError(`Camera with ID ${cameraId} not found`);
     }
 
+    this.validateStreamConfigInput(data, camera);
+
     // Update fields
     if (data.name !== undefined) camera.name = data.name;
     if (data.description !== undefined) camera.description = data.description;
     if (data.streamUrl !== undefined) camera.streamUrl = data.streamUrl;
+    // TEST-ONLY: Allow streamConfig updates for Phase 2 scaffolding.
+    if (data.streamConfig !== undefined) {
+      // TEST-ONLY: Preserve streamConfig.type when partial updates omit it.
+      camera.streamConfig = this.buildStreamConfig(data.streamConfig, camera.streamConfig);
+    }
     if (data.type !== undefined) camera.type = data.type;
     if (data.status !== undefined) camera.status = data.status;
 
@@ -472,11 +566,22 @@ class CameraService {
    */
   async getStreamUrls(
     companyId: mongoose.Types.ObjectId,
-    cameraId: mongoose.Types.ObjectId
+    cameraId: mongoose.Types.ObjectId,
+    publicBaseUrl?: string
   ): Promise<StreamUrls> {
     const camera = await this.findById(companyId, cameraId);
     if (!camera) {
       throw new NotFoundError(`Camera with ID ${cameraId} not found`);
+    }
+
+    if (camera.streamConfig?.type === 'direct-rtsp') {
+      // TEST-ONLY: Serve direct-rtsp streams from local HLS output.
+      const baseUrl = (publicBaseUrl || '').replace(/\/+$/, '');
+      await rtspStreamService.ensureStream(camera);
+      rtspStreamService.cleanupIdleStreams();
+      const token = rtspStreamService.createStreamToken(camera._id.toString(), camera.companyId.toString());
+      const hlsUrl = `${baseUrl}/api/cameras/${camera._id}/streams/hls/index.m3u8?token=${token}`;
+      return { hls: hlsUrl };
     }
 
     if (!camera.vms?.serverId || !camera.vms?.monitorId) {

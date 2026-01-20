@@ -16,7 +16,8 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
-  height: 100%;
+  /* TEST-ONLY: Allow the grid to grow for overflow scrolling. */
+  min-height: 100%;
   /* TEST-ONLY: Allow resizable tiles to wrap without overlap. */
   align-content: flex-start;
   align-items: flex-start;

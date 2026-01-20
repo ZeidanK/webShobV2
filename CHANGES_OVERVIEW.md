@@ -47,6 +47,37 @@
 - Map events now offer a "View Nearby Cameras" action that opens the monitor wall in nearby mode.
 - Monitor wall adds "Reset Layout" (positions only) and "Exit Nearby" (restore full wall) controls, with nearby selection stored in session storage.
 
+### Operator wall scroll + encoding cleanup
+- Monitor wall now renders all cameras for a grid size and relies on scroll to view overflow tiles.
+- Camera grid container uses `min-height` so extra rows extend and the wall scrolls when cameras exceed the grid.
+- Grid size selection now explicitly controls wall column count while keeping overflow cameras scrollable.
+- Wall viewport height is measured to keep tile heights aligned to the selected NxN rows while scrolling vertically.
+- Monitor wall scroll is vertical-only to keep the grid width locked to the chosen column count.
+- Wall header labels (grid size + refresh) now use ASCII-only text to avoid mojibake.
+- LiveView status/error glyphs use ASCII-only labels to prevent garbled UI symbols.
+- Camera grid empty/offline labels use ASCII-only text for consistent operator display.
+- Navigation sidebar labels are normalized to ASCII for dashboard/report/camera links.
+### Phase 2.2 direct-rtsp streaming (in progress)
+- Added RTSP-to-HLS pipeline service with per-camera FFmpeg processes and idle cleanup.
+- Added short-lived stream tokens scoped to camera/company for HLS asset access.
+- Exposed a secured HLS asset route that injects tokens into playlists for segment access.
+- Direct-rtsp stream URLs now return backend-hosted HLS playlist URLs with tokens.
+- Added streaming configuration (base dir, token TTL, idle timeout, public base URL).
+- Backend Docker image now installs FFmpeg for RTSP transcoding.
+- Added `streams/` to `.gitignore` to avoid committing HLS output.
+- Request logging now redacts `token` query parameters to avoid leaking stream tokens.
+## 2026-01-18
+### Phase 2 scaffolding (Direct RTSP)
+- Added `streamConfig` to camera models and API types to support Direct RTSP configuration without changing VMS behavior.
+- Camera service now accepts `streamConfig` on create/update; no streaming logic yet (Phase 2.2+).
+- Added server-side validation to require `streamConfig.rtspUrl` for direct-rtsp and block mixed VMS/streamUrl configs.
+- Camera routes now accept `streamConfig` on create/update so validation is enforced.
+- Stream config auth passwords are excluded from camera query results by default.
+- Local test: direct-rtsp without rtspUrl now fails with validation (HTTP 400).
+- Local test: streamConfig.auth password is not returned in camera responses.
+- Validation now requires `streamConfig.type` when streamConfig is supplied to prevent ambiguous defaults.
+- Fixed update edge case where partial streamConfig updates could fail casting due to undefined auth.
+
 #### Key changes
 **Monitor wall settings + ordering (frontend)**
 ```tsx

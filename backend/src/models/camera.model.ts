@@ -16,6 +16,9 @@ export type CameraType = 'ip' | 'analog' | 'usb';
 /** Camera status options */
 export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
 
+/** TEST-ONLY: Stream configuration types for Phase 2 scaffolding. */
+export type StreamConfigType = 'vms' | 'direct-rtsp';
+
 /** Camera document interface */
 export interface ICamera extends Document {
   /** Multi-tenant isolation */
@@ -29,6 +32,17 @@ export interface ICamera extends Document {
   
   /** Direct stream URL (RTSP, HTTP, etc.) */
   streamUrl?: string;
+
+  /** Stream configuration (Phase 2) */
+  streamConfig?: {
+    type: StreamConfigType;
+    rtspUrl?: string;
+    transport?: 'tcp' | 'udp';
+    auth?: {
+      username?: string;
+      password?: string;
+    };
+  };
   
   /** Camera type */
   type: CameraType;
@@ -112,6 +126,44 @@ const CameraSchema = new Schema<ICamera>(
           return /^(rtsp|rtmp|http|https):\/\/.+/.test(url);
         },
         message: 'Stream URL must be a valid RTSP, RTMP, HTTP, or HTTPS URL',
+      },
+    },
+    streamConfig: {
+      type: {
+        type: String,
+        enum: ['vms', 'direct-rtsp'],
+        default: 'vms',
+      },
+      rtspUrl: {
+        type: String,
+        trim: true,
+        validate: {
+          validator: function (url: string) {
+            // TEST-ONLY: Require rtspUrl when using direct-rtsp config.
+            const streamType = this.streamConfig?.type;
+            if (streamType === 'direct-rtsp') {
+              return !!url && /^(rtsp|rtmp|http|https):\/\/.+/.test(url);
+            }
+            if (!url) return true;
+            return /^(rtsp|rtmp|http|https):\/\/.+/.test(url);
+          },
+          message: 'RTSP URL is required for direct-rtsp and must be a valid RTSP/HTTP URL',
+        },
+      },
+      transport: {
+        type: String,
+        enum: ['tcp', 'udp'],
+      },
+      auth: {
+        username: {
+          type: String,
+          trim: true,
+        },
+        password: {
+          type: String,
+          // TEST-ONLY: Prevent auth secrets from leaking in camera responses.
+          select: false,
+        },
       },
     },
     type: {

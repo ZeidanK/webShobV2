@@ -238,8 +238,9 @@ export const LiveView: React.FC<LiveViewProps> = ({
           <span className={styles.cameraName}>{cameraName}</span>
           {/* TEST-ONLY: Optional header actions for wall resize control. */}
           <div className={styles.headerActions}>
+            {/* TEST-ONLY: ASCII status label to avoid encoding issues. */}
             <span className={`${styles.status} ${state.playing ? styles.live : ''}`}>
-              {state.playing ? 'ƒ-? LIVE' : state.loading ? 'Loading...' : 'Offline'}
+              {state.playing ? 'LIVE' : state.loading ? 'Loading...' : 'Offline'}
             </span>
             {headerRight}
           </div>
@@ -269,7 +270,8 @@ export const LiveView: React.FC<LiveViewProps> = ({
       {/* Error overlay */}
       {state.error && (
         <div className={styles.overlay}>
-          <div className={styles.errorIcon}>âš ï¸</div>
+          {/* TEST-ONLY: ASCII error glyph to avoid mojibake. */}
+          <div className={styles.errorIcon}>!</div>
           <span className={styles.errorText}>{state.error}</span>
           <button className={styles.retryButton} onClick={handleRetry}>
             Retry Connection
@@ -281,4 +283,5 @@ export const LiveView: React.FC<LiveViewProps> = ({
 };
 
 export default LiveView;
+
 

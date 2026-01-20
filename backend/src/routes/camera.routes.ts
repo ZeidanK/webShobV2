@@ -8,12 +8,16 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import path from 'path';
 import mongoose from 'mongoose';
 import { cameraService, CreateCameraInput, UpdateCameraInput } from '../services/camera.service';
+import { rtspStreamService } from '../services/rtsp-stream.service';
 import { CameraStatus } from '../models';
+import { config } from '../config';
 import { successResponse, errorResponse, calculatePagination } from '../utils/response';
 import { authenticate, authorize } from '../middleware/auth.middleware';
-import { ValidationError } from '../utils/errors';
+import { AppError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { UserRole } from '../models';
 
@@ -214,7 +218,7 @@ router.post(
       const companyId = new mongoose.Types.ObjectId(targetCompanyId);
       const userId = new mongoose.Types.ObjectId(req.user!.id);
 
-      const { name, description, streamUrl, type, status, location, settings, vms, metadata } = req.body;
+      const { name, description, streamUrl, streamConfig, type, status, location, settings, vms, metadata } = req.body;
 
       // Validate required fields
       if (!name) {
@@ -228,6 +232,8 @@ router.post(
         name,
         description,
         streamUrl,
+        // TEST-ONLY: Stream config scaffolding for Direct RTSP.
+        streamConfig,
         type,
         status,
         location: {
@@ -284,12 +290,14 @@ router.put(
       const userId = new mongoose.Types.ObjectId(req.user!.id);
       const cameraId = new mongoose.Types.ObjectId(req.params.id);
 
-      const { name, description, streamUrl, type, status, location, settings, metadata } = req.body;
+      const { name, description, streamUrl, streamConfig, type, status, location, settings, metadata } = req.body;
 
       const data: UpdateCameraInput = {};
       if (name !== undefined) data.name = name;
       if (description !== undefined) data.description = description;
       if (streamUrl !== undefined) data.streamUrl = streamUrl;
+      // TEST-ONLY: Stream config scaffolding for Direct RTSP.
+      if (streamConfig !== undefined) data.streamConfig = streamConfig;
       if (type !== undefined) data.type = type;
       if (status !== undefined) data.status = status;
       if (location !== undefined) data.location = location;
@@ -370,9 +378,103 @@ router.get(
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
       const cameraId = new mongoose.Types.ObjectId(req.params.id);
 
-      const streams = await cameraService.getStreamUrls(companyId, cameraId);
+      // TEST-ONLY: Build a public-facing base URL for direct-rtsp streams.
+      const streamBaseUrl =
+        config.streaming.publicBaseUrl || `${req.protocol}://${req.get('host')}`;
+      const streams = await cameraService.getStreamUrls(companyId, cameraId, streamBaseUrl);
 
       res.json(successResponse(streams, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/{id}/streams/hls/{file}:
+ *   get:
+ *     summary: Get HLS playlist/segments for direct-rtsp cameras
+ *     tags: [Cameras]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: file
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: HLS asset
+ */
+router.get(
+  '/:id/streams/hls/:file',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = typeof req.query.token === 'string' ? req.query.token : '';
+      if (!token) {
+        throw new AppError('MISSING_AUTH_TOKEN', 'Stream token is required', 401);
+      }
+
+      // TEST-ONLY: Validate stream token and enforce camera/company match.
+      const payload = rtspStreamService.verifyStreamToken(token);
+      if (payload.cameraId !== req.params.id) {
+        throw new AppError('FORBIDDEN', 'Stream token does not match camera', 403);
+      }
+
+      const companyId = new mongoose.Types.ObjectId(payload.companyId);
+      const cameraId = new mongoose.Types.ObjectId(payload.cameraId);
+      const camera = await cameraService.findById(companyId, cameraId);
+      if (!camera) {
+        throw new AppError('RESOURCE_NOT_FOUND', 'Camera not found', 404);
+      }
+
+      // TEST-ONLY: Ensure the RTSP pipeline is active for this camera.
+      await rtspStreamService.ensureStream(camera);
+      rtspStreamService.cleanupIdleStreams();
+
+      const filePath = rtspStreamService.resolveStreamFilePath(req.params.id, req.params.file);
+      if (!fs.existsSync(filePath)) {
+        res.status(404).json(errorResponse('STREAM_FILE_NOT_FOUND', 'Stream file not found', req.correlationId));
+        return;
+      }
+
+      // TEST-ONLY: Prevent caching of live stream assets.
+      res.setHeader('Cache-Control', 'no-store');
+      if (path.extname(filePath) === '.m3u8') {
+        // TEST-ONLY: Inject stream token into segment URLs for secure playback.
+        const playlist = fs.readFileSync(filePath, 'utf8');
+        const tokenParam = `token=${encodeURIComponent(token)}`;
+        const rewritten = playlist
+          .split('\n')
+          .map((line) => {
+            if (!line || line.startsWith('#')) {
+              return line;
+            }
+            if (line.includes('token=')) {
+              return line;
+            }
+            return line.includes('?') ? `${line}&${tokenParam}` : `${line}?${tokenParam}`;
+          })
+          .join('\n');
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        res.send(rewritten);
+        return;
+      }
+      if (path.extname(filePath) === '.ts') {
+        res.setHeader('Content-Type', 'video/MP2T');
+      }
+
+      res.sendFile(filePath);
     } catch (error) {
       next(error);
     }

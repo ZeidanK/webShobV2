@@ -198,7 +198,9 @@
 
 .gridWrapper {
   flex: 1;
-  overflow: auto;
+  /* TEST-ONLY: Vertical-only scroll for overflow cameras. */
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem;
 }
 

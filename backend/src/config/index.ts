@@ -43,6 +43,15 @@ export const config = {
     uploadDir: process.env.UPLOAD_DIR || './uploads',
   },
 
+  // Direct RTSP streaming
+  streaming: {
+    baseDir: process.env.STREAMING_BASE_DIR || './streams',
+    tokenTtlSeconds: parseInt(process.env.STREAMING_TOKEN_TTL_SECONDS || '300', 10),
+    ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
+    idleTimeoutMs: parseInt(process.env.STREAMING_IDLE_TIMEOUT_MS || '300000', 10),
+    publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
+  },
+
   // AI Service
   aiService: {
     url: process.env.AI_SERVICE_URL || 'http://localhost:8000',

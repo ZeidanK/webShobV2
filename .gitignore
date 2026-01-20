@@ -1,2 +1,4 @@
 # Test log outputs
 logs/
+# Direct RTSP stream outputs
+streams/

@@ -218,6 +218,19 @@ export interface UpdateVmsServerInput {
 // Camera types for Slice 9.0
 export type CameraType = 'ip' | 'analog' | 'usb';
 export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
+// TEST-ONLY: Stream configuration types for Phase 2 scaffolding.
+export type StreamConfigType = 'vms' | 'direct-rtsp';
+
+// TEST-ONLY: Stream configuration payload for Direct RTSP.
+export interface StreamConfig {
+  type: StreamConfigType;
+  rtspUrl?: string;
+  transport?: 'tcp' | 'udp';
+  auth?: {
+    username?: string;
+    password?: string;
+  };
+}
 
 export interface Camera {
   _id: string;
@@ -225,6 +238,7 @@ export interface Camera {
   name: string;
   description?: string;
   streamUrl?: string;
+  streamConfig?: StreamConfig;
   type: CameraType;
   status: CameraStatus;
   location: {
@@ -268,6 +282,7 @@ export interface CreateCameraInput {
   name: string;
   description?: string;
   streamUrl?: string;
+  streamConfig?: StreamConfig;
   type?: CameraType;
   status?: CameraStatus;
   location: {
@@ -290,6 +305,7 @@ export interface UpdateCameraInput {
   name?: string;
   description?: string;
   streamUrl?: string;
+  streamConfig?: StreamConfig;
   type?: CameraType;
   status?: CameraStatus;
   location?: {

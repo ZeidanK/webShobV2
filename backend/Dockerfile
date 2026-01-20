@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install FFmpeg for direct RTSP pipeline support
+RUN apk add --no-cache ffmpeg
+
 # Install dependencies first (for better caching)
 COPY package*.json ./
 RUN npm ci

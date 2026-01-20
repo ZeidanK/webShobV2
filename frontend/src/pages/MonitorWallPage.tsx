@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CameraGrid, CameraItem } from '../components/CameraGrid';
 import { api } from '../services/api';
 import styles from './MonitorWallPage.module.css';
@@ -48,6 +48,8 @@ export default function MonitorWallPage() {
   const [gridResetToken, setGridResetToken] = useState(0);
   const [nearbySelection, setNearbySelection] = useState<NearbySelection | null>(null);
   const [nearbyMode, setNearbyMode] = useState(false);
+  const gridWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [gridViewportHeight, setGridViewportHeight] = useState<number | null>(null);
 
   const updateWallSettings = useCallback((updates: Partial<WallSettings>) => {
     // TEST-ONLY: Keep settings changes local for operator-level customization.
@@ -184,6 +186,21 @@ export default function MonitorWallPage() {
     setGridResetToken((prev) => prev + 1);
   }, [gridSize]);
 
+  useEffect(() => {
+    // TEST-ONLY: Track wall viewport height for fixed NxN sizing with overflow scroll.
+    const wrapper = gridWrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const updateHeight = () => {
+      setGridViewportHeight(wrapper.getBoundingClientRect().height);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(() => updateHeight());
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
+
   const handleSwap = useCallback((sourceId: string, targetId: string) => {
     // TEST-ONLY: Apply drag swaps to the local grid ordering.
     setCameras((prev) => {
@@ -218,13 +235,7 @@ export default function MonitorWallPage() {
     await fetchCameras(true);
   }, [fetchCameras]);
 
-  const gridSizeMap: Record<GridSize, number> = {
-    '2x2': 4,
-    '3x3': 9,
-    '4x4': 16,
-  };
-
-  const displayCameras = cameras.slice(0, gridSizeMap[gridSize]);
+  // TEST-ONLY: Show all cameras and rely on wall scroll for overflow beyond the grid size.
   const onlineCameras = cameras.filter((c) => c.status === 'online');
 
   if (loading && cameras.length === 0) {
@@ -247,13 +258,14 @@ export default function MonitorWallPage() {
               onChange={(e) => setGridSize(e.target.value as GridSize)}
               className={styles.select}
             >
-              <option value="2x2">2×2 (4 cameras)</option>
-              <option value="3x3">3×3 (9 cameras)</option>
-              <option value="4x4">4×4 (16 cameras)</option>
+              <option value="2x2">2x2 (4 cameras)</option>
+              <option value="3x3">3x3 (9 cameras)</option>
+              <option value="4x4">4x4 (16 cameras)</option>
             </select>
           </label>
+          {/* TEST-ONLY: Use ASCII-only labels to avoid mojibake in operator controls. */}
           <button onClick={fetchCameras} className={styles.refreshBtn} title="Refresh cameras">
-            dY", Refresh
+            Refresh
           </button>
           <button onClick={handleResetLayout} className={styles.resetBtn} title="Reset wall layout">
             Reset Layout
@@ -303,23 +315,27 @@ export default function MonitorWallPage() {
 
       {error && (
         <div className={styles.error}>
-          ⚠️ {error}
+          {/* TEST-ONLY: Keep error copy ASCII to avoid encoding issues in the wall UI. */}
+          Error: {error}
         </div>
       )}
 
-      {!loading && displayCameras.length === 0 ? (
+      {!loading && cameras.length === 0 ? (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>📹</div>
+          {/* TEST-ONLY: ASCII fallback for empty-state icon text. */}
+          <div className={styles.emptyIcon}>No cameras</div>
           <div className={styles.emptyTitle}>No cameras available</div>
           <div className={styles.emptyText}>
             Add online cameras to start monitoring.
           </div>
         </div>
       ) : (
-        <div className={styles.gridWrapper}>
+        <div className={styles.gridWrapper} ref={gridWrapperRef}>
           <CameraGrid
-            cameras={displayCameras}
-            columns={parseInt(gridSize[0])}
+            cameras={cameras}
+            columns={parseInt(gridSize.split('x')[0], 10)}
+            rows={parseInt(gridSize.split('x')[1], 10)}
+            viewportHeight={gridViewportHeight ?? undefined}
             interactionMode={wallSettings.interactionMode}
             onSwap={handleSwap}
             showStatus={true}
@@ -330,4 +346,8 @@ export default function MonitorWallPage() {
     </div>
   );
 }
+
+
+
+
 
