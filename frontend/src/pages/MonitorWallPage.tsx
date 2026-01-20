@@ -340,6 +340,8 @@ export default function MonitorWallPage() {
             onSwap={handleSwap}
             showStatus={true}
             resetToken={gridResetToken}
+            // TEST-ONLY: Keep wall tiles in a scrollable container when overflow occurs.
+            wallMode={true}
           />
         </div>
       )}

@@ -50,6 +50,8 @@ export const config = {
     ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
     idleTimeoutMs: parseInt(process.env.STREAMING_IDLE_TIMEOUT_MS || '300000', 10),
     publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
+    transcodeEnabled: process.env.STREAMING_TRANSCODE_ENABLED === 'true',
+    transcodePreset: process.env.STREAMING_TRANSCODE_PRESET || 'veryfast',
   },
 
   // AI Service

@@ -57,6 +57,7 @@
 - LiveView status/error glyphs use ASCII-only labels to prevent garbled UI symbols.
 - Camera grid empty/offline labels use ASCII-only text for consistent operator display.
 - Navigation sidebar labels are normalized to ASCII for dashboard/report/camera links.
+- Monitor wall uses a scroll-friendly grid container to allow overflow rows without shrinking tile size.
 ### Phase 2.2 direct-rtsp streaming (in progress)
 - Added RTSP-to-HLS pipeline service with per-camera FFmpeg processes and idle cleanup.
 - Added short-lived stream tokens scoped to camera/company for HLS asset access.
@@ -66,6 +67,8 @@
 - Backend Docker image now installs FFmpeg for RTSP transcoding.
 - Added `streams/` to `.gitignore` to avoid committing HLS output.
 - Request logging now redacts `token` query parameters to avoid leaking stream tokens.
+- Added optional RTSP transcode mode (configurable preset) for non-copyable streams.
+- HLS playlist delivery now waits briefly for initial generation before returning not-ready errors.
 ## 2026-01-18
 ### Phase 2 scaffolding (Direct RTSP)
 - Added `streamConfig` to camera models and API types to support Direct RTSP configuration without changing VMS behavior.

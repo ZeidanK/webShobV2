@@ -53,6 +53,9 @@ interface CameraGridProps {
   
   /** Optional CSS class */
   className?: string;
+
+  /** Enable wall layout mode for scrollable grids */
+  wallMode?: boolean;
 }
 
 export const CameraGrid: React.FC<CameraGridProps> = ({
@@ -68,7 +71,12 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   onSwap,
   resetToken,
   className,
+  wallMode = false,
 }) => {
+  // TEST-ONLY: Allow monitor wall to opt into a scroll-friendly container.
+  const containerClassName = `${styles.container} ${wallMode ? styles.wallContainer : ''} ${
+    className || ''
+  }`;
   const [focusedCameraId, setFocusedCameraId] = useState<string | null>(null);
   const [draggingCameraId, setDraggingCameraId] = useState<string | null>(null);
   const [dragOverCameraId, setDragOverCameraId] = useState<string | null>(null);
@@ -290,7 +298,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     const focusedCamera = cameras.find(c => c.id === focusedCameraId);
     if (focusedCamera && focusedCamera.streamUrl) {
       return (
-        <div className={`${styles.container} ${styles.focused} ${className || ''}`}>
+        <div className={`${containerClassName} ${styles.focused}`}>
           <div className={styles.focusedView}>
             {/* TEST-ONLY: Keep fullscreen control label ASCII to avoid mojibake. */}
             <button 
@@ -333,7 +341,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   }
 
   return (
-    <div className={`${styles.container} ${className || ''}`}>
+    <div className={containerClassName}>
       {cameras.length === 0 ? (
         <div className={styles.empty}>
           {/* TEST-ONLY: ASCII fallback for the empty-state icon label. */}

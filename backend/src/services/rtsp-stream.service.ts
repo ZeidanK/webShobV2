@@ -82,12 +82,24 @@ class RtspStreamService {
       throw ffmpegCheck.error;
     }
 
-    // TEST-ONLY: Spawn FFmpeg without a shell to avoid injection risk.
-    const ffmpegArgs = [
+    const baseArgs = [
       '-rtsp_transport', 'tcp',
       '-i', rtspUrl,
       '-an',
-      '-c:v', 'copy',
+    ];
+    const codecArgs = config.streaming.transcodeEnabled
+      ? [
+          // TEST-ONLY: Transcode for compatibility when direct copy fails.
+          '-c:v', 'libx264',
+          '-preset', config.streaming.transcodePreset,
+          '-tune', 'zerolatency',
+          '-pix_fmt', 'yuv420p',
+        ]
+      : [
+          // TEST-ONLY: Prefer stream copy for low CPU usage.
+          '-c:v', 'copy',
+        ];
+    const hlsArgs = [
       '-f', 'hls',
       '-hls_time', '2',
       '-hls_list_size', '6',
@@ -95,6 +107,9 @@ class RtspStreamService {
       '-hls_segment_filename', segmentPattern,
       playlistPath,
     ];
+
+    // TEST-ONLY: Spawn FFmpeg without a shell to avoid injection risk.
+    const ffmpegArgs = [...baseArgs, ...codecArgs, ...hlsArgs];
 
     let proc: ChildProcessWithoutNullStreams;
     try {

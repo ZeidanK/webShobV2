@@ -10,6 +10,12 @@
   overflow: hidden;
 }
 
+/* TEST-ONLY: Allow monitor wall grids to scroll beyond container height. */
+.wallContainer {
+  height: auto;
+  overflow: visible;
+}
+
 /* Grid Layout */
 .grid {
   display: flex;

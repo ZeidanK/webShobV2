@@ -444,8 +444,21 @@ router.get(
 
       const filePath = rtspStreamService.resolveStreamFilePath(req.params.id, req.params.file);
       if (!fs.existsSync(filePath)) {
-        res.status(404).json(errorResponse('STREAM_FILE_NOT_FOUND', 'Stream file not found', req.correlationId));
-        return;
+        // TEST-ONLY: Wait briefly for playlist generation before returning 404.
+        const maxAttempts = 10;
+        const delayMs = 200;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          if (fs.existsSync(filePath)) {
+            break;
+          }
+        }
+        if (!fs.existsSync(filePath)) {
+          res.status(404).json(
+            errorResponse('STREAM_PLAYLIST_NOT_READY', 'Stream playlist not ready', req.correlationId)
+          );
+          return;
+        }
       }
 
       // TEST-ONLY: Prevent caching of live stream assets.
