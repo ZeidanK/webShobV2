@@ -11,7 +11,7 @@
  */
 
 import mongoose, { Document } from 'mongoose';
-import { Camera, ICamera, CameraStatus, VmsServer, IVmsServer } from '../models';
+import { Camera, ICamera, CameraStatus, VmsServer, IVmsServer, AuditLog, AuditAction } from '../models';
 import { vmsService, VmsMonitor, StreamUrls } from './vms.service';
 import { rtspStreamService } from './rtsp-stream.service';
 import { NotFoundError, ValidationError, ConflictError } from '../utils/errors';
@@ -32,6 +32,14 @@ export interface CameraFilters {
   hasVms?: boolean;
   search?: string;
   isDeleted?: boolean;
+}
+
+/** Optional audit context for camera VMS operations */
+export interface CameraAuditContext {
+  userId?: mongoose.Types.ObjectId;
+  correlationId?: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /** Create camera input */
@@ -111,6 +119,28 @@ export interface CameraWithStreams extends CameraData {
 }
 
 class CameraService {
+  // TEST-ONLY: Persist a camera audit entry for VMS-related updates.
+  private async writeAuditLog(
+    action: AuditAction,
+    companyId: mongoose.Types.ObjectId,
+    resourceId: mongoose.Types.ObjectId | undefined,
+    changes: Record<string, unknown> | undefined,
+    metadata: Record<string, unknown> | undefined,
+    context?: CameraAuditContext
+  ): Promise<void> {
+    await AuditLog.create({
+      action,
+      companyId,
+      resourceType: 'Camera',
+      resourceId,
+      userId: context?.userId,
+      changes,
+      metadata,
+      correlationId: context?.correlationId,
+      ipAddress: context?.ipAddress,
+      userAgent: context?.userAgent,
+    });
+  }
   /**
    * Validate stream configuration and related fields.
    */
@@ -406,7 +436,8 @@ class CameraService {
     cameraId: mongoose.Types.ObjectId,
     serverId: mongoose.Types.ObjectId,
     monitorId: string,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: CameraAuditContext
   ): Promise<ICamera> {
     // Verify camera exists in this company
     const camera = await Camera.findOne({ _id: cameraId, companyId, isDeleted: false });
@@ -445,6 +476,16 @@ class CameraService {
     camera.updatedBy = userId;
     await camera.save();
 
+    // TEST-ONLY: Record audit metadata for camera VMS connections.
+    await this.writeAuditLog(
+      AuditAction.CAMERA_VMS_CONNECTED,
+      companyId,
+      camera._id,
+      { vms: { serverId: serverId.toString(), monitorId } },
+      { provider: server.provider },
+      { ...context, userId }
+    );
+
     logger.info('Camera connected to VMS', { cameraId, serverId, monitorId });
     return camera;
   }
@@ -455,7 +496,8 @@ class CameraService {
   async disconnectFromVms(
     companyId: mongoose.Types.ObjectId,
     cameraId: mongoose.Types.ObjectId,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: CameraAuditContext
   ): Promise<ICamera> {
     const camera = await Camera.findOne({ _id: cameraId, companyId, isDeleted: false });
     if (!camera) {
@@ -465,6 +507,16 @@ class CameraService {
     camera.vms = undefined;
     camera.updatedBy = userId;
     await camera.save();
+
+    // TEST-ONLY: Record audit metadata for camera VMS disconnections.
+    await this.writeAuditLog(
+      AuditAction.CAMERA_VMS_DISCONNECTED,
+      companyId,
+      camera._id,
+      undefined,
+      undefined,
+      { ...context, userId }
+    );
 
     logger.info('Camera disconnected from VMS', { cameraId });
     return camera;
@@ -481,7 +533,8 @@ class CameraService {
       name: string;
       location: { coordinates: [number, number]; address?: string };
     }>,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: CameraAuditContext
   ): Promise<{ created: number; skipped: number; cameras: ICamera[] }> {
     const server = await VmsServer.findOne({ _id: serverId, companyId });
     if (!server) {
@@ -532,6 +585,16 @@ class CameraService {
     }
 
     logger.info('Batch import from VMS completed', { serverId, created, skipped, total: monitors.length });
+
+    // TEST-ONLY: Record audit metadata for VMS batch import results.
+    await this.writeAuditLog(
+      AuditAction.VMS_MONITORS_IMPORTED,
+      companyId,
+      undefined,
+      undefined,
+      { serverId: serverId.toString(), created, skipped },
+      { ...context, userId }
+    );
 
     return { created, skipped, cameras };
   }

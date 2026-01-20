@@ -115,6 +115,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
       const serverId = new mongoose.Types.ObjectId(req.params.id);
 
       const server = await vmsService.findById(companyId, serverId);
@@ -199,7 +200,13 @@ router.post(
         isActive,
       };
 
-      const server = await vmsService.create(companyId, data, userId);
+      // TEST-ONLY: Track VMS creation with audit metadata.
+      const server = await vmsService.create(companyId, data, userId, {
+        userId,
+        correlationId: req.correlationId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
       logger.info('VMS server created via API', { 
         serverId: server._id, 
@@ -251,7 +258,13 @@ router.put(
       if (auth !== undefined) data.auth = auth;
       if (isActive !== undefined) data.isActive = isActive;
 
-      const server = await vmsService.update(companyId, serverId, data, userId);
+      // TEST-ONLY: Track VMS updates with audit metadata.
+      const server = await vmsService.update(companyId, serverId, data, userId, {
+        userId,
+        correlationId: req.correlationId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
       res.json(successResponse(server, req.correlationId));
     } catch (error) {
@@ -285,9 +298,16 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
       const serverId = new mongoose.Types.ObjectId(req.params.id);
 
-      await vmsService.delete(companyId, serverId);
+      // TEST-ONLY: Track VMS deletions with audit metadata.
+      await vmsService.delete(companyId, serverId, {
+        userId,
+        correlationId: req.correlationId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
       res.json(
         successResponse({ message: 'VMS server deleted successfully' }, req.correlationId)
@@ -323,9 +343,16 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
       const serverId = new mongoose.Types.ObjectId(req.params.id);
 
-      const result = await vmsService.testConnection(companyId, serverId);
+      // TEST-ONLY: Track VMS connection tests with audit metadata.
+      const result = await vmsService.testConnection(companyId, serverId, {
+        userId,
+        correlationId: req.correlationId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
       res.json(successResponse(result, req.correlationId));
     } catch (error) {
@@ -360,7 +387,13 @@ router.get(
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
       const serverId = new mongoose.Types.ObjectId(req.params.id);
 
-      const monitors = await vmsService.discoverMonitors(companyId, serverId);
+      // TEST-ONLY: Track monitor discovery with audit metadata.
+      const monitors = await vmsService.discoverMonitors(companyId, serverId, {
+        userId,
+        correlationId: req.correlationId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
       res.json(successResponse(monitors, req.correlationId));
     } catch (error) {
@@ -426,13 +459,20 @@ router.post(
       const serverId = new mongoose.Types.ObjectId(req.params.id);
       const { monitorIds, defaultLocation, source } = req.body;
 
+      // TEST-ONLY: Track monitor import with audit metadata.
       const cameras = await vmsService.importMonitors(
         serverId,
         monitorIds,
         defaultLocation,
         source,
         companyId,
-        userId
+        userId,
+        {
+          userId,
+          correlationId: req.correlationId,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        }
       );
 
       res.status(201).json(

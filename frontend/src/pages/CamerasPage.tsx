@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { api, Camera, VmsServer, CameraStatus } from '../services/api';
+import { api, Camera, VmsServer, CameraStatus, StreamUrls } from '../services/api';
 import { LiveView } from '../components/LiveView';
 import { getCurrentUser } from '../utils/auth';
 import styles from './CamerasPage.module.css';
@@ -58,7 +58,8 @@ export default function CamerasPage() {
   
   // Live view state
   const [liveViewCamera, setLiveViewCamera] = useState<Camera | null>(null);
-  const [streamOverrides, setStreamOverrides] = useState<Record<string, string>>({});
+  // TEST-ONLY: Cache stream URL variants for LiveView fallback handling.
+  const [streamOverrides, setStreamOverrides] = useState<Record<string, StreamUrls>>({});
 
   // Fetch cameras and VMS servers
   const fetchData = useCallback(async () => {
@@ -178,10 +179,8 @@ export default function CamerasPage() {
 
     try {
       const streams = await api.cameras.getStreams(camera._id);
-      const streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
-      if (streamUrl) {
-        setStreamOverrides((prev) => ({ ...prev, [camera._id]: streamUrl }));
-      }
+      // TEST-ONLY: Store all stream variants for fallback playback.
+      setStreamOverrides((prev) => ({ ...prev, [camera._id]: streams }));
     } catch (err) {
       console.error('Failed to load camera streams:', err);
     }
@@ -189,8 +188,9 @@ export default function CamerasPage() {
 
   // Get stream URL for camera
   const getStreamUrl = (camera: Camera): string | null => {
-    if (streamOverrides[camera._id]) {
-      return streamOverrides[camera._id];
+    const overrides = streamOverrides[camera._id];
+    if (overrides) {
+      return overrides.hls || overrides.raw || overrides.embed || overrides.snapshot || null;
     }
 
     if (camera.streamUrl) {
@@ -617,7 +617,10 @@ export default function CamerasPage() {
             </div>
             <LiveView
               streamUrl={getStreamUrl(liveViewCamera) || ''}
+              // TEST-ONLY: Provide embed URL fallback when HLS is unsupported.
+              embedUrl={streamOverrides[liveViewCamera._id]?.embed}
               cameraName={liveViewCamera.name}
+              snapshotUrl={streamOverrides[liveViewCamera._id]?.snapshot || liveViewCamera.streamUrl}
               className={styles.liveViewVideo}
             />
           </div>

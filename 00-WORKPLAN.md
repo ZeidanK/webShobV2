@@ -583,72 +583,72 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
 - ❌ Do NOT implement AI detection integration (Slice 13)
 
 ### Backend Tasks - Models
-- [ ] Port `VmsServer` model from patch
-  - [ ] Add `companyId` field for multi-tenant isolation
-  - [ ] Keep provider enum: ['shinobi', 'zoneminder', 'agentdvr', 'other']
-  - [ ] Keep auth fields (apiKey, groupKey, username, password)
-  - [ ] Add security transforms to hide auth in JSON responses
-- [ ] Port Camera model VMS extensions from patch
-  - [ ] Add `vms` subdocument: `{ serverId, monitorId }`
-  - [ ] Add `metadata.source` field for demo tracking
-  - [ ] Keep existing Camera fields from your architecture
+- [x] Port `VmsServer` model from patch
+  - [x] Add `companyId` field for multi-tenant isolation
+  - [x] Keep provider enum: ['shinobi', 'zoneminder', 'agentdvr', 'other']
+  - [x] Keep auth fields (apiKey, groupKey, username, password)
+  - [x] Add security transforms to hide auth in JSON responses
+- [x] Port Camera model VMS extensions from patch
+  - [x] Add `vms` subdocument: `{ serverId, monitorId }`
+  - [x] Add `metadata.source` field for demo tracking
+  - [x] Keep existing Camera fields from your architecture
 
 ### Backend Tasks - VMS Controller & Routes
 - [ ] Port `vmsController.ts` from patch
   - [ ] Add `companyId` filtering to ALL queries (critical for multi-tenant)
-  - [ ] Port `POST /api/vms/servers` (create VMS server)
-  - [ ] Port `GET /api/vms/servers` (list, company-scoped)
-  - [ ] Port `GET /api/vms/servers/:id` (get single)
-  - [ ] Port `PATCH /api/vms/servers/:id` (update)
-  - [ ] Port `DELETE /api/vms/servers/:id` (delete)
-  - [ ] Port `GET /api/vms/servers/:id/monitors` (Shinobi monitor discovery)
-  - [ ] Port `POST /api/vms/servers/:id/monitors/import` (batch import)
-  - [ ] Add audit log entries for VMS operations
-  - [ ] Add correlationId logging
+  - [x] Port `POST /api/vms/servers` (create VMS server)
+  - [x] Port `GET /api/vms/servers` (list, company-scoped)
+  - [x] Port `GET /api/vms/servers/:id` (get single)
+  - [x] Port `PATCH /api/vms/servers/:id` (update)
+  - [x] Port `DELETE /api/vms/servers/:id` (delete)
+  - [x] Port `GET /api/vms/servers/:id/monitors` (Shinobi monitor discovery)
+  - [x] Port `POST /api/vms/servers/:id/monitors/import` (batch import)
+  - [x] Add audit log entries for VMS operations
+  - [x] Add correlationId logging
   - [ ] Add OpenAPI/Swagger annotations
-- [ ] Port `vms.ts` routes from patch
-  - [ ] Mount at `/api/vms`
-  - [ ] Add auth middleware to all routes
+- [x] Port `vms.ts` routes from patch
+  - [x] Mount at `/api/vms`
+  - [x] Add auth middleware to all routes
 
 ### Backend Tasks - Camera Extensions
-- [ ] Port camera-VMS endpoints from patch
-  - [ ] `POST /api/cameras/:id/vms/connect` (link camera to VMS)
-  - [ ] `POST /api/cameras/:id/vms/disconnect` (unlink camera)
-  - [ ] `GET /api/cameras/:id/vms/streams` (get HLS/embed/snapshot URLs)
-  - [ ] `POST /api/cameras/test-connection` (RTSP and VMS connectivity test)
-  - [ ] `DELETE /api/cameras/source/:source` (demo cleanup)
-- [ ] Adapt to use your standard response envelope
-- [ ] Add tenant isolation checks
-- [ ] Add audit logging
+- [x] Port camera-VMS endpoints from patch
+  - [x] `POST /api/cameras/:id/vms/connect` (link camera to VMS)
+  - [x] `POST /api/cameras/:id/vms/disconnect` (unlink camera)
+  - [x] `GET /api/cameras/:id/vms/streams` (get HLS/embed/snapshot URLs)
+  - [x] `POST /api/cameras/test-connection` (RTSP and VMS connectivity test)
+  - [x] `DELETE /api/cameras/source/:source` (demo cleanup)
+- [x] Adapt to use your standard response envelope
+- [x] Add tenant isolation checks
+  - [x] Add audit logging
 
 ### Backend Tasks - Shinobi Adapter
-- [ ] Port Shinobi stream URL generation logic
-  - [ ] `liveHlsUrl`: `{baseUrl}/{apiKey}/hls/{groupKey}/{monitorId}/s.m3u8`
-  - [ ] `liveEmbedUrl`: `{baseUrl}/{apiKey}/embed/{groupKey}/{monitorId}`
-  - [ ] `snapshotUrl`: `{baseUrl}/{apiKey}/jpeg/{groupKey}/{monitorId}/s.jpg`
-- [ ] Port Shinobi monitor discovery
-  - [ ] API call: `GET {baseUrl}/{apiKey}/monitor/{groupKey}`
-  - [ ] Parse response and normalize to camera schema
-- [ ] Port connection testing logic (mode: 'rtsp' vs 'vms')
+- [x] Port Shinobi stream URL generation logic
+  - [x] `liveHlsUrl`: `{baseUrl}/{apiKey}/hls/{groupKey}/{monitorId}/s.m3u8`
+  - [x] `liveEmbedUrl`: `{baseUrl}/{apiKey}/embed/{groupKey}/{monitorId}`
+  - [x] `snapshotUrl`: `{baseUrl}/{apiKey}/jpeg/{groupKey}/{monitorId}/s.jpg`
+- [x] Port Shinobi monitor discovery
+  - [x] API call: `GET {baseUrl}/{apiKey}/monitor/{groupKey}`
+  - [x] Parse response and normalize to camera schema
+- [x] Port connection testing logic (mode: 'rtsp' vs 'vms')
 
 ### Frontend Tasks
-- [ ] Install hls.js: `npm install hls.js @types/hls.js`
-- [ ] Port `LiveView.tsx` from patch
-  - [ ] Implement HLS.js video player
-  - [ ] Add iframe fallback for non-HLS browsers
-  - [ ] Add loading/error states
+- [x] Install hls.js: `npm install hls.js @types/hls.js`
+- [x] Port `LiveView.tsx` from patch
+  - [x] Implement HLS.js video player
+  - [x] Add iframe fallback for non-HLS browsers
+  - [x] Add loading/error states
   - [ ] Adapt to your component styling
-- [ ] Create VMS server management UI
-  - [ ] VMS server list page
-  - [ ] Add/edit VMS server form
-  - [ ] Test connection button
-  - [ ] Monitor discovery interface
-- [ ] Extend camera management UI from patch
-  - [ ] Add "Connect to VMS" action
-  - [ ] Show VMS connection status
-  - [ ] Add "View Live" button (opens LiveView modal)
-  - [ ] Add demo mode: discover & import Shinobi monitors
-  - [ ] Add demo cleanup action
+- [x] Create VMS server management UI
+  - [x] VMS server list page
+  - [x] Add/edit VMS server form
+  - [x] Test connection button
+  - [x] Monitor discovery interface
+- [x] Extend camera management UI from patch
+  - [x] Add "Connect to VMS" action
+  - [x] Show VMS connection status
+  - [x] Add "View Live" button (opens LiveView modal)
+  - [x] Add demo mode: discover & import Shinobi monitors
+  - [x] Add demo cleanup action
 
 ### Docker/Infrastructure Tasks
 - [ ] Create `vms-lab/` directory for Shinobi testing
@@ -679,16 +679,16 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
 - [ ] Manual: Shinobi connection test
 
 ### Definition of Done (Slice 9.0)
-- [ ] VMS server can be registered (Shinobi credentials)
-- [ ] Cameras can be linked to Shinobi monitors
-- [ ] Stream URLs generated correctly (HLS, embed, snapshot)
-- [ ] Live video plays in browser using hls.js
-- [ ] Shinobi monitors can be discovered and imported
-- [ ] Connection testing works for both RTSP and VMS modes
-- [ ] Demo cameras can be bulk imported and cleaned up
-- [ ] All operations are multi-tenant (companyId filtered)
+- [x] VMS server can be registered (Shinobi credentials)
+- [x] Cameras can be linked to Shinobi monitors
+- [x] Stream URLs generated correctly (HLS, embed, snapshot)
+- [x] Live video plays in browser using hls.js
+- [x] Shinobi monitors can be discovered and imported
+- [x] Connection testing works for both RTSP and VMS modes
+- [x] Demo cameras can be bulk imported and cleaned up
+- [x] All operations are multi-tenant (companyId filtered)
 - [ ] Shinobi Docker environment runs locally for testing
-- [ ] Frontend shows camera status and live video
+- [x] Frontend shows camera status and live video
 - [ ] All tests pass
 
 ### Dependencies

@@ -904,6 +904,17 @@ export const api = {
     getStreams: (id: string) => 
       apiClient.get<StreamUrls>(`/cameras/${id}/streams`),
 
+    // TEST-ONLY: Unified RTSP/VMS connectivity test endpoint.
+    testConnection: (data: {
+      mode?: 'rtsp' | 'vms';
+      rtspUrl?: string;
+      transport?: 'tcp' | 'udp';
+      serverId?: string;
+    }) => apiClient.post<{ success: boolean; message: string; monitors?: number }>(
+      '/cameras/test-connection',
+      data
+    ),
+
     connectToVms: (id: string, serverId: string, monitorId: string) =>
       apiClient.post<Camera>(`/cameras/${id}/vms/connect`, { serverId, monitorId }),
 

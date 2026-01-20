@@ -59,6 +59,8 @@ export default function VmsSettingsPage() {
   // Monitors state
   const [loadingMonitors, setLoadingMonitors] = useState<string | null>(null);
   const [monitors, setMonitors] = useState<Record<string, VmsMonitor[]>>({});
+  // TEST-ONLY: Track cleanup action per VMS server.
+  const [cleaning, setCleaning] = useState<string | null>(null);
 
   // Fetch VMS servers
   const fetchServers = useCallback(async () => {
@@ -247,6 +249,26 @@ export default function VmsSettingsPage() {
     }
   };
 
+  // TEST-ONLY: Remove imported demo cameras for a VMS server.
+  const handleCleanupImported = async (server: VmsServer) => {
+    const ok = confirm(`Remove imported cameras from ${server.name}?`);
+    if (!ok) {
+      return;
+    }
+
+    try {
+      setCleaning(server._id);
+      const result = await api.cameras.deleteCamerasBySource('vms-import');
+      alert(`Deleted ${result.deletedCount} imported camera(s).`);
+      fetchServers();
+    } catch (err) {
+      console.error('Failed to cleanup imported cameras:', err);
+      alert(formatApiError(err, 'Failed to cleanup imported cameras'));
+    } finally {
+      setCleaning(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -333,9 +355,8 @@ export default function VmsSettingsPage() {
                     onClick={() => openModal(server)}
                   >
                     ✏️
-                  </button>
-                  <button
-                    className={`${styles.actionButton} ${styles.danger}`}
+                  `</button>
+                  {/* TEST-ONLY: Cleanup imported demo cameras for this VMS. */}`n                      <button`n                        className={`${styles.actionButton} ${styles.danger}`}
                     onClick={() => handleDelete(server)}
                   >
                     🗑️
@@ -374,7 +395,15 @@ export default function VmsSettingsPage() {
                         className={`${styles.actionButton} ${styles.primary}`}
                         onClick={() => handleImportAllMonitors(server)}
                       >
-                        📥 Import All
+                        Import All
+                      </button>
+                      {/* TEST-ONLY: Cleanup imported demo cameras for this VMS. */}
+                      <button
+                        className={`${styles.actionButton} ${styles.danger}`}
+                        onClick={() => handleCleanupImported(server)}
+                        disabled={cleaning === server._id}
+                      >
+                        {cleaning === server._id ? '...' : 'Cleanup Imported'}
                       </button>
                     </div>
                   </div>
@@ -598,3 +627,6 @@ export default function VmsSettingsPage() {
     </div>
   );
 }
+
+
+

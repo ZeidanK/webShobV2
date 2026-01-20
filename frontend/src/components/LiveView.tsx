@@ -18,6 +18,9 @@ interface LiveViewProps {
   
   /** Optional snapshot URL for poster image */
   snapshotUrl?: string;
+
+  /** Optional embed URL for iframe fallback */
+  embedUrl?: string;
   
   /** Enable/disable autoplay */
   autoPlay?: boolean;
@@ -70,6 +73,7 @@ export const LiveView: React.FC<LiveViewProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const retryRef = useRef({ network: 0, media: 0 });
+  const [useIframe, setUseIframe] = useState(false);
   
   const [state, setState] = useState<StreamState>({
     loading: true,
@@ -90,7 +94,7 @@ export const LiveView: React.FC<LiveViewProps> = ({
   // Initialize HLS stream
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !streamUrl) {
+    if (!video || (!streamUrl && !embedUrl)) {
       setState({ loading: false, error: 'Stream URL is missing', playing: false });
       return;
     }
@@ -98,6 +102,15 @@ export const LiveView: React.FC<LiveViewProps> = ({
     cleanupHls();
     retryRef.current = { network: 0, media: 0 };
     setState({ loading: true, error: null, playing: false });
+    // TEST-ONLY: Reset iframe fallback when retrying.
+    setUseIframe(false);
+
+    if (!streamUrl && embedUrl) {
+      // TEST-ONLY: Use iframe fallback when only embed URL is available.
+      setUseIframe(true);
+      setState({ loading: false, error: null, playing: false });
+      return;
+    }
 
     // Check if native HLS is supported (Safari, iOS)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -121,6 +134,12 @@ export const LiveView: React.FC<LiveViewProps> = ({
 
     // Use hls.js for other browsers
     if (!Hls.isSupported()) {
+      if (embedUrl) {
+        // TEST-ONLY: Fall back to iframe embed when HLS is unsupported.
+        setUseIframe(true);
+        setState({ loading: false, error: null, playing: false });
+        return;
+      }
       const errorMsg = 'HLS is not supported in this browser';
       setState({ loading: false, error: errorMsg, playing: false });
       onError?.(errorMsg);
@@ -193,7 +212,7 @@ export const LiveView: React.FC<LiveViewProps> = ({
     });
 
     hls.attachMedia(video);
-  }, [streamUrl, autoPlay, cleanupHls, onLoad, onError]);
+  }, [streamUrl, embedUrl, autoPlay, cleanupHls, onLoad, onError]);
 
   // Initialize on mount and URL change
   useEffect(() => {
@@ -248,16 +267,29 @@ export const LiveView: React.FC<LiveViewProps> = ({
       )}
 
       {/* Video player */}
-      <video
-        ref={videoRef}
-        className={`${styles.video} ${fillParent ? styles.videoFill : ''}`}
-        controls={showControls}
-        muted={muted}
-        playsInline
-        poster={snapshotUrl}
-        onPlay={handlePlay}
-        onPause={handlePause}
-      />
+      {!useIframe && (
+        <video
+          ref={videoRef}
+          className={`${styles.video} ${fillParent ? styles.videoFill : ''}`}
+          controls={showControls}
+          muted={muted}
+          playsInline
+          poster={snapshotUrl}
+          onPlay={handlePlay}
+          onPause={handlePause}
+        />
+      )}
+
+      {/* TEST-ONLY: Iframe fallback for non-HLS browsers */}
+      {useIframe && embedUrl && (
+        <iframe
+          className={styles.iframe}
+          src={embedUrl}
+          title={cameraName || 'Camera stream'}
+          allow="autoplay; fullscreen"
+          onLoad={() => onLoad?.()}
+        />
+      )}
 
       {/* Loading overlay */}
       {state.loading && (

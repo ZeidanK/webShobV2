@@ -98,10 +98,15 @@ export default function MonitorWallPage() {
     return Promise.all(
       (cameraList || []).map(async (camera) => {
         let streamUrl = camera.streamUrl;
+        let embedUrl = camera.embedUrl;
+        let snapshotUrl = camera.snapshotUrl;
         if (!streamUrl && camera.vms?.serverId) {
           try {
             const streams = await api.cameras.getStreams(camera._id);
             streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
+            // TEST-ONLY: Preserve embed/snapshot URLs for fallback playback.
+            embedUrl = streams.embed || embedUrl;
+            snapshotUrl = streams.snapshot || snapshotUrl;
           } catch (err) {
             console.error('Failed to load camera streams:', err);
           }
@@ -111,6 +116,8 @@ export default function MonitorWallPage() {
           id: camera._id,
           name: camera.name,
           streamUrl,
+          embedUrl,
+          snapshotUrl,
           status: camera.status,
         } as CameraItem;
       })

@@ -55,6 +55,16 @@ export enum AuditAction {
   CAMERA_UPDATED = 'camera.updated',
   CAMERA_DEACTIVATED = 'camera.deactivated',
   CAMERA_STATUS_CHANGED = 'camera.status.changed',
+  
+  // VMS actions
+  VMS_SERVER_CREATED = 'vms.server.created',
+  VMS_SERVER_UPDATED = 'vms.server.updated',
+  VMS_SERVER_DELETED = 'vms.server.deleted',
+  VMS_SERVER_TESTED = 'vms.server.tested',
+  VMS_MONITORS_DISCOVERED = 'vms.monitors.discovered',
+  VMS_MONITORS_IMPORTED = 'vms.monitors.imported',
+  CAMERA_VMS_CONNECTED = 'camera.vms.connected',
+  CAMERA_VMS_DISCONNECTED = 'camera.vms.disconnected',
 }
 
 /**

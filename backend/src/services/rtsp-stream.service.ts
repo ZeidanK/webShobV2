@@ -43,6 +43,56 @@ class RtspStreamService {
       return 'rtsp://redacted';
     }
   }
+  // TEST-ONLY: Run a short FFmpeg probe to validate RTSP connectivity.
+  async testRtspConnection(
+    rtspUrl: string,
+    transport: 'tcp' | 'udp' = 'tcp'
+  ): Promise<{ success: boolean; message: string }> {
+    const ffmpegCheck = spawnSync(config.streaming.ffmpegPath, ['-version'], { stdio: 'ignore' });
+    if (ffmpegCheck.error) {
+      if ((ffmpegCheck.error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return { success: false, message: 'FFmpeg is not installed' };
+      }
+      return { success: false, message: 'FFmpeg probe failed to start' };
+    }
+
+    const probeArgs = [
+      '-rtsp_transport',
+      transport,
+      '-i',
+      rtspUrl,
+      '-t',
+      '1',
+      '-f',
+      'null',
+      '-',
+    ];
+    const result = spawnSync(config.streaming.ffmpegPath, probeArgs, {
+      stdio: 'pipe',
+      timeout: 8000,
+    });
+
+    if (result.error) {
+      const err = result.error as NodeJS.ErrnoException;
+      if (err.code === 'ETIMEDOUT') {
+        return { success: false, message: 'RTSP probe timed out' };
+      }
+      return { success: false, message: 'RTSP probe failed to start' };
+    }
+
+    if (result.status === 0) {
+      return { success: true, message: 'RTSP connection succeeded' };
+    }
+
+    logger.warn({
+      action: 'rtsp.probe.failed',
+      rtspUrl: this.sanitizeRtspUrl(rtspUrl),
+      code: result.status,
+      stderr: result.stderr?.toString().slice(0, 300),
+    });
+
+    return { success: false, message: 'RTSP connection failed' };
+  }
 
   // TEST-ONLY: Build and validate per-camera HLS output folder.
   private ensureOutputDir(cameraId: string): string {
@@ -67,6 +117,21 @@ class RtspStreamService {
     if (existing && existing.process.exitCode === null) {
       existing.lastUsedAt = Date.now();
       return existing.outputDir;
+    }
+
+    // TEST-ONLY: Enforce a max process limit to protect backend resources.
+    if (this.processes.size >= config.streaming.maxProcesses) {
+      const sorted = [...this.processes.entries()].sort((a, b) => a[1].lastUsedAt - b[1].lastUsedAt);
+      const [oldestId, oldestState] = sorted[0] || [];
+      if (oldestId && oldestState) {
+        oldestState.process.kill('SIGTERM');
+        this.processes.delete(oldestId);
+        logger.warn({
+          action: 'rtsp.stream.evict',
+          cameraId: oldestId,
+          reason: 'max_processes',
+        });
+      }
     }
 
     const outputDir = this.ensureOutputDir(cameraId);

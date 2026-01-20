@@ -52,6 +52,7 @@ export const config = {
     publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
     transcodeEnabled: process.env.STREAMING_TRANSCODE_ENABLED === 'true',
     transcodePreset: process.env.STREAMING_TRANSCODE_PRESET || 'veryfast',
+    maxProcesses: parseInt(process.env.STREAMING_MAX_PROCESSES || '8', 10),
   },
 
   // AI Service

@@ -69,6 +69,16 @@
 - Request logging now redacts `token` query parameters to avoid leaking stream tokens.
 - Added optional RTSP transcode mode (configurable preset) for non-copyable streams.
 - HLS playlist delivery now waits briefly for initial generation before returning not-ready errors.
+- Added a max RTSP process cap to evict least-recently-used pipelines under load.
+- Added a stream token cookie fallback for native players that drop HLS query params.
+
+### Known Issues
+- [Resolved] HLS segment requests rely on query tokens; cookie fallback added for native players.
+- [Resolved] FFmpeg process cap is enforced via LRU eviction (STREAMING_MAX_PROCESSES).
+- [Partial] Stream startup can still be slow for some RTSP sources; wait loop helps but does not eliminate delays.
+- [Open] Transcode is global (env flag) rather than per-camera; mixed camera fleets may need different modes.
+- [Open] Stream errors are not surfaced with camera-specific diagnostics in the UI yet.
+- [Open] HLS endpoints are token-protected but not rate-limited; burst traffic could impact stability.
 ## 2026-01-18
 ### Phase 2 scaffolding (Direct RTSP)
 - Added `streamConfig` to camera models and API types to support Direct RTSP configuration without changing VMS behavior.
@@ -103,3 +113,15 @@ const allowsClick = interactionMode !== 'drag';
 const allowsDrag = interactionMode !== 'click';
 ```
 Interaction mode gates click focus vs drag swapping for operator workflow flexibility.
+
+## 2026-01-19
+### Slice 9-A connectivity + audit logging
+- Added `/api/cameras/test-connection` to validate RTSP URLs or VMS servers in one endpoint.
+- Added RTSP probe support in the backend with a short FFmpeg connectivity test.
+- Added audit log actions for VMS server lifecycle, monitor discovery/import, and camera VMS connect/disconnect.
+- Added correlationId/ip/userAgent metadata to VMS audit logs for traceability.
+
+### LiveView fallback + demo cleanup
+- LiveView now supports iframe fallback via `embedUrl` when HLS is unsupported or absent.
+- Monitor wall and camera modal now retain embed/snapshot URLs for fallback playback.
+- VMS settings now include a cleanup action to remove `vms-import` demo cameras.

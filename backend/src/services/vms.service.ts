@@ -10,7 +10,7 @@
  */
 
 import mongoose from 'mongoose';
-import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus } from '../models';
+import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus, AuditLog, AuditAction } from '../models';
 import { AppError, ErrorCodes, NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -45,6 +45,14 @@ export interface VmsServerFilters {
   provider?: VmsProvider;
   isActive?: boolean;
   search?: string;
+}
+
+/** Optional audit context for VMS operations */
+export interface VmsAuditContext {
+  userId?: mongoose.Types.ObjectId;
+  correlationId?: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /** Create VMS server input */
@@ -111,15 +119,42 @@ class VmsService {
     }
     return 'offline';
   }
+  // TEST-ONLY: Persist a VMS audit entry with standard metadata.
+  private async writeAuditLog(
+    action: AuditAction,
+    companyId: mongoose.Types.ObjectId,
+    resourceId: mongoose.Types.ObjectId | undefined,
+    changes: Record<string, unknown> | undefined,
+    metadata: Record<string, unknown> | undefined,
+    context?: VmsAuditContext
+  ): Promise<void> {
+    await AuditLog.create({
+      action,
+      companyId,
+      resourceType: 'VmsServer',
+      resourceId,
+      userId: context?.userId,
+      changes,
+      metadata,
+      correlationId: context?.correlationId,
+      ipAddress: context?.ipAddress,
+      userAgent: context?.userAgent,
+    });
+  }
   /**
    * Create a new VMS server
    */
   async create(
     companyId: mongoose.Types.ObjectId,
     data: CreateVmsServerInput,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<IVmsServer> {
-    logger.info('Creating VMS server', { companyId, provider: data.provider, name: data.name });
+    logger.info({
+      action: 'vms.create.start',
+      context: { companyId: companyId.toString(), provider: data.provider, name: data.name },
+      correlationId: context?.correlationId,
+    });
 
     const urls = this.normalizeVmsUrls(data.baseUrl, data.publicBaseUrl);
     const server = new VmsServer({
@@ -133,7 +168,21 @@ class VmsService {
 
     await server.save();
 
-    logger.info('VMS server created', { serverId: server._id, provider: data.provider });
+    // TEST-ONLY: Record audit metadata for VMS server creation.
+    await this.writeAuditLog(
+      AuditAction.VMS_SERVER_CREATED,
+      companyId,
+      server._id,
+      { name: server.name, provider: server.provider, baseUrl: server.baseUrl },
+      { publicBaseUrl: server.publicBaseUrl },
+      { ...context, userId }
+    );
+
+    logger.info({
+      action: 'vms.create.success',
+      context: { serverId: server._id.toString(), provider: data.provider },
+      correlationId: context?.correlationId,
+    });
     return server;
   }
 
@@ -221,7 +270,8 @@ class VmsService {
     companyId: mongoose.Types.ObjectId,
     serverId: mongoose.Types.ObjectId,
     data: UpdateVmsServerInput,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<IVmsServer> {
     // ALWAYS filter by companyId, include auth for validation
     const server = await VmsServer.findOne({ _id: serverId, companyId })
@@ -251,7 +301,26 @@ class VmsService {
     server.updatedBy = userId;
     await server.save();
 
-    logger.info('VMS server updated', { serverId, provider: server.provider });
+    // TEST-ONLY: Record audit metadata for VMS server updates.
+    await this.writeAuditLog(
+      AuditAction.VMS_SERVER_UPDATED,
+      companyId,
+      server._id,
+      {
+        name: data.name,
+        baseUrl: data.baseUrl,
+        publicBaseUrl: data.publicBaseUrl,
+        isActive: data.isActive,
+      },
+      { provider: server.provider },
+      { ...context, userId }
+    );
+
+    logger.info({
+      action: 'vms.update.success',
+      context: { serverId: server._id.toString(), provider: server.provider },
+      correlationId: context?.correlationId,
+    });
     return server;
   }
 
@@ -260,7 +329,8 @@ class VmsService {
    */
   async delete(
     companyId: mongoose.Types.ObjectId,
-    serverId: mongoose.Types.ObjectId
+    serverId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<void> {
     // ALWAYS filter by companyId
     const result = await VmsServer.deleteOne({ _id: serverId, companyId });
@@ -275,7 +345,21 @@ class VmsService {
       { $set: { isDeleted: true, lastModified: new Date() } }
     );
 
-    logger.info('VMS server deleted', { serverId });
+    // TEST-ONLY: Record audit metadata for VMS server deletion.
+    await this.writeAuditLog(
+      AuditAction.VMS_SERVER_DELETED,
+      companyId,
+      serverId,
+      undefined,
+      undefined,
+      context
+    );
+
+    logger.info({
+      action: 'vms.delete.success',
+      context: { serverId: serverId.toString() },
+      correlationId: context?.correlationId,
+    });
   }
 
   /**
@@ -283,7 +367,8 @@ class VmsService {
    */
   async testConnection(
     companyId: mongoose.Types.ObjectId,
-    serverId: mongoose.Types.ObjectId
+    serverId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<{ success: boolean; message: string; monitors?: number }> {
     const server = await this.findByIdWithAuth(companyId, serverId);
 
@@ -294,12 +379,49 @@ class VmsService {
     try {
       switch (server.provider) {
         case 'shinobi':
-          return await this.testShinobiConnection(server);
+          const result = await this.testShinobiConnection(server);
+          // TEST-ONLY: Audit successful Shinobi connection tests.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: true, monitors: result.monitors },
+            context
+          );
+          return result;
         case 'zoneminder':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
           return { success: false, message: 'ZoneMinder integration not yet implemented' };
         case 'agentdvr':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
           return { success: false, message: 'AgentDVR integration not yet implemented' };
         default:
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
           return { success: false, message: `Unknown provider: ${server.provider}` };
       }
     } catch (error) {
@@ -312,6 +434,16 @@ class VmsService {
           connectionStatus: 'error',
           lastError: message,
         }
+      );
+
+      // TEST-ONLY: Audit failed connection tests for troubleshooting.
+      await this.writeAuditLog(
+        AuditAction.VMS_SERVER_TESTED,
+        companyId,
+        serverId,
+        undefined,
+        { provider: server.provider, success: false, error: message },
+        context
       );
 
       logger.error('VMS connection test failed', { serverId, error: message });
@@ -329,7 +461,8 @@ class VmsService {
    */
   async discoverMonitors(
     companyId: mongoose.Types.ObjectId,
-    serverId: mongoose.Types.ObjectId
+    serverId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<VmsMonitor[]> {
     const server = await this.findByIdWithAuth(companyId, serverId);
 
@@ -340,7 +473,17 @@ class VmsService {
     try {
       switch (server.provider) {
         case 'shinobi':
-          return await this.discoverShinobiMonitors(server);
+          const monitors = await this.discoverShinobiMonitors(server);
+          // TEST-ONLY: Audit monitor discovery counts.
+          await this.writeAuditLog(
+            AuditAction.VMS_MONITORS_DISCOVERED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, count: monitors.length },
+            context
+          );
+          return monitors;
         case 'zoneminder':
           return [];
         case 'agentdvr':
@@ -563,7 +706,8 @@ class VmsService {
     defaultLocation: { coordinates: [number, number]; address?: string } | undefined,
     source: string | undefined,
     companyId: mongoose.Types.ObjectId,
-    userId: mongoose.Types.ObjectId
+    userId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<any[]> {
     // VMS servers do not support soft delete; filter by company only
     // Ensure the VMS server exists for the current tenant
@@ -584,7 +728,7 @@ class VmsService {
 
     // Discover all monitors
     // Maintain discoverMonitors signature: (companyId, serverId)
-    const monitors = await this.discoverMonitors(companyId, serverId);
+    const monitors = await this.discoverMonitors(companyId, serverId, context);
 
     // Filter to selected monitors if specified
     const selectedMonitors = monitorIds && monitorIds.length > 0
@@ -658,6 +802,16 @@ class VmsService {
 
     const createdCameras = await Camera.insertMany(camerasToCreate);
     
+    // TEST-ONLY: Audit imported monitor counts for VMS tracking.
+    await this.writeAuditLog(
+      AuditAction.VMS_MONITORS_IMPORTED,
+      companyId,
+      serverId,
+      undefined,
+      { provider: server.provider, count: createdCameras.length },
+      { ...context, userId }
+    );
+
     logger.info('Imported monitors as cameras', {
       serverId,
       companyId,

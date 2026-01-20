@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 import { cameraService, CreateCameraInput, UpdateCameraInput } from '../services/camera.service';
+import { vmsService } from '../services/vms.service';
 import { rtspStreamService } from '../services/rtsp-stream.service';
 import { CameraStatus } from '../models';
 import { config } from '../config';
@@ -22,6 +23,31 @@ import { logger } from '../utils/logger';
 import { UserRole } from '../models';
 
 const router = Router();
+
+// TEST-ONLY: Parse cookie header for stream token fallback.
+const parseCookieHeader = (header?: string): Record<string, string> => {
+  if (!header) {
+    return {};
+  }
+  return header.split(';').reduce<Record<string, string>>((acc, part) => {
+    const [key, ...rest] = part.trim().split('=');
+    if (!key) {
+      return acc;
+    }
+    acc[key] = decodeURIComponent(rest.join('='));
+    return acc;
+  }, {});
+};
+
+// TEST-ONLY: Extract stream token from HLS URL for cookie fallback.
+const extractStreamToken = (hlsUrl: string): string | null => {
+  try {
+    const parsed = new URL(hlsUrl, 'http://localhost');
+    return parsed.searchParams.get('token');
+  } catch {
+    return null;
+  }
+};
 
 /**
  * @swagger
@@ -354,6 +380,79 @@ router.delete(
 
 /**
  * @swagger
+ * /cameras/test-connection:
+ *   post:
+ *     summary: Test RTSP or VMS connectivity
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               mode:
+ *                 type: string
+ *                 enum: [rtsp, vms]
+ *               rtspUrl:
+ *                 type: string
+ *               transport:
+ *                 type: string
+ *                 enum: [tcp, udp]
+ *               serverId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Connection test result
+ */
+router.post(
+  '/test-connection',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
+      const { mode, serverId, rtspUrl, transport } = req.body || {};
+
+      const resolvedMode = mode || (serverId ? 'vms' : 'rtsp');
+
+      if (resolvedMode === 'vms') {
+        if (!serverId) {
+          throw new ValidationError('serverId is required for VMS tests');
+        }
+        // TEST-ONLY: Track VMS connection tests with audit metadata.
+        const result = await vmsService.testConnection(
+          companyId,
+          new mongoose.Types.ObjectId(serverId),
+          {
+            userId,
+            correlationId: req.correlationId,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+          }
+        );
+        res.json(successResponse(result, req.correlationId));
+        return;
+      }
+
+      if (!rtspUrl) {
+        throw new ValidationError('rtspUrl is required for RTSP tests');
+      }
+
+      // TEST-ONLY: Run a short RTSP probe to validate connectivity.
+      const result = await rtspStreamService.testRtspConnection(rtspUrl, transport);
+      res.json(successResponse(result, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
  * /cameras/{id}/streams:
  *   get:
  *     summary: Get stream URLs for a camera
@@ -382,6 +481,22 @@ router.get(
       const streamBaseUrl =
         config.streaming.publicBaseUrl || `${req.protocol}://${req.get('host')}`;
       const streams = await cameraService.getStreamUrls(companyId, cameraId, streamBaseUrl);
+
+      // TEST-ONLY: Set stream token cookie for native HLS players that drop query params.
+      if (streams.hls && streams.hls.includes('/streams/hls/')) {
+        const token = extractStreamToken(streams.hls);
+        if (token) {
+          const forwardedProto = req.headers['x-forwarded-proto'];
+          const isSecure = req.secure || forwardedProto === 'https';
+          res.cookie('stream_token', token, {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: isSecure,
+            path: `/api/cameras/${cameraId.toString()}/streams/hls`,
+            maxAge: config.streaming.tokenTtlSeconds * 1000,
+          });
+        }
+      }
 
       res.json(successResponse(streams, req.correlationId));
     } catch (error) {
@@ -420,7 +535,10 @@ router.get(
   '/:id/streams/hls/:file',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const token = typeof req.query.token === 'string' ? req.query.token : '';
+      const queryToken = typeof req.query.token === 'string' ? req.query.token : '';
+      const cookies = parseCookieHeader(req.headers.cookie);
+      // TEST-ONLY: Prefer query token but allow cookie fallback for native players.
+      const token = queryToken || cookies.stream_token || '';
       if (!token) {
         throw new AppError('MISSING_AUTH_TOKEN', 'Stream token is required', 401);
       }
@@ -547,7 +665,13 @@ router.post(
         cameraId,
         new mongoose.Types.ObjectId(serverId),
         monitorId,
-        userId
+        userId,
+        {
+          userId,
+          correlationId: req.correlationId,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        }
       );
 
       res.json(successResponse(camera, req.correlationId));
@@ -585,7 +709,12 @@ router.post(
       const userId = new mongoose.Types.ObjectId(req.user!.id);
       const cameraId = new mongoose.Types.ObjectId(req.params.id);
 
-      const camera = await cameraService.disconnectFromVms(companyId, cameraId, userId);
+      const camera = await cameraService.disconnectFromVms(companyId, cameraId, userId, {
+        userId,
+        correlationId: req.correlationId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
       res.json(successResponse(camera, req.correlationId));
     } catch (error) {
@@ -655,7 +784,13 @@ router.post(
         companyId,
         new mongoose.Types.ObjectId(serverId),
         monitors,
-        userId
+        userId,
+        {
+          userId,
+          correlationId: req.correlationId,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        }
       );
 
       logger.info('Batch import from VMS completed via API', { 

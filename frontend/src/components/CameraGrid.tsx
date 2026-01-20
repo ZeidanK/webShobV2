@@ -13,6 +13,8 @@ export interface CameraItem {
   id: string;
   name: string;
   streamUrl?: string;
+  // TEST-ONLY: Provide an embed URL for non-HLS fallback playback.
+  embedUrl?: string;
   snapshotUrl?: string;
   status?: 'online' | 'offline' | 'error' | 'maintenance';
 }
@@ -310,6 +312,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
             </button>
             <LiveView
               streamUrl={focusedCamera.streamUrl}
+              embedUrl={focusedCamera.embedUrl}
               cameraName={focusedCamera.name}
               snapshotUrl={focusedCamera.snapshotUrl}
               aspectRatio="16:9"
@@ -388,6 +391,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                 {camera.streamUrl ? (
                   <LiveView
                     streamUrl={camera.streamUrl}
+                    embedUrl={camera.embedUrl}
                     cameraName={camera.name}
                     snapshotUrl={camera.snapshotUrl}
                     showControls={false}
