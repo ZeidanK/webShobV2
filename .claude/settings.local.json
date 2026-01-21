@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(dir:*)",
-      "Bash(xargs basename:*)",
-      "Bash(npm test:*)"
-    ]
-  }
-}
