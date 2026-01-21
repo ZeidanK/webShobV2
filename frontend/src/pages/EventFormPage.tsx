@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { api, CreateEventInput, EventType } from '../services/api';
 import styles from './EventFormPage.module.css';
 
 export default function EventFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEdit = !!id;
+  
+  // Check if coming from map with pre-filled coordinates
+  const mapContext = location.state as { coordinates?: [number, number]; fromMap?: boolean } | null;
+  const fromMap = mapContext?.fromMap && mapContext?.coordinates;
 
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(isEdit);
@@ -35,6 +40,20 @@ export default function EventFormPage() {
       loadEvent();
     }
   }, [isEdit, id]);
+  
+  // Pre-fill location if coming from map
+  useEffect(() => {
+    if (fromMap && mapContext?.coordinates) {
+      const [lng, lat] = mapContext.coordinates;
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          longitude: lng,
+          latitude: lat,
+        },
+      }));
+    }
+  }, [fromMap, mapContext]);
 
   const loadEventTypes = async () => {
     try {
@@ -184,6 +203,13 @@ export default function EventFormPage() {
       </button>
 
       <h1 className={styles.title}>{isEdit ? 'Edit Event' : 'Create New Event'}</h1>
+      
+      {fromMap && (
+        <div className={styles.mapContextBanner}>
+          <span className={styles.mapContextIcon}>📍</span>
+          <span>Location pre-filled from map</span>
+        </div>
+      )}
 
       {error && (
         <div className={styles.error}>{error}</div>

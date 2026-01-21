@@ -209,6 +209,81 @@
   background-color: #e0e0e0;
 }
 
+/* Radius selector styles */
+.radiusSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.radiusLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.radiusSelect {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.radiusSelect:hover {
+  border-color: #1976d2;
+}
+
+.radiusSelect:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+/* Camera status badge styles */
+.popupBadgeOnline {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.popupBadgeOffline {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.popupBadgeMaintenance {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.popupBadgeError {
+  background-color: #fff3e0;
+  color: #d84315;
+}
+
+/* Report status badge styles */
+.popupBadgePending {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.popupBadgeVerified {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.popupBadgeRejected {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
 /* Loading state */
 .loading {
   position: absolute;

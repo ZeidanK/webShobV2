@@ -16,6 +16,15 @@ import { vmsService, VmsMonitor, StreamUrls } from './vms.service';
 import { NotFoundError, ValidationError, ConflictError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
+// Lazy load websocket service to avoid circular dependency
+let _websocketService: any = null;
+const getWebSocketService = () => {
+  if (!_websocketService) {
+    _websocketService = require('./websocket.service').websocketService;
+  }
+  return _websocketService;
+};
+
 /** Pagination options */
 export interface PaginationOptions {
   page?: number;
@@ -252,6 +261,9 @@ class CameraService {
       throw new NotFoundError(`Camera with ID ${cameraId} not found`);
     }
 
+    // Track old status for WebSocket broadcast
+    const oldStatus = camera.status;
+
     // Update fields
     if (data.name !== undefined) camera.name = data.name;
     if (data.description !== undefined) camera.description = data.description;
@@ -280,6 +292,24 @@ class CameraService {
     await camera.save();
 
     logger.info('Camera updated', { cameraId, name: camera.name });
+
+    // Broadcast status change if status was updated
+    if (data.status !== undefined && oldStatus !== data.status) {
+      const websocketService = getWebSocketService();
+      websocketService.broadcastCameraStatusUpdated(companyId.toString(), {
+        cameraId: cameraId.toString(),
+        oldStatus: oldStatus,
+        newStatus: data.status,
+        timestamp: new Date(),
+        companyId: companyId.toString(),
+      });
+      logger.info('Camera status change broadcasted', { 
+        cameraId, 
+        oldStatus, 
+        newStatus: data.status 
+      });
+    }
+
     return camera;
   }
 

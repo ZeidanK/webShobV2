@@ -17,6 +17,7 @@ import ReportsPage from './pages/ReportsPage';
 import ReportSubmissionPage from './pages/ReportSubmissionPage';
 import ReportDetailPage from './pages/ReportDetailPage';
 import CamerasPage from './pages/CamerasPage';
+import CameraFormPage from './pages/CameraFormPage';
 import MonitorWallPage from './pages/MonitorWallPage';
 import VmsSettingsPage from './pages/VmsSettingsPage';
 import { websocketService } from './services/websocket';
@@ -106,6 +107,14 @@ function App() {
           } 
         />
         <Route 
+          path="events/create" 
+          element={
+            <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
+              <EventFormPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="events/new" 
           element={
             <ProtectedRoute allowedRoles={['operator', 'admin', 'company_admin', 'super_admin']}>
@@ -158,6 +167,22 @@ function App() {
           element={
             <ProtectedRoute requiredRole="operator">
               <CamerasPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="cameras/add" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <CameraFormPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="cameras/monitor-wall" 
+          element={
+            <ProtectedRoute requiredRole="operator">
+              <MonitorWallPage />
             </ProtectedRoute>
           } 
         />

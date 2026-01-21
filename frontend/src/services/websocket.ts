@@ -25,6 +25,9 @@ export enum WebSocketEvent {
   REPORT_CREATED = 'report:created',
   REPORT_UPDATED = 'report:updated',
   
+  // Cameras
+  CAMERA_STATUS_UPDATED = 'camera:status_updated',
+  
   // Connection
   CONNECT = 'connect',
   DISCONNECT = 'disconnect',

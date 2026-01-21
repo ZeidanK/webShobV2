@@ -13,6 +13,7 @@
     "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",
     "seed": "tsx src/scripts/seed-test-data.ts",
     "seed:demo": "tsx src/scripts/seed-demo-cameras.ts",
+    "cleanup:test": "tsx src/scripts/cleanup-test-data.ts",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",

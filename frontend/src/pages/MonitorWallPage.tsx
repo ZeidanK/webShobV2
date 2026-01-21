@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CameraGrid, CameraItem } from '../components/CameraGrid';
 import { api } from '../services/api';
 import styles from './MonitorWallPage.module.css';
@@ -8,18 +9,18 @@ type WallInteractionMode = 'both' | 'click' | 'drag';
 type WallSettings = {
   interactionMode: WallInteractionMode;
 };
-type NearbySelection = {
-  eventId?: string;
-  radius?: number;
-  limit?: number;
-  lng?: number;
-  lat?: number;
-  cameras?: any[];
-  createdAt?: string;
+type NearbyCameraContext = {
+  centerLat: number;
+  centerLng: number;
+  radius: number;
+  eventId: string;
+  eventTitle: string;
+  cameraIds: string[];
+  timestamp: string;
 };
 
 const wallSettingsKey = 'monitorWall.settings';
-const nearbySelectionKey = 'monitorWall.nearby';
+const nearbyCameraContextKey = 'nearbyCameraContext';
 
 const loadWallSettings = (): WallSettings => {
   // TEST-ONLY: Persist per-operator wall settings locally for phase 1.
@@ -39,6 +40,7 @@ const loadWallSettings = (): WallSettings => {
 };
 
 export default function MonitorWallPage() {
+  const navigate = useNavigate();
   const [cameras, setCameras] = useState<CameraItem[]>([]);
   const [gridSize, setGridSize] = useState<GridSize>('2x2');
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export default function MonitorWallPage() {
   const [wallSettings, setWallSettings] = useState<WallSettings>(() => loadWallSettings());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gridResetToken, setGridResetToken] = useState(0);
-  const [nearbySelection, setNearbySelection] = useState<NearbySelection | null>(null);
+  const [nearbyContext, setNearbyContext] = useState<NearbyCameraContext | null>(null);
   const [nearbyMode, setNearbyMode] = useState(false);
 
   const updateWallSettings = useCallback((updates: Partial<WallSettings>) => {
@@ -63,17 +65,19 @@ export default function MonitorWallPage() {
   }, []);
 
   useEffect(() => {
-    // TEST-ONLY: Load nearby selection for the current operator session.
+    // Load nearby camera context from event radius selection
     try {
-      const stored = sessionStorage.getItem(nearbySelectionKey);
+      const stored = sessionStorage.getItem(nearbyCameraContextKey);
       if (stored) {
-        const parsed = JSON.parse(stored) as NearbySelection;
-        setNearbySelection(parsed);
+        const parsed = JSON.parse(stored) as NearbyCameraContext;
+        setNearbyContext(parsed);
         setNearbyMode(true);
+        // Clear context after loading so it doesn't persist on refresh
+        sessionStorage.removeItem(nearbyCameraContextKey);
       }
     } catch (err) {
-      console.warn('Failed to load nearby camera selection:', err);
-      sessionStorage.removeItem(nearbySelectionKey);
+      console.warn('Failed to load nearby camera context:', err);
+      sessionStorage.removeItem(nearbyCameraContextKey);
     }
   }, []);
 
@@ -134,20 +138,20 @@ export default function MonitorWallPage() {
     }
   }, [buildCameraItems, mergeCameras]);
 
-  const loadNearbyCameras = useCallback(async (selection: NearbySelection, replace = false) => {
-    if (!selection?.lng || !selection?.lat) {
+  const loadNearbyCameras = useCallback(async (context: NearbyCameraContext, replace = false) => {
+    if (!context?.centerLng || !context?.centerLat) {
       return;
     }
     try {
       setLoading(true);
       setError(null);
       const nearby = await api.cameras.findNearby(
-        selection.lng,
-        selection.lat,
-        selection.radius,
-        selection.limit
+        context.centerLng,
+        context.centerLat,
+        context.radius,
+        context.cameraIds.length || 16
       );
-      const cameraItems = await buildCameraItems(nearby || selection.cameras || []);
+      const cameraItems = await buildCameraItems(nearby || []);
       if (replace) {
         setCameras(cameraItems);
       } else {
@@ -162,22 +166,22 @@ export default function MonitorWallPage() {
   }, [buildCameraItems, mergeCameras]);
 
   useEffect(() => {
-    if (nearbyMode && nearbySelection) {
-      loadNearbyCameras(nearbySelection, true);
+    if (nearbyMode && nearbyContext) {
+      loadNearbyCameras(nearbyContext, true);
     } else {
       fetchCameras(true);
     }
 
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
-      if (nearbyMode && nearbySelection) {
-        loadNearbyCameras(nearbySelection, true);
+      if (nearbyMode && nearbyContext) {
+        loadNearbyCameras(nearbyContext, true);
       } else {
         fetchCameras();
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbySelection]);
+  }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbyContext]);
 
   useEffect(() => {
     // TEST-ONLY: Reset session-only tile sizes when grid size changes.
@@ -203,20 +207,25 @@ export default function MonitorWallPage() {
   const handleResetLayout = useCallback(async () => {
     // TEST-ONLY: Reset ordering and session-only tile sizes.
     setGridResetToken((prev) => prev + 1);
-    if (nearbyMode && nearbySelection) {
-      await loadNearbyCameras(nearbySelection, true);
+    if (nearbyMode && nearbyContext) {
+      await loadNearbyCameras(nearbyContext, true);
     } else {
       await fetchCameras(true);
     }
-  }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbySelection]);
+  }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbyContext]);
 
   const handleExitNearbyMode = useCallback(async () => {
-    // TEST-ONLY: Return to the full wall without changing layout settings.
-    sessionStorage.removeItem(nearbySelectionKey);
-    setNearbySelection(null);
+    // Return to full camera wall
+    sessionStorage.removeItem(nearbyCameraContextKey);
+    setNearbyContext(null);
     setNearbyMode(false);
     await fetchCameras(true);
   }, [fetchCameras]);
+  
+  const handleBackToMap = useCallback(() => {
+    // Navigate back to operator map view
+    navigate('/operator');
+  }, [navigate]);
 
   const gridSizeMap: Record<GridSize, number> = {
     '2x2': 4,
@@ -237,6 +246,29 @@ export default function MonitorWallPage() {
 
   return (
     <div className={styles.container}>
+      {/* Event Context Banner */}
+      {nearbyMode && nearbyContext && (
+        <div className={styles.contextBanner}>
+          <div className={styles.contextInfo}>
+            <span className={styles.contextIcon}>📍</span>
+            <div className={styles.contextText}>
+              <strong>Event Context:</strong> {nearbyContext.eventTitle}
+              <span className={styles.contextMeta}>
+                • {nearbyContext.radius}m radius • {cameras.length} cameras nearby
+              </span>
+            </div>
+          </div>
+          <div className={styles.contextActions}>
+            <button onClick={handleBackToMap} className={styles.backToMapBtn}>
+              ← Back to Map
+            </button>
+            <button onClick={handleExitNearbyMode} className={styles.exitContextBtn}>
+              ✕ Exit Context
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className={styles.header}>
         <h1>Monitor Wall</h1>
         <div className={styles.controls}>

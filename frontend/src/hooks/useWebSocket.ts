@@ -66,3 +66,17 @@ export function useReportCreated(callback: (report: any) => void) {
   const stableCallback = useCallback(callback, [callback]);
   useWebSocketEvent(WebSocketEvent.REPORT_CREATED, stableCallback);
 }
+
+/**
+ * Hook to listen for camera status updates
+ */
+export function useCameraStatusUpdated(callback: (update: {
+  cameraId: string;
+  oldStatus: string;
+  newStatus: string;
+  timestamp: Date;
+  companyId: string;
+}) => void) {
+  const stableCallback = useCallback(callback, [callback]);
+  useWebSocketEvent(WebSocketEvent.CAMERA_STATUS_UPDATED, stableCallback);
+}

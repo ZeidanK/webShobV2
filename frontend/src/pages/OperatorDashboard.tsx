@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EventMap } from '../components/EventMap';
-import { api, Event, Report } from '../services/api';
-import { useEventCreated, useEventUpdated } from '../hooks/useWebSocket';
+import { FilterOverlay, MapFilters } from '../components/FilterOverlay';
+import { MapContextMenu } from '../components/MapContextMenu';
+import { api, Event, Report, Camera } from '../services/api';
+import { useEventCreated, useEventUpdated, useCameraStatusUpdated } from '../hooks/useWebSocket';
+import { getCurrentUser } from '../utils/auth';
 import styles from './OperatorDashboard.module.css';
 
 type FilterStatus = 'active' | 'assigned' | 'resolved' | 'all';
@@ -11,8 +14,10 @@ type DisplayMode = 'events' | 'reports' | 'both';
 
 export function OperatorDashboard() {
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
   const [events, setEvents] = useState<Event[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [cameras, setCameras] = useState<Camera[]>([]);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('events');
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
@@ -21,6 +26,30 @@ export function OperatorDashboard() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [priorityFilter, setPriorityFilter] = useState<FilterPriority>('all');
+  
+  // Filter overlay state
+  const [showFilterOverlay, setShowFilterOverlay] = useState(false);
+  const [mapFilters, setMapFilters] = useState<MapFilters>({
+    display: {
+      showEvents: true,
+      showReports: false,
+      showCameras: true,
+      clusterCameras: true,
+    },
+    events: {
+      status: [],
+      priority: [],
+      dateRange: null,
+    },
+    cameras: {
+      status: [],
+      hasVms: null,
+      search: '',
+    },
+  });
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; lat: number; lng: number } | null>(null);
   
   // Map bounds
   const [mapBounds, setMapBounds] = useState<{
@@ -34,8 +63,8 @@ export function OperatorDashboard() {
   const nearbyRadiusMeters = 500;
   const nearbyMaxCameras = 16;
 
-  // Load events and/or reports from API based on display mode
-  const loadEvents = useCallback(async () => {
+  // Load events, reports, and cameras from API
+  const loadData = useCallback(async () => {
     if (!mapBounds) return;
 
     try {
@@ -46,16 +75,21 @@ export function OperatorDashboard() {
         ...mapBounds,
       };
 
-      if (statusFilter !== 'all') {
+      // Apply filter overlay filters for events
+      if (mapFilters.events.status.length > 0) {
+        filters.status = mapFilters.events.status[0]; // Use first selected status
+      } else if (statusFilter !== 'all') {
         filters.status = statusFilter;
       }
 
-      if (priorityFilter !== 'all') {
+      if (mapFilters.events.priority.length > 0) {
+        filters.priority = mapFilters.events.priority[0]; // Use first selected priority
+      } else if (priorityFilter !== 'all') {
         filters.priority = priorityFilter;
       }
 
-      // Fetch based on display mode
-      if (displayMode === 'events' || displayMode === 'both') {
+      // Fetch based on display mode and filter overlay settings
+      if ((displayMode === 'events' || displayMode === 'both') && mapFilters.display.showEvents) {
         const fetchedEvents = await api.events.getInBounds(filters);
         console.log('[OperatorDashboard] Fetched events:', fetchedEvents?.length || 0);
         setEvents(fetchedEvents || []);
@@ -63,7 +97,7 @@ export function OperatorDashboard() {
         setEvents([]);
       }
 
-      if (displayMode === 'reports' || displayMode === 'both') {
+      if ((displayMode === 'reports' || displayMode === 'both') && mapFilters.display.showReports) {
         const reportFilters = { ...mapBounds };
         // Only apply status filter for reports (they don't have priority)
         if (statusFilter !== 'all' && ['pending', 'verified', 'rejected'].includes(statusFilter)) {
@@ -76,18 +110,38 @@ export function OperatorDashboard() {
       } else {
         setReports([]);
       }
+      
+      // Fetch cameras if enabled
+      if (mapFilters.display.showCameras) {
+        const cameraFilters: any = {};
+        if (mapFilters.cameras.status.length > 0) {
+          cameraFilters.status = mapFilters.cameras.status[0];
+        }
+        if (mapFilters.cameras.hasVms !== null) {
+          cameraFilters.hasVms = mapFilters.cameras.hasVms;
+        }
+        if (mapFilters.cameras.search) {
+          cameraFilters.search = mapFilters.cameras.search;
+        }
+        
+        const fetchedCameras = await api.cameras.list(cameraFilters);
+        console.log('[OperatorDashboard] Fetched cameras:', fetchedCameras?.length || 0);
+        setCameras(fetchedCameras || []);
+      } else {
+        setCameras([]);
+      }
     } catch (err: any) {
       console.error('[OperatorDashboard] Failed to load data:', err);
       setError(err.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [mapBounds, statusFilter, priorityFilter, displayMode]);
+  }, [mapBounds, statusFilter, priorityFilter, displayMode, mapFilters]);
 
-  // Load events when filters or bounds change
+  // Load data when filters or bounds change
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+    loadData();
+  }, [loadData]);
 
   // Handle real-time event creation
   useEventCreated((newEvent) => {
@@ -109,6 +163,19 @@ export function OperatorDashboard() {
     setEvents((prev) =>
       prev.map((event) =>
         event._id === updatedEvent._id ? { ...event, ...updatedEvent } : event
+      )
+    );
+  });
+  
+  // Handle real-time camera status updates
+  useCameraStatusUpdated((data) => {
+    console.log('[OperatorDashboard] Camera status updated:', data);
+    
+    setCameras((prev) =>
+      prev.map((camera) =>
+        camera._id === data.cameraId
+          ? { ...camera, status: data.newStatus }
+          : camera
       )
     );
   });
@@ -136,7 +203,7 @@ export function OperatorDashboard() {
     setSelectedEventId(prev => prev === event._id ? undefined : event._id);
   }, []);
 
-  const handleViewNearbyCameras = useCallback(async (event: Event) => {
+  const handleViewNearbyCameras = useCallback(async (event: Event, radiusMeters: number) => {
     if (!event.location?.coordinates) {
       setError('Event location is missing coordinates');
       return;
@@ -145,25 +212,54 @@ export function OperatorDashboard() {
     try {
       // Persist nearby selection for the monitor wall session handoff.
       const [lng, lat] = event.location.coordinates;
-      const nearby = await api.cameras.findNearby(lng, lat, nearbyRadiusMeters, nearbyMaxCameras);
+      const nearby = await api.cameras.findNearby(lng, lat, radiusMeters, nearbyMaxCameras);
+      
+      console.log('[OperatorDashboard] Nearby cameras response:', nearby);
+      
+      if (!nearby || nearby.length === 0) {
+        setError(`No cameras found within ${radiusMeters}m of this event`);
+        return;
+      }
+      
+      // Filter out any invalid camera IDs
+      const validCameraIds = nearby
+        .filter(c => c && c._id && typeof c._id === 'string')
+        .map(c => c._id);
+      
+      if (validCameraIds.length === 0) {
+        setError('No valid cameras found nearby');
+        return;
+      }
+      
       sessionStorage.setItem(
-        'monitorWall.nearby',
+        'nearbyCameraContext',
         JSON.stringify({
+          centerLat: lat,
+          centerLng: lng,
+          radius: radiusMeters,
           eventId: event._id,
-          radius: nearbyRadiusMeters,
-          limit: nearbyMaxCameras,
-          lng,
-          lat,
-          cameras: nearby,
-          createdAt: new Date().toISOString(),
+          eventTitle: event.title,
+          cameraIds: validCameraIds,
+          timestamp: new Date().toISOString(),
         })
       );
-      navigate('/monitor');
+      navigate('/cameras/monitor-wall');
     } catch (err: any) {
       console.error('[OperatorDashboard] Failed to load nearby cameras:', err);
       setError(err.message || 'Failed to load nearby cameras');
     }
-  }, [navigate, nearbyRadiusMeters, nearbyMaxCameras]);
+  }, [navigate, nearbyMaxCameras]);
+  
+  // Handle camera click
+  const handleCameraClick = useCallback((camera: Camera) => {
+    console.log('[OperatorDashboard] Camera clicked:', camera._id);
+    navigate(`/cameras/${camera._id}`);
+  }, [navigate]);
+  
+  // Handle context menu
+  const handleContextMenu = useCallback((lat: number, lng: number, x: number, y: number) => {
+    setContextMenu({ x, y, lat, lng });
+  }, []);
 
   // Handle event card click (toggle: clicking again deselects)
   const handleEventCardClick = useCallback((event: Event) => {
@@ -360,16 +456,50 @@ export function OperatorDashboard() {
 
       {/* Map */}
       <div className={styles.mapContainer}>
+        {/* Filter Toggle Button */}
+        <button
+          className={styles.filterToggleButton}
+          onClick={() => setShowFilterOverlay(true)}
+          title="Open Filters"
+        >
+          🎯 Filters
+        </button>
+        
         <EventMap
           events={filteredEvents}
           reports={reports}
+          cameras={cameras}
           onBoundsChange={handleBoundsChange}
           onEventClick={handleEventClick}
-          onEventNearby={handleViewNearbyCameras}
+          onEventRadiusView={handleViewNearbyCameras}
+          onCameraClick={handleCameraClick}
+          onContextMenu={handleContextMenu}
           selectedEventId={selectedEventId}
+          showCameraClusters={mapFilters.display.clusterCameras}
           center={[31.5, 34.8]} // Israel default
           zoom={8}
         />
+        
+        {/* Filter Overlay */}
+        {showFilterOverlay && (
+          <FilterOverlay
+            filters={mapFilters}
+            onFiltersChange={setMapFilters}
+            onClose={() => setShowFilterOverlay(false)}
+            eventCount={events.length}
+            cameraCount={cameras.length}
+          />
+        )}
+        
+        {/* Context Menu */}
+        {contextMenu && (
+          <MapContextMenu
+            position={{ x: contextMenu.x, y: contextMenu.y }}
+            latLng={{ lat: contextMenu.lat, lng: contextMenu.lng }}
+            onClose={() => setContextMenu(null)}
+            userRole={currentUser?.role}
+          />
+        )}
       </div>
     </div>
   );
