@@ -990,6 +990,10 @@ export const api = {
     getStreams: (id: string) => 
       apiClient.get<StreamUrls>(`/cameras/${id}/streams`),
 
+    // TEST-ONLY: Keep direct-rtsp streams alive while LiveView is active.
+    heartbeat: (id: string) =>
+      apiClient.post<{ active: boolean; started: boolean }>(`/cameras/${id}/stream/heartbeat`),
+
     getLogs: (id: string, limit?: number) =>
       apiClient.get<CameraAuditLog[]>(`/cameras/${id}/logs`, limit ? { limit } : undefined),
 

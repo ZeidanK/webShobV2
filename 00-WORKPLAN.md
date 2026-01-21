@@ -817,17 +817,17 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
   - [x] Add `/api/cameras/:id/stream/token` endpoint
 
 ### Frontend Tasks
-- [ ] Update camera form to support both VMS and Direct RTSP
-  - [ ] Radio button: VMS or Direct RTSP
-  - [ ] Show RTSP URL field for direct mode
-  - [ ] Show VMS selection dropdown for VMS mode
-- [ ] Extend LiveView to handle both stream types
-  - [ ] Check camera type (VMS vs Direct RTSP)
-  - [ ] Request appropriate stream URL
-  - [ ] Display loading state during FFmpeg startup
-- [ ] Add stream heartbeat (keep-alive)
-  - [ ] Ping backend every 30 seconds while viewing
-  - [ ] Prevent auto-stop of active streams
+- [x] Update camera form to support both VMS and Direct RTSP
+  - [x] Radio button: VMS or Direct RTSP
+  - [x] Show RTSP URL field for direct mode
+  - [x] Show VMS selection dropdown for VMS mode
+- [x] Extend LiveView to handle both stream types
+  - [x] Check camera type (VMS vs Direct RTSP)
+  - [x] Request appropriate stream URL
+  - [x] Display loading state during FFmpeg startup
+- [x] Add stream heartbeat (keep-alive)
+  - [x] Ping backend every 30 seconds while viewing
+  - [x] Prevent auto-stop of active streams
 
 ### Infrastructure Tasks
 - [x] Install FFmpeg in backend Docker container

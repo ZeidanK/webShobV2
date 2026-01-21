@@ -569,6 +569,20 @@
   gap: 1rem;
 }
 
+.radioGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.radioOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  /* TEST-ONLY: Keep radio options readable on light backgrounds. */
+  color: #111827;
+}
+
 .formHint {
   font-size: 0.75rem;
   color: #6b7280;

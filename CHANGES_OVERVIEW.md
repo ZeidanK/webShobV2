@@ -187,3 +187,7 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added RTSP segment cleanup job and configurable cleanup settings.
 - Mounted `/tmp/hls` streaming directory in Docker for direct-rtsp output.
 - Documented FFmpeg as a Direct RTSP prerequisite.
+### Slice 10-C frontend integration
+- Added VMS vs Direct RTSP selector to camera form, with RTSP transport and VMS monitor inputs.
+- Wired direct-rtsp heartbeat pings into LiveView and monitor wall tiles.
+- Extended monitor wall stream loading to handle direct-rtsp cameras.

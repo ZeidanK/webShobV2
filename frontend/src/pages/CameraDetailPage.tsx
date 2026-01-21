@@ -170,6 +170,11 @@ export default function CameraDetailPage() {
                 embedUrl={streams?.embed}
                 cameraName={camera.name}
                 snapshotUrl={streams?.snapshot || camera.streamUrl}
+                onHeartbeat={
+                  camera.streamConfig?.type === 'direct-rtsp'
+                    ? () => api.cameras.heartbeat(camera._id)
+                    : undefined
+                }
               />
             ) : (
               <div className={styles.placeholder}>No stream available</div>

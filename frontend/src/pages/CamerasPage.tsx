@@ -14,6 +14,10 @@ interface CameraFormData {
   type: 'ip' | 'analog' | 'usb';
   status: CameraStatus;
   streamUrl: string;
+  connectionType: 'vms' | 'direct-rtsp';
+  transport: 'tcp' | 'udp';
+  vmsServerId: string;
+  vmsMonitorId: string;
   latitude: string;
   longitude: string;
   address: string;
@@ -34,6 +38,10 @@ const defaultFormData: CameraFormData = {
   type: 'ip',
   status: 'online',
   streamUrl: '',
+  connectionType: 'vms',
+  transport: 'tcp',
+  vmsServerId: '',
+  vmsMonitorId: '',
   latitude: '',
   longitude: '',
   address: '',
@@ -175,13 +183,19 @@ export default function CamerasPage() {
   // Open add/edit modal
   const openModal = (camera?: Camera) => {
     if (camera) {
+      const isDirectRtsp = camera.streamConfig?.type === 'direct-rtsp';
+      const hasVms = Boolean(camera.vms?.serverId);
       setEditingCamera(camera);
       setFormData({
         name: camera.name,
         description: camera.description || '',
         type: camera.type,
         status: camera.status,
-        streamUrl: camera.streamUrl || '',
+        streamUrl: camera.streamConfig?.rtspUrl || camera.streamUrl || '',
+        connectionType: isDirectRtsp ? 'direct-rtsp' : hasVms ? 'vms' : 'direct-rtsp',
+        transport: camera.streamConfig?.transport || 'tcp',
+        vmsServerId: camera.vms?.serverId || '',
+        vmsMonitorId: camera.vms?.monitorId || '',
         latitude: camera.location?.coordinates?.[1]?.toString() || '',
         longitude: camera.location?.coordinates?.[0]?.toString() || '',
         address: camera.location?.address || '',
@@ -200,13 +214,24 @@ export default function CamerasPage() {
     
     try {
       setSaving(true);
+
+      // TEST-ONLY: Validate connection fields before submitting.
+      if (formData.connectionType === 'direct-rtsp' && !formData.streamUrl) {
+        alert('RTSP URL is required for direct RTSP cameras.');
+        setSaving(false);
+        return;
+      }
+      if (formData.connectionType === 'vms' && (!formData.vmsServerId || !formData.vmsMonitorId)) {
+        alert('VMS server and monitor ID are required for VMS cameras.');
+        setSaving(false);
+        return;
+      }
       
       const cameraData = {
         name: formData.name,
         description: formData.description || undefined,
         type: formData.type,
         status: formData.status,
-        streamUrl: formData.streamUrl || undefined,
         // TEST-ONLY: Save tag list from comma-delimited input.
         tags: normalizeTags(formData.tags),
         location: {
@@ -217,6 +242,19 @@ export default function CamerasPage() {
           address: formData.address || undefined,
         },
         ...(formData.companyId && { companyId: formData.companyId }),
+        ...(formData.connectionType === 'direct-rtsp' && {
+          streamConfig: {
+            type: 'direct-rtsp' as const,
+            rtspUrl: formData.streamUrl,
+            transport: formData.transport,
+          },
+        }),
+        ...(formData.connectionType === 'vms' && {
+          vms: {
+            serverId: formData.vmsServerId,
+            monitorId: formData.vmsMonitorId,
+          },
+        }),
       };
 
       if (editingCamera) {
@@ -840,20 +878,98 @@ export default function CamerasPage() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Stream URL</label>
-                  <input
-                    type="text"
-                    value={formData.streamUrl}
-                    onChange={(e) =>
-                      setFormData({ ...formData, streamUrl: e.target.value })
-                    }
-                    className={styles.formInput}
-                    placeholder="rtsp:// or http:// stream URL"
-                  />
-                  <p className={styles.formHint}>
-                    Direct stream URL. Leave empty if using VMS integration.
-                  </p>
+                  <label className={styles.formLabel}>Connection Type</label>
+                  <div className={styles.radioGroup}>
+                    <label className={styles.radioOption}>
+                      <input
+                        type="radio"
+                        name="connectionType"
+                        value="vms"
+                        checked={formData.connectionType === 'vms'}
+                        onChange={() => setFormData({ ...formData, connectionType: 'vms' })}
+                      />
+                      <span>VMS</span>
+                    </label>
+                    <label className={styles.radioOption}>
+                      <input
+                        type="radio"
+                        name="connectionType"
+                        value="direct-rtsp"
+                        checked={formData.connectionType === 'direct-rtsp'}
+                        onChange={() => setFormData({ ...formData, connectionType: 'direct-rtsp' })}
+                      />
+                      <span>Direct RTSP</span>
+                    </label>
+                  </div>
                 </div>
+
+                {formData.connectionType === 'vms' && (
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>VMS Server</label>
+                    <select
+                      value={formData.vmsServerId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, vmsServerId: e.target.value })
+                      }
+                      className={styles.formSelect}
+                    >
+                      <option value="">Select VMS Server</option>
+                      {vmsServers.map((server) => (
+                        <option key={server._id} value={server._id}>
+                          {server.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className={styles.formHint}>
+                      Select the VMS server that owns the monitor.
+                    </div>
+                    <label className={styles.formLabel} style={{ marginTop: '0.75rem' }}>
+                      Monitor ID
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.vmsMonitorId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, vmsMonitorId: e.target.value })
+                      }
+                      className={styles.formInput}
+                      placeholder="Shinobi monitor ID"
+                    />
+                  </div>
+                )}
+
+                {formData.connectionType === 'direct-rtsp' && (
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>RTSP URL</label>
+                    <input
+                      type="text"
+                      value={formData.streamUrl}
+                      onChange={(e) =>
+                        setFormData({ ...formData, streamUrl: e.target.value })
+                      }
+                      className={styles.formInput}
+                      placeholder="rtsp://user:pass@host/stream"
+                    />
+                    <div className={styles.formRow} style={{ marginTop: '0.75rem' }}>
+                      <select
+                        value={formData.transport}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            transport: e.target.value as CameraFormData['transport'],
+                          })
+                        }
+                        className={styles.formSelect}
+                      >
+                        <option value="tcp">TCP</option>
+                        <option value="udp">UDP</option>
+                      </select>
+                    </div>
+                    <p className={styles.formHint}>
+                      RTSP URL required for direct streams. Use TCP unless your camera requires UDP.
+                    </p>
+                  </div>
+                )}
 
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Tags</label>
@@ -954,6 +1070,11 @@ export default function CamerasPage() {
               cameraName={liveViewCamera.name}
               snapshotUrl={streamOverrides[liveViewCamera._id]?.snapshot || liveViewCamera.streamUrl}
               className={styles.liveViewVideo}
+              onHeartbeat={
+                liveViewCamera.streamConfig?.type === 'direct-rtsp'
+                  ? () => api.cameras.heartbeat(liveViewCamera._id)
+                  : undefined
+              }
             />
           </div>
         </div>

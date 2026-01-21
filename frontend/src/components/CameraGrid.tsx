@@ -17,6 +17,10 @@ export interface CameraItem {
   embedUrl?: string;
   snapshotUrl?: string;
   status?: 'online' | 'offline' | 'error' | 'maintenance';
+  // TEST-ONLY: Track stream type for direct-rtsp heartbeat wiring.
+  streamType?: 'direct-rtsp' | 'vms' | 'manual';
+  // TEST-ONLY: Optional heartbeat callback for direct-rtsp playback.
+  heartbeat?: () => Promise<void>;
 }
 
 interface CameraGridProps {
@@ -316,6 +320,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
               cameraName={focusedCamera.name}
               snapshotUrl={focusedCamera.snapshotUrl}
               aspectRatio="16:9"
+              onHeartbeat={focusedCamera.streamType === 'direct-rtsp' ? focusedCamera.heartbeat : undefined}
             />
           </div>
           
@@ -397,6 +402,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                     showControls={false}
                     autoPlay={true}
                     fillParent={true}
+                    onHeartbeat={camera.streamType === 'direct-rtsp' ? camera.heartbeat : undefined}
                   />
                 ) : (
                   <div className={styles.offline}>

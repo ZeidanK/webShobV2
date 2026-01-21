@@ -48,6 +48,12 @@ interface LiveViewProps {
 
   /** Fill parent container (for resizable tiles) */
   fillParent?: boolean;
+
+  /** Optional heartbeat callback for keeping streams alive */
+  onHeartbeat?: () => Promise<unknown>;
+
+  /** Optional heartbeat interval override (ms) */
+  heartbeatIntervalMs?: number;
 }
 
 interface StreamState {
@@ -70,6 +76,8 @@ export const LiveView: React.FC<LiveViewProps> = ({
   aspectRatio = '16:9',
   headerRight,
   fillParent = false,
+  onHeartbeat,
+  heartbeatIntervalMs = 30000,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -220,6 +228,19 @@ export const LiveView: React.FC<LiveViewProps> = ({
     initializeHls();
     return cleanupHls;
   }, [initializeHls, cleanupHls]);
+
+  useEffect(() => {
+    if (!onHeartbeat || !streamUrl) {
+      return undefined;
+    }
+    // TEST-ONLY: Keep direct-rtsp streams alive while LiveView is active.
+    const interval = window.setInterval(() => {
+      onHeartbeat().catch(() => {
+        // Ignore heartbeat failures; LiveView will surface stream errors separately.
+      });
+    }, heartbeatIntervalMs);
+    return () => window.clearInterval(interval);
+  }, [onHeartbeat, heartbeatIntervalMs, streamUrl]);
 
   // Handle play state
   const handlePlay = () => {

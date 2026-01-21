@@ -250,8 +250,16 @@ The backend API is built with Node.js, Express, and TypeScript.
 - `NODE_ENV=development`
 - `PORT=3000`
 - `MONGODB_URI=mongodb://mongodb:27017/event_monitoring_dev`
-- `JWT_SECRET=development-secret-change-in-production`
-- `LOG_LEVEL=debug`
+  - `JWT_SECRET=development-secret-change-in-production`
+  - `LOG_LEVEL=debug`
+  - `STREAMING_BASE_DIR=/tmp/hls` (Direct RTSP output directory)
+  - `STREAMING_CLEANUP_INTERVAL_MS=300000` (segment cleanup interval)
+  - `STREAMING_CLEANUP_MAX_AGE_MS=3600000` (segment max age)
+  
+  **Direct RTSP Cleanup Runbook:**
+  - Adjust `STREAMING_CLEANUP_INTERVAL_MS` to control how often cleanup runs.
+  - Adjust `STREAMING_CLEANUP_MAX_AGE_MS` to control how long `.ts` segments are retained.
+  - HLS output is stored under `STREAMING_BASE_DIR` (default `/tmp/hls` in Docker).
 
 **Folder Structure:**
 ```

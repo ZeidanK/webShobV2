@@ -101,7 +101,7 @@ export default function MonitorWallPage() {
         let streamUrl = camera.streamUrl;
         let embedUrl = camera.embedUrl;
         let snapshotUrl = camera.snapshotUrl;
-        if (!streamUrl && camera.vms?.serverId) {
+        if (!streamUrl && (camera.vms?.serverId || camera.streamConfig?.type === 'direct-rtsp')) {
           try {
             const streams = await api.cameras.getStreams(camera._id);
             streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
@@ -120,6 +120,11 @@ export default function MonitorWallPage() {
           embedUrl,
           snapshotUrl,
           status: camera.status,
+          // TEST-ONLY: Track direct-rtsp streams for heartbeat support.
+          streamType: camera.streamConfig?.type || (camera.vms?.serverId ? 'vms' : 'manual'),
+          heartbeat: camera.streamConfig?.type === 'direct-rtsp'
+            ? () => api.cameras.heartbeat(camera._id)
+            : undefined,
         } as CameraItem;
       })
     );
