@@ -1,2 +1,37 @@
 # Test log outputs
 logs/
+
+# Test reports and coverage
+junit.xml
+coverage/
+*.xml
+
+# Claude AI local settings
+.claude/settings.local.json
+
+# Build artifacts and temporary files
+*.tmp
+*.temp
+*.log
+
+# Upload directories (runtime generated content)
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/thumbnails/*
+!backend/thumbnails/.gitkeep
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
