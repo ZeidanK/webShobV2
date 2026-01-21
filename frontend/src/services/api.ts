@@ -159,7 +159,14 @@ export interface UpdateEventInput {
 }
 
 // VMS types for Slice 9.0
-export type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
+export type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'milestone' | 'genetec' | 'other';
+
+// TEST-ONLY: VMS capability flags for adapter stubs.
+export interface VmsCapabilities {
+  supportsLive: boolean;
+  supportsPlayback: boolean;
+  supportsExport: boolean;
+}
 
 export interface VmsServer {
   _id: string;
@@ -169,6 +176,8 @@ export interface VmsServer {
   baseUrl: string;
   // Public base URL for browser stream access (optional).
   publicBaseUrl?: string;
+  // TEST-ONLY: Provider-specific SDK config payloads.
+  sdkConfig?: Record<string, unknown>;
   isActive: boolean;
   connectionStatus?: 'connected' | 'disconnected' | 'error' | 'unknown';
   lastConnectedAt?: string;
@@ -192,6 +201,8 @@ export interface CreateVmsServerInput {
   baseUrl: string;
   // Public base URL for browser stream access (optional).
   publicBaseUrl?: string;
+  // TEST-ONLY: Optional SDK config for providers like Genetec.
+  sdkConfig?: Record<string, unknown>;
   auth?: {
     apiKey?: string;
     groupKey?: string;
@@ -206,6 +217,8 @@ export interface UpdateVmsServerInput {
   baseUrl?: string;
   // Public base URL for browser stream access (optional).
   publicBaseUrl?: string;
+  // TEST-ONLY: Optional SDK config for providers like Genetec.
+  sdkConfig?: Record<string, unknown>;
   auth?: {
     apiKey?: string;
     groupKey?: string;
@@ -1100,6 +1113,10 @@ export const api = {
       source?: string;
     }) =>
       apiClient.post<any[]>(`/vms/${id}/monitors/import`, data),
+
+    // TEST-ONLY: Fetch adapter capability flags for UI gating.
+    capabilities: (id: string) =>
+      apiClient.get<{ provider: VmsProvider; capabilities: VmsCapabilities }>(`/vms/${id}/capabilities`),
   },
 
   deleteCamerasBySource: (source: string) =>

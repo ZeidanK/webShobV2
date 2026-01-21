@@ -312,6 +312,33 @@ describe('Camera Routes Integration Tests', () => {
       expect(response.body.data.vms.provider).toBe('shinobi');
     });
 
+    it('should reject unsupported VMS providers', async () => {
+      const camera = await Camera.create({
+        companyId: company._id,
+        name: 'Unsupported Camera',
+        location: { type: 'Point', coordinates: [34.78, 32.08] },
+      });
+      const milestoneServer = await VmsServer.create({
+        companyId: company._id,
+        name: 'Milestone Stub',
+        provider: 'milestone',
+        baseUrl: 'http://milestone.local:8080',
+      });
+
+      // Attempt a connect call against a stubbed provider.
+      const response = await request(app)
+        .post(`/api/cameras/${camera._id}/vms/connect`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          serverId: milestoneServer._id.toString(),
+          monitorId: 'monitor-unsupported',
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
     it('should reject duplicate monitor connection', async () => {
       // Create first camera connected to monitor
       await Camera.create({

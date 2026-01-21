@@ -372,6 +372,52 @@ describe('VMS Routes Integration Tests', () => {
     });
   });
 
+  // Coverage for capability endpoint responses.
+  describe('GET /api/vms/:id/capabilities', () => {
+    it('should return capability flags for Shinobi', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Shinobi Capabilities',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        auth: { apiKey: 'key1', groupKey: 'group1' },
+      });
+
+      const response = await request(app)
+        .get(`/api/vms/${server._id}/capabilities`)
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.provider).toBe('shinobi');
+      expect(response.body.data.capabilities.supportsLive).toBe(true);
+      expect(response.body.data.capabilities.supportsPlayback).toBe(true);
+      expect(response.body.data.capabilities.supportsExport).toBe(false);
+    });
+
+    it('should return disabled capabilities for Milestone stubs', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Milestone Stub',
+        provider: 'milestone',
+        baseUrl: 'http://milestone.local:8080',
+      });
+
+      const response = await request(app)
+        .get(`/api/vms/${server._id}/capabilities`)
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.provider).toBe('milestone');
+      expect(response.body.data.capabilities).toEqual({
+        supportsLive: false,
+        supportsPlayback: false,
+        supportsExport: false,
+      });
+    });
+  });
+
   // VMS test + discovery + import coverage.
   describe('POST /api/vms/:id/test', () => {
     it('should test a Shinobi server connection', async () => {

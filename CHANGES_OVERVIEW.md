@@ -195,6 +195,12 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added unit tests for RTSP stream tokens and HLS path validation.
 - Added a `SKIP_DB_SETUP` guard in test setup to allow non-DB unit tests on Alpine.
 - Ran `npm test -- --runTestsByPath src/services/rtsp-stream.service.test.ts` with `SKIP_DB_SETUP=true` (passed; ts-jest warnings about `isolatedModules` remain).
+### Slice 11-C progress
+- 11-C: Added Milestone/Genetec provider fields, capability pills from the API, and coming-soon gating for stubbed providers.
+### Slice 11 docs + tests
+- Added `docs/VMS_ADAPTER_GUIDE.md` with adapter interface, provider requirements, and test guidance.
+- Ran `SKIP_DB_SETUP=true` unit tests for the VMS factory/stubs (pass).
+- Attempted Slice 11 integration tests in Docker; MongoMemoryServer fails on Alpine, so integration tests remain marked as partial.
 ### Historical step explanations (Slice 9.0-A to Slice 10-D)
 - 9.0-A: Before only core VMS routes existed; after added camera connection tests, audit logging, LiveView fallback, and demo cleanup to close MVP gaps.
 - 9.0-B: Before no local VMS lab/docs; after added `vms-lab/` compose, README updates, and VMS integration docs.
@@ -206,6 +212,7 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - 10-B: Before no streaming cleanup infra; after added FFmpeg install, segment cleanup job, and streaming mounts.
 - 10-C: Before UI couldn't configure direct RTSP; after added form controls, LiveView heartbeat, and wall stream wiring.
 - 10-D: Before no RTSP unit checks; after added token/path unit tests and DB setup guard for Alpine.
+- 11-C: Before VMS settings only supported legacy providers; after added Milestone/Genetec fields, capability pills, and coming-soon gating.
 ### Slice 11-A progress
 - 11-A: Before no Milestone/Genetec stubs or factory; after added adapter stubs and factory scaffolding plus `sdkConfig` and provider enum expansion.
 ### Slice 11-B progress

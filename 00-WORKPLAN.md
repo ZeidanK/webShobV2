@@ -690,7 +690,7 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
 - [x] All operations are multi-tenant (companyId filtered)
 - [ ] Shinobi Docker environment runs locally for testing
 - [x] Frontend shows camera status and live video
-- [ ] All tests pass
+- [~] All tests pass
 
 ### Dependencies
 - Slice 8 (Mobile Testing & Documentation)
@@ -902,47 +902,48 @@ Slice 9.0 provides Shinobi adapter. Slice 10 provides Direct RTSP. This slice ad
   - [x] Returns what the VMS adapter supports
 
 ### Frontend Tasks
-- [ ] Update VMS server form
-  - [ ] Show provider-specific fields based on selection
-  - [ ] Milestone: Server URL, username, password
-  - [ ] Genetec: Server URL, SDK config
-  - [ ] Shinobi: API key, group key (existing)
-- [ ] Add VMS capability indicators
-  - [ ] Show badges: "Live ✓", "Playback ✗", "Export ✗"
-  - [ ] Disable unavailable features in UI
-- [ ] Add "Coming Soon" messages for unsupported VMS
-  - [ ] Show when trying to connect Milestone camera
-  - [ ] Show when trying to view Genetec stream
+- [x] Update VMS server form
+  - [x] Show provider-specific fields based on selection
+  - [x] Milestone: Server URL, username, password
+  - [x] Genetec: Server URL, SDK config
+  - [x] Shinobi: API key, group key (existing)
+- [x] Add VMS capability indicators
+  - [x] Show badges: "Live ✓", "Playback ✗", "Export ✗"
+  - [x] Disable unavailable features in UI
+- [x] Add "Coming Soon" messages for unsupported VMS
+  - [x] Show when trying to connect Milestone camera
+  - [x] Show when trying to view Genetec stream
 
 ### Documentation Tasks
-- [ ] Create `docs/VMS_ADAPTER_GUIDE.md`
-  - [ ] How to implement a new VMS adapter
-  - [ ] Interface requirements
-  - [ ] Testing guidelines
-- [ ] Document Milestone integration requirements (Phase 2)
-  - [ ] SDK installation
-  - [ ] API authentication
-  - [ ] Stream URL generation
-- [ ] Document Genetec integration requirements (Phase 2)
-  - [ ] SDK installation
-  - [ ] Server connection
-  - [ ] Stream access patterns
+- [x] Create `docs/VMS_ADAPTER_GUIDE.md`
+  - [x] How to implement a new VMS adapter
+  - [x] Interface requirements
+  - [x] Testing guidelines
+- [x] Document Milestone integration requirements (Phase 2)
+  - [x] SDK installation
+  - [x] API authentication
+  - [x] Stream URL generation
+- [x] Document Genetec integration requirements (Phase 2)
+  - [x] SDK installation
+  - [x] Server connection
+  - [x] Stream access patterns
 
 ### Tests
-- [ ] Unit: VMS adapter factory creates correct adapter
-- [ ] Unit: Milestone stub throws appropriate errors
-- [ ] Unit: Genetec stub throws appropriate errors
-- [ ] Integration: VMS capability endpoint returns correct data
-- [ ] Integration: Unsupported VMS connection shows error
+- [x] Unit: VMS adapter factory creates correct adapter
+- [x] Unit: Milestone stub throws appropriate errors
+- [x] Unit: Genetec stub throws appropriate errors
+- [~] Integration: VMS capability endpoint returns correct data
+- [~] Integration: Unsupported VMS connection shows error
+Note: Tests attempted in Docker (Alpine) fail due to MongoMemoryServer unsupported binaries.
 
 ### Definition of Done (Slice 11)
-- [ ] VMS adapter factory pattern implemented
-- [ ] Milestone and Genetec stubs created
-- [ ] Adapter interface documented
-- [ ] VMS capabilities exposed via API
-- [ ] Frontend shows "Coming Soon" for unsupported VMS
-- [ ] Clear path for Phase 2 VMS implementation
-- [ ] All tests pass
+- [x] VMS adapter factory pattern implemented
+- [x] Milestone and Genetec stubs created
+- [x] Adapter interface documented
+- [x] VMS capabilities exposed via API
+- [x] Frontend shows "Coming Soon" for unsupported VMS
+- [x] Clear path for Phase 2 VMS implementation
+- [~] All tests pass
 
 ### Dependencies
 - Slice 10 (Direct RTSP Adapter)
@@ -1027,7 +1028,7 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - [ ] Timeline scrubber allows seeking
 - [ ] Graceful handling when no recording exists
 - [ ] UI shows which cameras have recording available
-- [ ] All tests pass
+- [~] All tests pass
 
 ### Dependencies
 - Slice 11 (Additional VMS Adapters)
