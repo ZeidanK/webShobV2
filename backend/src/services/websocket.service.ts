@@ -22,6 +22,9 @@ export enum WebSocketEvent {
   // Reports
   REPORT_CREATED = 'report:created',
   REPORT_UPDATED = 'report:updated',
+
+  // Cameras
+  CAMERA_STATUS = 'camera:status',
   
   // Connection
   CONNECTION = 'connection',
@@ -289,6 +292,16 @@ class WebSocketService {
    */
   public broadcastReportCreated(companyId: string, reportData: any): void {
     this.broadcastToCompany(companyId, WebSocketEvent.REPORT_CREATED, reportData);
+  }
+
+  /**
+   * Broadcast camera:status to company
+   *
+   * @param companyId Company ID
+   * @param statusData Status payload
+   */
+  public broadcastCameraStatus(companyId: string, statusData: any): void {
+    this.broadcastToCompany(companyId, WebSocketEvent.CAMERA_STATUS, statusData);
   }
 
   /**

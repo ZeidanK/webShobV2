@@ -144,7 +144,7 @@ export interface CameraWithStreams extends CameraData {
 }
 
 class CameraService {
-  // Normalize tag inputs to trimmed, unique values.
+  // TEST-ONLY: Normalize tag inputs to trimmed, unique values.
   private normalizeTags(tags?: string[]): string[] | undefined {
     if (!tags) {
       return undefined;
@@ -762,7 +762,7 @@ class CameraService {
   }
 
   /**
-   * Find cameras by status.
+   * TEST-ONLY: Find cameras by status.
    */
   async findByStatus(
     companyId: mongoose.Types.ObjectId | null | undefined,
@@ -776,7 +776,7 @@ class CameraService {
   }
 
   /**
-   * Find cameras by tag.
+   * TEST-ONLY: Find cameras by tag.
    */
   async findByTag(
     companyId: mongoose.Types.ObjectId | null | undefined,
@@ -793,7 +793,7 @@ class CameraService {
   }
 
   /**
-   * Bulk update camera status.
+   * TEST-ONLY: Bulk update camera status.
    */
   async bulkUpdateStatus(
     companyId: mongoose.Types.ObjectId,
@@ -809,7 +809,7 @@ class CameraService {
   }
 
   /**
-   * Bulk delete cameras by ID (soft delete).
+   * TEST-ONLY: Bulk delete cameras by ID (soft delete).
    */
   async bulkDelete(
     companyId: mongoose.Types.ObjectId,
@@ -824,7 +824,7 @@ class CameraService {
   }
 
   /**
-   * Bulk tag cameras with add/remove/set behavior.
+   * TEST-ONLY: Bulk tag cameras with add/remove/set behavior.
    */
   async bulkTag(
     companyId: mongoose.Types.ObjectId,

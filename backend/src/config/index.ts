@@ -59,6 +59,12 @@ export const config = {
   aiService: {
     url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
   },
+
+  // Camera status monitoring
+  cameraStatusMonitor: {
+    enabled: process.env.CAMERA_STATUS_MONITOR_ENABLED !== 'false',
+    intervalMs: parseInt(process.env.CAMERA_STATUS_MONITOR_INTERVAL_MS || '60000', 10),
+  },
 };
 
 // Validate critical config in production

@@ -19,14 +19,14 @@ export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
 /** TEST-ONLY: Stream configuration types for Phase 2 scaffolding. */
 export type StreamConfigType = 'vms' | 'direct-rtsp';
 
-/** Camera capability flags */
+/** TEST-ONLY: Camera capability flags */
 export interface CameraCapabilities {
   ptz?: boolean;
   audio?: boolean;
   motionDetection?: boolean;
 }
 
-/** Maintenance schedule metadata */
+/** TEST-ONLY: Maintenance schedule metadata */
 export interface CameraMaintenanceSchedule {
   intervalDays?: number;
   lastServiceAt?: Date;
@@ -65,13 +65,13 @@ export interface ICamera extends Document {
   /** Camera status */
   status: CameraStatus;
 
-  /** Optional capability flags */
+  /** TEST-ONLY: Optional capability flags */
   capabilities?: CameraCapabilities;
 
-  /** Maintenance schedule tracking */
+  /** TEST-ONLY: Maintenance schedule tracking */
   maintenanceSchedule?: CameraMaintenanceSchedule;
 
-  /** Tag list for categorization */
+  /** TEST-ONLY: Tag list for categorization */
   tags?: string[];
   
   /** Physical location */

@@ -14,6 +14,7 @@ import mongoose from 'mongoose';
 import { cameraService, CreateCameraInput, UpdateCameraInput } from '../services/camera.service';
 import { vmsService } from '../services/vms.service';
 import { rtspStreamService } from '../services/rtsp-stream.service';
+import { cameraStatusMonitorService } from '../services/camera-status.service';
 import { CameraStatus } from '../models';
 import { config } from '../config';
 import { successResponse, errorResponse, calculatePagination } from '../utils/response';
@@ -39,7 +40,7 @@ const parseCookieHeader = (header?: string): Record<string, string> => {
   }, {});
 };
 
-// Validate and map string IDs to ObjectId instances.
+// TEST-ONLY: Validate and map string IDs to ObjectId instances.
 const parseObjectIdList = (values: string[]): mongoose.Types.ObjectId[] => {
   return values.map((value) => {
     if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -150,7 +151,37 @@ router.get(
   }
 );
 
-// Keep specialized collection routes ahead of /:id to avoid path conflicts.
+// TEST-ONLY: Keep specialized collection routes ahead of /:id to avoid path conflicts.
+
+// TEST-ONLY: Manual status refresh trigger.
+router.post(
+  '/status/refresh',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const targetCompanyId = req.user!.role === UserRole.SUPER_ADMIN && req.body.companyId
+        ? req.body.companyId
+        : req.user!.companyId;
+
+      // TEST-ONLY: Validate companyId override for super admins.
+      if (targetCompanyId && !mongoose.Types.ObjectId.isValid(targetCompanyId)) {
+        throw new ValidationError('companyId must be a valid ObjectId');
+      }
+
+      await cameraStatusMonitorService.runOnce({
+        companyId: targetCompanyId,
+        reason: 'manual',
+        requestedBy: req.user!.id,
+        correlationId: req.correlationId,
+      });
+
+      res.json(successResponse({ message: 'Status refresh triggered' }, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * @swagger
@@ -290,7 +321,7 @@ router.get(
   }
 );
 
-// Legacy alias for /near to preserve existing clients.
+// TEST-ONLY: Legacy alias for /near to preserve existing clients.
 router.get(
   '/nearby',
   authenticate,

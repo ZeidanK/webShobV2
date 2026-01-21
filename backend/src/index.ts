@@ -4,6 +4,7 @@ import { connectDatabase } from './config/database';
 import { logger } from './utils/logger';
 import { EventTypeService } from './services/event-type.service';
 import { websocketService } from './services/websocket.service';
+import { cameraStatusMonitorService } from './services/camera-status.service';
 
 async function bootstrap() {
   try {
@@ -31,6 +32,7 @@ async function bootstrap() {
 
     // Initialize WebSocket server
     websocketService.initialize(server);
+    cameraStatusMonitorService.start();
 
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
@@ -41,6 +43,7 @@ async function bootstrap() {
 
       // Close WebSocket connections
       await websocketService.close();
+      await cameraStatusMonitorService.stop();
 
       server.close(async () => {
         logger.info('HTTP server closed', {

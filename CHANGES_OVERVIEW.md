@@ -145,3 +145,18 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added status and tag filter endpoints plus a `/cameras/near` alias for geo queries.
 - Normalized tags on create/update and added tag-based filtering in list queries.
 - Added bulk status update, delete, and tag operations with tenant scoping.
+
+## 2026-01-21
+### Phase 9-B scope (expanded)
+- Background health check job will periodically evaluate camera status with a configurable interval.
+- Status evaluation will branch by source: VMS monitor status for VMS-linked cameras and RTSP probing for direct streams.
+- Status updates will only be persisted on changes, with `lastSeen` refreshed on online transitions.
+- WebSocket `camera:status` broadcasts will carry cameraId, companyId, previous status, next status, and timestamp.
+- Admin-triggered refresh endpoint will allow manual status checks without waiting for the scheduler.
+
+### Phase 9-B implementation
+- Added camera status monitoring service with scheduled runs and manual refresh support.
+- Status checks resolve VMS and direct-RTSP health and persist changes with audit logging.
+- Added `camera:status` WebSocket event broadcast for real-time updates.
+- Added manual status refresh endpoint for admins and company admins.
+- Added configuration for status monitor enablement and interval.

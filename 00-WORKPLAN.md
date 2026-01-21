@@ -730,11 +730,11 @@ Enhance camera CRUD beyond Boaz's work with advanced features: status monitoring
   - [x] `GET /api/cameras/near?lat=X&lng=Y&radius=Z` (geo-spatial)
   - [x] `GET /api/cameras/status/:status` (filter by status)
   - [x] `GET /api/cameras/tags/:tag` (filter by tag)
-- [ ] Create status monitoring service
-  - [ ] Background job to check camera health
-  - [ ] Ping RTSP/VMS endpoints periodically
-  - [ ] Update camera status (online, offline, error)
-  - [ ] Emit `camera:status` WebSocket event on changes
+- [x] Create status monitoring service
+  - [x] Background job to check camera health
+  - [x] Ping RTSP/VMS endpoints periodically
+  - [x] Update camera status (online, offline, error)
+  - [x] Emit `camera:status` WebSocket event on changes
 - [x] Implement bulk operations
   - [x] `POST /api/cameras/bulk/update` (bulk status update)
   - [x] `POST /api/cameras/bulk/delete` (bulk delete)
