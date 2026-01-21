@@ -1198,7 +1198,7 @@ router.post(
         throw new ValidationError('serverId and monitorId are required');
       }
 
-      const camera = await cameraService.connectToVms(
+      const { camera, capabilities } = await cameraService.connectToVms(
         companyId,
         cameraId,
         new mongoose.Types.ObjectId(serverId),
@@ -1212,7 +1212,8 @@ router.post(
         }
       );
 
-      res.json(successResponse(camera, req.correlationId));
+      const cameraData = typeof (camera as any).toObject === 'function' ? (camera as any).toObject() : camera;
+      res.json(successResponse({ ...cameraData, vmsCapabilities: capabilities }, req.correlationId));
     } catch (error) {
       next(error);
     }

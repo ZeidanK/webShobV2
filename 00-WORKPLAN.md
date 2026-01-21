@@ -893,13 +893,13 @@ Slice 9.0 provides Shinobi adapter. Slice 10 provides Direct RTSP. This slice ad
 - [x] Update VmsServer model
   - [x] Add 'milestone' and 'genetec' to provider enum
   - [x] Add `sdkConfig` field for VMS-specific settings
-- [ ] Update camera VMS connection logic
-  - [ ] Check VMS provider before connecting
-  - [ ] Show helpful error for unsupported VMS types
-  - [ ] Return capability flags: `{ supportsLive, supportsPlayback, supportsExport }`
-- [ ] Add VMS capability checking endpoint
-  - [ ] `GET /api/vms/servers/:id/capabilities`
-  - [ ] Returns what the VMS adapter supports
+- [x] Update camera VMS connection logic
+  - [x] Check VMS provider before connecting
+  - [x] Show helpful error for unsupported VMS types
+  - [x] Return capability flags: `{ supportsLive, supportsPlayback, supportsExport }`
+- [x] Add VMS capability checking endpoint
+  - [x] `GET /api/vms/servers/:id/capabilities`
+  - [x] Returns what the VMS adapter supports
 
 ### Frontend Tasks
 - [ ] Update VMS server form
@@ -1158,4 +1158,5 @@ Use this checklist after completing each slice:
 ---
 
 *This document guides incremental implementation. Each slice should be completed fully before moving to the next. Do not skip slices or combine multiple slices without explicit approval.*
+
 

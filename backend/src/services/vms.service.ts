@@ -13,6 +13,7 @@ import mongoose from 'mongoose';
 import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus, AuditLog, AuditAction } from '../models';
 import { AppError, ErrorCodes, NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { VmsAdapterFactory, type VmsAdapterCapabilities } from '../adapters/vms/factory';
 
 /** Monitor info returned from VMS discovery */
 export interface VmsMonitor {
@@ -412,6 +413,28 @@ class VmsService {
             context
           );
           return { success: false, message: 'AgentDVR integration not yet implemented' };
+        case 'milestone':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
+          return { success: false, message: 'Milestone integration not yet implemented' };
+        case 'genetec':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
+          return { success: false, message: 'Genetec integration not yet implemented' };
         default:
           // TEST-ONLY: Audit unsupported provider test attempts.
           await this.writeAuditLog(
@@ -488,6 +511,10 @@ class VmsService {
           return [];
         case 'agentdvr':
           return [];
+        case 'milestone':
+          return [];
+        case 'genetec':
+          return [];
         default:
           return [];
       }
@@ -517,6 +544,10 @@ class VmsService {
         return {};
       case 'agentdvr':
         return {};
+      case 'milestone':
+        return {};
+      case 'genetec':
+        return {};
       default:
         return {};
     }
@@ -536,6 +567,10 @@ class VmsService {
         const monitor = monitors.find((item) => item.id === monitorId);
         return this.mapShinobiStatus(monitor?.status);
       }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
       default:
         return null;
     }
@@ -687,6 +722,13 @@ class VmsService {
     }
 
     await VmsServer.updateOne({ _id: serverId }, update);
+  }
+
+  /**
+   * Resolve adapter capabilities for a provider.
+   */
+  getCapabilities(provider: VmsProvider): VmsAdapterCapabilities {
+    return VmsAdapterFactory.create(provider).capabilities;
   }
 
   /**

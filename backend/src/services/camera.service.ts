@@ -495,7 +495,7 @@ class CameraService {
     monitorId: string,
     userId?: mongoose.Types.ObjectId,
     context?: CameraAuditContext
-  ): Promise<ICamera> {
+  ): Promise<{ camera: ICamera; capabilities: { supportsLive: boolean; supportsPlayback: boolean; supportsExport: boolean } }> {
     // Verify camera exists in this company
     const camera = await Camera.findOne({ _id: cameraId, companyId, isDeleted: false });
     if (!camera) {
@@ -506,6 +506,10 @@ class CameraService {
     const server = await VmsServer.findOne({ _id: serverId, companyId });
     if (!server) {
       throw new NotFoundError(`VMS server with ID ${serverId} not found`);
+    }
+    // TEST-ONLY: Block unsupported VMS providers before connecting.
+    if (server.provider !== 'shinobi') {
+      throw new ValidationError(`VMS provider ${server.provider} is not supported yet`);
     }
 
     // Check if another camera already uses this monitor
@@ -543,8 +547,9 @@ class CameraService {
       { ...context, userId }
     );
 
+    const capabilities = vmsService.getCapabilities(server.provider);
     logger.info('Camera connected to VMS', { cameraId, serverId, monitorId });
-    return camera;
+    return { camera, capabilities };
   }
 
   /**

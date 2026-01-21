@@ -207,8 +207,9 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - 10-C: Before UI couldn't configure direct RTSP; after added form controls, LiveView heartbeat, and wall stream wiring.
 - 10-D: Before no RTSP unit checks; after added token/path unit tests and DB setup guard for Alpine.
 ### Slice 11-A progress
-- Added VMS adapter stubs (Milestone/Genetec) and adapter factory scaffolding.
-- Extended VmsServer provider enum with `milestone` and `genetec`, plus `sdkConfig` placeholder.
+- 11-A: Before no Milestone/Genetec stubs or factory; after added adapter stubs and factory scaffolding plus `sdkConfig` and provider enum expansion.
+### Slice 11-B progress
+- 11-B: Before no capability endpoint or provider gating; after added capability lookup endpoint, capability flags in camera connect responses, and provider validation for unsupported VMS types.
 ### Frontend build fixes
 - Removed unused React imports and resize handler args that were failing `tsc` strict checks.
 - Replaced mojibake UI labels in operator/event playback/report submission flows with ASCII-only text.

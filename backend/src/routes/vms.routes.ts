@@ -42,7 +42,7 @@ const router = Router();
  *         name: provider
  *         schema:
  *           type: string
- *           enum: [shinobi, zoneminder, agentdvr, other]
+ *           enum: [shinobi, zoneminder, agentdvr, milestone, genetec, other]
  *       - in: query
  *         name: isActive
  *         schema:
@@ -135,6 +135,51 @@ router.get(
 
 /**
  * @swagger
+ * /vms/{id}/capabilities:
+ *   get:
+ *     summary: Get VMS capability flags by provider
+ *     tags: [VMS]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: VMS capability flags
+ *       404:
+ *         description: VMS server not found
+ */
+router.get(
+  '/:id/capabilities',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const serverId = new mongoose.Types.ObjectId(req.params.id);
+
+      const server = await vmsService.findById(companyId, serverId);
+
+      if (!server) {
+        return res.status(404).json(
+          errorResponse('NOT_FOUND', 'VMS server not found', req.correlationId)
+        );
+      }
+
+      const capabilities = vmsService.getCapabilities(server.provider);
+
+      res.json(successResponse(capabilities, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
  * /vms:
  *   post:
  *     summary: Create a new VMS server
@@ -156,7 +201,7 @@ router.get(
  *                 type: string
  *               provider:
  *                 type: string
- *                 enum: [shinobi, zoneminder, agentdvr, other]
+ *                 enum: [shinobi, zoneminder, agentdvr, milestone, genetec, other]
  *               baseUrl:
  *                 type: string
  *               publicBaseUrl:
