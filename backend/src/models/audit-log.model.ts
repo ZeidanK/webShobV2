@@ -28,11 +28,13 @@ export enum AuditAction {
   USER_DELETED = 'user.deleted',
   USER_ACTIVATED = 'user.activated',
   USER_DEACTIVATED = 'user.deactivated',
+  USER_LOCATION_UPDATED = 'user.location.updated',
   
   // Event actions
   EVENT_CREATED = 'event.created',
   EVENT_UPDATED = 'event.updated',
   EVENT_STATUS_CHANGED = 'event.status.changed',
+  EVENT_STATUS_UPDATED = 'event.status.updated',
   EVENT_ASSIGNED = 'event.assigned',
   EVENT_RESOLVED = 'event.resolved',
   EVENT_CLOSED = 'event.closed',

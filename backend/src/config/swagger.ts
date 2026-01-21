@@ -116,6 +116,96 @@ All responses use a consistent envelope:
             },
           },
         },
+        // Mobile API specific schemas
+        MobileLoginRequest: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: { 
+              type: 'string', 
+              format: 'email', 
+              example: 'user@example.com' 
+            },
+            password: { 
+              type: 'string', 
+              minLength: 8,
+              example: 'securePassword123' 
+            },
+          },
+        },
+        MobileAuthResponse: {
+          allOf: [
+            { $ref: '#/components/schemas/SuccessResponse' },
+            {
+              type: 'object',
+              properties: {
+                data: {
+                  type: 'object',
+                  properties: {
+                    user: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        email: { type: 'string' },
+                        firstName: { type: 'string' },
+                        lastName: { type: 'string' },
+                        role: { type: 'string' },
+                        companyId: { type: 'string' },
+                      },
+                    },
+                    accessToken: { type: 'string' },
+                    refreshToken: { type: 'string' },
+                    expiresIn: { type: 'string', example: '15m' },
+                  },
+                },
+              },
+            },
+          ],
+        },
+        MobileReportRequest: {
+          type: 'object',
+          required: ['title', 'description', 'type', 'location'],
+          properties: {
+            title: { 
+              type: 'string', 
+              maxLength: 100,
+              example: 'Suspicious activity reported' 
+            },
+            description: { 
+              type: 'string', 
+              example: 'Detailed description of the incident' 
+            },
+            type: { 
+              type: 'string', 
+              enum: ['suspicious_activity', 'theft', 'vandalism', 'violence', 'fire', 'medical_emergency', 'traffic_incident', 'other'],
+              example: 'suspicious_activity' 
+            },
+            location: { $ref: '#/components/schemas/GeoPoint' },
+            priority: { 
+              type: 'string', 
+              enum: ['low', 'medium', 'high'], 
+              default: 'medium' 
+            },
+            isAnonymous: { 
+              type: 'boolean', 
+              default: false,
+              description: 'Whether to submit report anonymously' 
+            },
+          },
+        },
+        ResponderLocationUpdate: {
+          type: 'object',
+          required: ['location'],
+          properties: {
+            location: { $ref: '#/components/schemas/GeoPoint' },
+            accuracy: {
+              type: 'number',
+              minimum: 0,
+              description: 'Location accuracy in meters',
+              example: 5.0,
+            },
+          },
+        },
       },
       parameters: {
         correlationId: {
@@ -153,6 +243,11 @@ All responses use a consistent envelope:
       { name: 'Events', description: 'Event management and lifecycle' },
       { name: 'Cameras', description: 'Camera management and video' },
       { name: 'AI', description: 'AI detection integration' },
+      // Mobile API tags
+      { name: 'Mobile Auth', description: 'Mobile authentication with API keys' },
+      { name: 'Mobile Reports', description: 'Report submission via mobile apps' },
+      { name: 'Mobile Events', description: 'Event assignments for responders' },
+      { name: 'Mobile Users', description: 'Mobile user operations (location tracking)' },
     ],
   },
   apis: ['./src/routes/*.ts', './src/routes/**/*.ts', './dist/routes/*.js', './dist/routes/**/*.js'],

@@ -474,43 +474,43 @@ Implement mobile-specific API endpoints and API key management for external mobi
 - ❌ Do NOT implement mobile SDK
 
 ### Backend Tasks
-- [ ] Add `mobile_partner` company type to Company model
-- [ ] Implement API key scoping (restrict endpoints per key)
-- [ ] Create rate limiting for mobile endpoints
-- [ ] Implement `POST /api/mobile/auth/login` (API key + user credentials)
-- [ ] Implement `POST /api/mobile/auth/refresh`
-- [ ] Implement `GET /api/mobile/reports` (citizen's own reports)
-- [ ] Implement `POST /api/mobile/reports` (citizen submission)
-- [ ] Implement `POST /api/mobile/reports/:id/attachments`
-- [ ] Implement `GET /api/mobile/events/assignments` (responder view)
-- [ ] Implement `PATCH /api/mobile/events/:id/status` (responder update)
-- [ ] Implement `POST /api/mobile/users/location` (responder location)
-- [ ] Add mobile-specific validation rules
-- [ ] Emit `responder:location` WebSocket event
+- [x] Add `mobile_partner` company type to Company model
+- [x] Implement API key scoping (restrict endpoints per key)
+- [x] Create rate limiting for mobile endpoints
+- [x] Implement `POST /api/mobile/auth/login` (API key + user credentials)
+- [x] Implement `POST /api/mobile/auth/refresh`
+- [x] Implement `GET /api/mobile/reports` (citizen's own reports)
+- [x] Implement `POST /api/mobile/reports` (citizen submission)
+- [x] Implement `POST /api/mobile/reports/:id/attachments`
+- [x] Implement `GET /api/mobile/events/assignments` (responder view)
+- [x] Implement `PATCH /api/mobile/events/:id/status` (responder update)
+- [x] Implement `POST /api/mobile/users/location` (responder location)
+- [x] Add mobile-specific validation rules
+- [x] Emit `responder:location` WebSocket event
 
 ### API/Swagger Tasks
-- [ ] Create separate OpenAPI spec for mobile APIs
-- [ ] Document mobile authentication flow
-- [ ] Add mobile endpoint examples
-- [ ] Document file upload for mobile (multipart)
-- [ ] Create Postman collection for mobile team
+- [x] Create separate OpenAPI spec for mobile APIs
+- [x] Document mobile authentication flow
+- [x] Add mobile endpoint examples
+- [x] Document file upload for mobile (multipart)
+- [x] Create Postman collection for mobile team
 
 ### Tests
-- [ ] Integration: mobile auth flow (API key + credentials)
-- [ ] Integration: API key scope validation
-- [ ] Integration: mobile report submission
-- [ ] Integration: mobile assignment workflow
-- [ ] Integration: rate limiting enforcement
-- [ ] Integration: responder location update
+- [x] Integration: mobile auth flow (API key + credentials)
+- [x] Integration: API key scope validation
+- [x] Integration: mobile report submission
+- [x] Integration: mobile assignment workflow
+- [x] Integration: rate limiting enforcement
+- [x] Integration: responder location update
 
 ### Definition of Done (Slice 7)
-- [ ] Mobile team can authenticate with API key + credentials
-- [ ] Citizens can submit reports via mobile API
-- [ ] Responders can get assignments via mobile API
-- [ ] Responders can update event status via mobile API
-- [ ] Responder locations broadcast to operators
-- [ ] Rate limiting prevents API abuse
-- [ ] All mobile endpoints documented in Swagger
+- [x] Mobile team can authenticate with API key + credentials
+- [x] Citizens can submit reports via mobile API
+- [x] Responders can get assignments via mobile API
+- [x] Responders can update event status via mobile API
+- [x] Responder locations broadcast to operators
+- [x] Rate limiting prevents API abuse
+- [x] All mobile endpoints documented in Swagger
 
 ### Dependencies
 - Slice 6 (Map & Dashboard UI)

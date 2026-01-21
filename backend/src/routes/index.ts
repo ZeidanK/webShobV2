@@ -8,6 +8,7 @@ import { eventRoutes } from './event.routes';
 import { eventTypeRoutes } from './event-type.routes';
 import cameraRoutes from './camera.routes';
 import vmsRoutes from './vms.routes';
+import mobileRoutes from './mobile.routes';
 import { testLogsRoutes } from './test-logs.routes';
 import { config } from '../config';
 
@@ -23,6 +24,7 @@ router.use('/events', eventRoutes);      // Slice 4
 router.use('/event-types', eventTypeRoutes); // Slice 4
 router.use('/cameras', cameraRoutes);    // Slice 9.0: Camera Management
 router.use('/vms', vmsRoutes);           // Slice 9.0: VMS Integration
+router.use('/mobile', mobileRoutes);     // Slice 7: Mobile API Integration
 // Test-only log ingestion (disabled in production)
 if (config.env !== 'production') {
   router.use('/test-logs', testLogsRoutes);

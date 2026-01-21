@@ -1,14 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-// Extend Express Request type
-declare global {
-  namespace Express {
-    interface Request {
-      correlationId: string;
-    }
-  }
-}
+// Note: Express Request type extension is now in src/types/express.d.ts
 
 /**
  * Middleware to attach correlation ID to every request

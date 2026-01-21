@@ -1,0 +1,342 @@
+{
+  "info": {
+    "name": "Event Monitoring Platform - Mobile API",
+    "description": "Postman collection for mobile team development and testing",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{API_KEY}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "API_KEY",
+      "value": "",
+      "type": "string",
+      "description": "Company API key - get from your company admin"
+    },
+    {
+      "key": "ACCESS_TOKEN",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token - automatically set after login"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Mobile authentication endpoints",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"citizen@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "auth", "login"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const response = pm.response.json();",
+                  "  if (response.success && response.data.accessToken) {",
+                  "    pm.collectionVariables.set('ACCESS_TOKEN', response.data.accessToken);",
+                  "    console.log('Access token saved');",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your-refresh-token\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/auth/refresh",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "auth", "refresh"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "description": "Mobile report submission endpoints",
+      "item": [
+        {
+          "name": "Get My Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/reports?page=1&pageSize=20",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "reports"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit New Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Suspicious Activity Report\",\n  \"description\": \"Observed suspicious behavior near the park entrance\",\n  \"type\": \"suspicious_activity\",\n  \"location\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-122.4194, 37.7749]\n  },\n  \"priority\": \"medium\",\n  \"isAnonymous\": false\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/reports",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "reports"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Report Attachment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select an image or video file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/reports/:reportId/attachments",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "reports", ":reportId", "attachments"],
+              "variable": [
+                {
+                  "key": "reportId",
+                  "value": "REPORT_ID_HERE",
+                  "description": "Replace with actual report ID"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Responder Operations",
+      "description": "Endpoints for first responders",
+      "item": [
+        {
+          "name": "Get My Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/events/assignments",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "events", "assignments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assignment Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/events/:eventId",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "events", ":eventId"],
+              "variable": [
+                {
+                  "key": "eventId",
+                  "value": "EVENT_ID_HERE",
+                  "description": "Replace with actual event ID"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Event Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"notes\": \"Responding to incident\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/events/:eventId/status",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "events", ":eventId", "status"],
+              "variable": [
+                {
+                  "key": "eventId",
+                  "value": "EVENT_ID_HERE",
+                  "description": "Replace with actual event ID"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-122.4194, 37.7749]\n  },\n  \"accuracy\": 5.0\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/users/location",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "users", "location"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Location",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/mobile/users/location",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mobile", "users", "location"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
