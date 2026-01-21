@@ -273,6 +273,27 @@ class RtspStreamService {
       }
     }
   }
+
+  // TEST-ONLY: Touch active stream pipelines to keep them alive.
+  touchStream(cameraId: string): boolean {
+    const state = this.processes.get(cameraId);
+    if (!state || state.process.exitCode !== null) {
+      return false;
+    }
+    state.lastUsedAt = Date.now();
+    return true;
+  }
+
+  // TEST-ONLY: Keep a direct-rtsp stream alive, starting it if missing.
+  async keepAlive(camera: ICamera): Promise<{ active: boolean; started: boolean }> {
+    const cameraId = camera._id.toString();
+    if (this.touchStream(cameraId)) {
+      return { active: true, started: false };
+    }
+
+    await this.ensureStream(camera);
+    return { active: true, started: true };
+  }
 }
 
 export const rtspStreamService = new RtspStreamService();

@@ -741,37 +741,37 @@ Enhance camera CRUD beyond Boaz's work with advanced features: status monitoring
   - [x] `POST /api/cameras/bulk/tag` (bulk tagging)
 
 ### Frontend Tasks
-- [ ] Enhance camera list page
-  - [ ] Add advanced filters (status, tags, VMS)
-  - [ ] Add bulk selection checkboxes
-  - [ ] Add bulk action toolbar
-  - [ ] Show camera health indicators with tooltips
-- [ ] Create camera detail page
-  - [ ] Full camera information display
-  - [ ] Edit capability in place
-  - [ ] Show connection history/logs
-  - [ ] Display maintenance schedule
-- [ ] Add camera search functionality
-  - [ ] Search by name, location, tags
-  - [ ] Auto-complete suggestions
-- [ ] Real-time camera status updates
-  - [ ] Subscribe to `camera:status` WebSocket events
-  - [ ] Update UI when camera status changes
-  - [ ] Show notification on camera offline
+- [x] Enhance camera list page
+  - [x] Add advanced filters (status, tags, VMS)
+  - [x] Add bulk selection checkboxes
+  - [x] Add bulk action toolbar
+  - [x] Show camera health indicators with tooltips
+- [x] Create camera detail page
+  - [x] Full camera information display
+  - [x] Edit capability in place
+  - [x] Show connection history/logs
+  - [x] Display maintenance schedule
+- [x] Add camera search functionality
+  - [x] Search by name, location, tags
+  - [x] Auto-complete suggestions
+- [x] Real-time camera status updates
+  - [x] Subscribe to `camera:status` WebSocket events
+  - [x] Update UI when camera status changes
+  - [x] Show notification on camera offline
 
 ### Tests
-- [ ] Integration: geo-spatial camera query
-- [ ] Unit: status monitoring job logic
-- [ ] Integration: bulk operations with tenant isolation
-- [ ] Integration: WebSocket status updates
+- [~] Integration: geo-spatial camera query (manual verification completed; automated tests blocked by MongoMemoryServer on Alpine)
+- [~] Unit: status monitoring job logic (manual verification completed; automated tests blocked by MongoMemoryServer on Alpine)
+- [~] Integration: bulk operations with tenant isolation (manual verification completed; automated tests blocked by MongoMemoryServer on Alpine)
+- [~] Integration: WebSocket status updates (manual verification completed; automated tests blocked by MongoMemoryServer on Alpine)
 
 ### Definition of Done (Slice 9)
-- [ ] Geo-spatial queries return nearby cameras
-- [ ] Camera status monitoring runs automatically
-- [ ] Status changes broadcast via WebSocket
-- [ ] Bulk operations work correctly
-- [ ] Advanced search and filtering functional
-- [ ] Real-time status updates appear in UI
+- [x] Geo-spatial queries return nearby cameras (manual verification completed)
+- [x] Camera status monitoring runs automatically (manual verification completed)
+- [x] Status changes broadcast via WebSocket (manual verification completed)
+- [x] Bulk operations work correctly (manual verification completed)
+- [x] Advanced search and filtering functional (manual verification completed)
+- [x] Real-time status updates appear in UI (manual verification completed)
 
 ### Dependencies
 - Slice 9.0 (VMS Integration Foundation)
@@ -797,23 +797,23 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
   - [ ] Define `getStreamUrls()` method signature
   - [ ] Define `testConnection()` method
   - [ ] Define `getPlaybackUrl(timestamp)` stub for Slice 12
-- [ ] Implement DirectRTSPAdapter
-  - [ ] Accept RTSP URL as input
-  - [ ] Spawn FFmpeg process for RTSP → HLS transcoding
-  - [ ] Store HLS segments in temp directory (`/tmp/hls/{cameraId}/`)
-  - [ ] Generate HLS playlist URL
-  - [ ] Implement segment cleanup (delete old segments)
-  - [ ] Handle FFmpeg process lifecycle (start/stop/restart)
-- [ ] Implement stream session management
-  - [ ] Track active streams per camera
-  - [ ] Auto-stop stream after X minutes of inactivity
+- [~] Implement DirectRTSPAdapter
+  - [x] Accept RTSP URL as input
+  - [x] Spawn FFmpeg process for RTSP → HLS transcoding
+  - [~] Store HLS segments in temp directory (`/tmp/hls/{cameraId}/`)
+  - [x] Generate HLS playlist URL
+  - [x] Implement segment cleanup (delete old segments)
+  - [x] Handle FFmpeg process lifecycle (start/stop/restart)
+- [~] Implement stream session management
+  - [x] Track active streams per camera
+  - [x] Auto-stop stream after X minutes of inactivity
   - [ ] Implement heartbeat endpoint to keep stream alive
-- [ ] Add DirectRTSP configuration to Camera model
-  - [ ] `streamConfig.type: 'direct-rtsp' | 'vms'`
-  - [ ] `streamConfig.rtspUrl` for direct cameras
-- [ ] Implement stream authentication tokens
-  - [ ] Generate time-limited tokens for HLS access
-  - [ ] Validate tokens on HLS segment requests
+- [x] Add DirectRTSP configuration to Camera model
+  - [x] `streamConfig.type: 'direct-rtsp' | 'vms'`
+  - [x] `streamConfig.rtspUrl` for direct cameras
+- [~] Implement stream authentication tokens
+  - [x] Generate time-limited tokens for HLS access
+  - [x] Validate tokens on HLS segment requests
   - [ ] Add `/api/cameras/:id/stream/token` endpoint
 
 ### Frontend Tasks
@@ -830,8 +830,8 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
   - [ ] Prevent auto-stop of active streams
 
 ### Infrastructure Tasks
-- [ ] Install FFmpeg in backend Docker container
-  - [ ] Add to Dockerfile: `RUN apt-get install -y ffmpeg`
+- [x] Install FFmpeg in backend Docker container
+  - [x] Add to Dockerfile: `RUN apt-get install -y ffmpeg`
 - [ ] Create HLS segment storage directory
   - [ ] Add volume mount for `/tmp/hls` in docker-compose
   - [ ] Implement cleanup cron job (delete segments >1 hour old)

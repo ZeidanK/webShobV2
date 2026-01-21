@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CameraGrid, CameraItem } from '../components/CameraGrid';
-import { api } from '../services/api';
+import { api, CameraStatus } from '../services/api';
+import { useCameraStatus } from '../hooks/useWebSocket';
 import styles from './MonitorWallPage.module.css';
 
 type GridSize = '2x2' | '3x3' | '4x4';
@@ -187,6 +188,18 @@ export default function MonitorWallPage() {
     }, 30000);
     return () => clearInterval(interval);
   }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbySelection]);
+
+  // TEST-ONLY: Apply real-time status updates to the wall tiles.
+  useCameraStatus((payload: { cameraId: string; status: CameraStatus }) => {
+    if (!payload?.cameraId) {
+      return;
+    }
+    setCameras((prev) =>
+      prev.map((camera) =>
+        camera.id === payload.cameraId ? { ...camera, status: payload.status } : camera
+      )
+    );
+  });
 
   useEffect(() => {
     // TEST-ONLY: Reset session-only tile sizes when grid size changes.

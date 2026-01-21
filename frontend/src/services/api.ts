@@ -221,6 +221,21 @@ export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
 // TEST-ONLY: Stream configuration types for Phase 2 scaffolding.
 export type StreamConfigType = 'vms' | 'direct-rtsp';
 
+// TEST-ONLY: Camera capability flags.
+export interface CameraCapabilities {
+  ptz?: boolean;
+  audio?: boolean;
+  motionDetection?: boolean;
+}
+
+// TEST-ONLY: Maintenance schedule metadata.
+export interface CameraMaintenanceSchedule {
+  intervalDays?: number;
+  lastServiceAt?: string;
+  nextServiceAt?: string;
+  notes?: string;
+}
+
 // TEST-ONLY: Stream configuration payload for Direct RTSP.
 export interface StreamConfig {
   type: StreamConfigType;
@@ -241,6 +256,12 @@ export interface Camera {
   streamConfig?: StreamConfig;
   type: CameraType;
   status: CameraStatus;
+  // TEST-ONLY: Optional capability flags.
+  capabilities?: CameraCapabilities;
+  // TEST-ONLY: Maintenance schedule tracking.
+  maintenanceSchedule?: CameraMaintenanceSchedule;
+  // TEST-ONLY: Tag list for categorization.
+  tags?: string[];
   location: {
     type: 'Point';
     coordinates: [number, number];
@@ -274,6 +295,22 @@ export interface StreamUrls {
   raw?: string;
 }
 
+// TEST-ONLY: Camera audit log shape.
+export interface CameraAuditLog {
+  _id: string;
+  action: string;
+  companyId: string;
+  resourceType: string;
+  resourceId?: string;
+  userId?: string;
+  changes?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  correlationId?: string;
+  timestamp: string;
+}
+
 export interface CameraWithStreams extends Camera {
   streams?: StreamUrls;
 }
@@ -285,6 +322,9 @@ export interface CreateCameraInput {
   streamConfig?: StreamConfig;
   type?: CameraType;
   status?: CameraStatus;
+  capabilities?: CameraCapabilities;
+  maintenanceSchedule?: CameraMaintenanceSchedule;
+  tags?: string[];
   location: {
     coordinates: [number, number];
     address?: string;
@@ -308,6 +348,9 @@ export interface UpdateCameraInput {
   streamConfig?: StreamConfig;
   type?: CameraType;
   status?: CameraStatus;
+  capabilities?: CameraCapabilities;
+  maintenanceSchedule?: CameraMaintenanceSchedule;
+  tags?: string[];
   location?: {
     coordinates?: [number, number];
     address?: string;
@@ -325,6 +368,75 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+  }
+
+  // Refresh the access token using the stored refresh token.
+  private async refreshAccessToken(): Promise<string | null> {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      return null;
+    }
+
+    const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as ApiResponse<{ accessToken: string }>;
+    const accessToken = data?.data?.accessToken;
+    if (!accessToken) {
+      return null;
+    }
+
+    localStorage.setItem('accessToken', accessToken);
+    return accessToken;
+  }
+
+  // Execute a request and retry once after refreshing the access token.
+  private async request(
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    path: string,
+    params?: Record<string, string | number>,
+    body?: string,
+    retried = false
+  ): Promise<Response> {
+    const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        // TEST-ONLY: Skip undefined/empty query params to avoid invalid ObjectId casts.
+        if (value === undefined || value === null || value === '') {
+          return;
+        }
+        url.searchParams.append(key, String(value));
+      });
+    }
+
+    const response = await fetch(url.toString(), {
+      method,
+      headers: this.getHeaders(),
+      body,
+    });
+
+    if (response.status === 401 && !retried) {
+      const errorData = await response.clone().json().catch(() => null);
+      const code = (errorData as ApiError | null)?.error?.code;
+      if (code === 'TOKEN_EXPIRED' || code === 'TOKEN_INVALID' || code === 'INVALID_TOKEN') {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          return this.request(method, path, params, body, true);
+        }
+      }
+    }
+
+    return response;
   }
 
   private getHeaders(): Record<string, string> {
@@ -393,74 +505,40 @@ class ApiClient {
   }
 
   async get<T>(path: string, params?: Record<string, string | number>): Promise<T> {
-    const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
-    
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, String(value));
-      });
-    }
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+    const response = await this.request('GET', path, params);
 
     return this.handleResponse<T>(response);
   }
 
   async getPaginated<T>(path: string, params?: Record<string, string | number>): Promise<{ data: T; meta: ApiResponse<T>['meta'] }> {
-    const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
-    
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, String(value));
-      });
-    }
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+    const response = await this.request('GET', path, params);
 
     return this.handlePaginatedResponse<T>(response);
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    const payload = body ? JSON.stringify(body) : undefined;
+    const response = await this.request('POST', path, undefined, payload);
 
     return this.handleResponse<T>(response);
   }
 
   async put<T>(path: string, body: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(body),
-    });
+    const payload = JSON.stringify(body);
+    const response = await this.request('PUT', path, undefined, payload);
 
     return this.handleResponse<T>(response);
   }
 
   async patch<T>(path: string, body: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'PATCH',
-      headers: this.getHeaders(),
-      body: JSON.stringify(body),
-    });
+    const payload = JSON.stringify(body);
+    const response = await this.request('PATCH', path, undefined, payload);
 
     return this.handleResponse<T>(response);
   }
 
   async delete<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    const response = await this.request('DELETE', path);
 
     return this.handleResponse<T>(response);
   }
@@ -887,7 +965,15 @@ export const api = {
       vmsServerId?: string;
       hasVms?: boolean;
       search?: string;
-    }) => apiClient.get<Camera[]>('/cameras', params as Record<string, string | number>),
+      tags?: string[];
+    }) => {
+      const query: Record<string, string | number> = { ...(params as Record<string, string | number>) };
+      if (params?.tags && params.tags.length > 0) {
+        // TEST-ONLY: Send tags as a comma-delimited query string.
+        query.tags = params.tags.join(',');
+      }
+      return apiClient.get<Camera[]>('/cameras', query);
+    },
 
     get: (id: string, includeStreams?: boolean) => 
       apiClient.get<CameraWithStreams>(`/cameras/${id}`, includeStreams ? { includeStreams: 'true' } : undefined),
@@ -903,6 +989,9 @@ export const api = {
 
     getStreams: (id: string) => 
       apiClient.get<StreamUrls>(`/cameras/${id}/streams`),
+
+    getLogs: (id: string, limit?: number) =>
+      apiClient.get<CameraAuditLog[]>(`/cameras/${id}/logs`, limit ? { limit } : undefined),
 
     // TEST-ONLY: Unified RTSP/VMS connectivity test endpoint.
     testConnection: (data: {
@@ -941,6 +1030,33 @@ export const api = {
         ...(maxDistance ? { maxDistance } : {}),
         ...(limit ? { limit } : {}),
       }),
+
+    listByStatus: (status: CameraStatus) =>
+      apiClient.get<Camera[]>(`/cameras/status/${status}`),
+
+    listByTag: (tag: string) =>
+      apiClient.get<Camera[]>(`/cameras/tags/${encodeURIComponent(tag)}`),
+
+    refreshStatus: (companyId?: string) =>
+      apiClient.post<{ message: string }>('/cameras/status/refresh', companyId ? { companyId } : undefined),
+
+    bulkUpdateStatus: (cameraIds: string[], status: CameraStatus, companyId?: string) =>
+      apiClient.post<{ updated: number }>(
+        '/cameras/bulk/update',
+        { cameraIds, status, ...(companyId ? { companyId } : {}) }
+      ),
+
+    bulkDelete: (cameraIds: string[], companyId?: string) =>
+      apiClient.post<{ deleted: number }>(
+        '/cameras/bulk/delete',
+        { cameraIds, ...(companyId ? { companyId } : {}) }
+      ),
+
+    bulkTag: (cameraIds: string[], tags: string[], mode: 'add' | 'remove' | 'set', companyId?: string) =>
+      apiClient.post<{ updated: number }>(
+        '/cameras/bulk/tag',
+        { cameraIds, tags, mode, ...(companyId ? { companyId } : {}) }
+      ),
   },
 
   // VMS Servers (Slice 9.0)

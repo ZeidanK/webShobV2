@@ -385,6 +385,8 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      // Include userId so audit metadata is complete for discovery calls.
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
       const serverId = new mongoose.Types.ObjectId(req.params.id);
 
       // TEST-ONLY: Track monitor discovery with audit metadata.

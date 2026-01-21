@@ -15,7 +15,7 @@ import { cameraService, CreateCameraInput, UpdateCameraInput } from '../services
 import { vmsService } from '../services/vms.service';
 import { rtspStreamService } from '../services/rtsp-stream.service';
 import { cameraStatusMonitorService } from '../services/camera-status.service';
-import { CameraStatus } from '../models';
+import { AuditLog, CameraStatus } from '../models';
 import { config } from '../config';
 import { successResponse, errorResponse, calculatePagination } from '../utils/response';
 import { authenticate, authorize } from '../middleware/auth.middleware';
@@ -117,7 +117,16 @@ router.get(
         correlationId: req.correlationId,
       });
       
-      const { page, limit, status, vmsServerId, hasVms, search, sortBy, sortOrder } = req.query;
+      const { page, limit, status, vmsServerId, hasVms, search, sortBy, sortOrder, tags } = req.query;
+      // TEST-ONLY: Normalize tag filters from string or query array values.
+      const tagList = Array.isArray(tags)
+        ? tags
+            .filter((tag): tag is string => typeof tag === 'string')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : typeof tags === 'string'
+          ? tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+          : undefined;
 
       const result = await cameraService.findAll(
         companyId,
@@ -126,6 +135,7 @@ router.get(
           vmsServerId: vmsServerId ? new mongoose.Types.ObjectId(vmsServerId as string) : undefined,
           hasVms: hasVms === 'true' ? true : hasVms === 'false' ? false : undefined,
           search: (search && search !== '') ? search as string : undefined,
+          tags: tagList,
         },
         {
           page: page ? parseInt(page as string, 10) : 1,
@@ -627,6 +637,55 @@ router.delete(
 
 /**
  * @swagger
+ * /cameras/{id}/logs:
+ *   get:
+ *     summary: Get audit logs for a camera
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 25
+ *     responses:
+ *       200:
+ *         description: Camera audit logs
+ */
+router.get(
+  '/:id/logs',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const cameraId = new mongoose.Types.ObjectId(req.params.id);
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 25;
+
+      // TEST-ONLY: Query audit logs for this camera by company scope.
+      const logs = await AuditLog.find({
+        companyId,
+        resourceType: 'Camera',
+        resourceId: cameraId,
+      })
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .lean();
+
+      res.json(successResponse(logs, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
  * /cameras/bulk/update:
  *   post:
  *     summary: Bulk update camera status
@@ -921,6 +980,63 @@ router.get(
       }
 
       res.json(successResponse(streams, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// TEST-ONLY: Issue stream tokens for direct-rtsp cameras.
+router.post(
+  '/:id/stream/token',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const cameraId = new mongoose.Types.ObjectId(req.params.id);
+      const camera = await cameraService.findById(companyId, cameraId);
+      if (!camera) {
+        return res.status(404).json(
+          errorResponse('RESOURCE_NOT_FOUND', 'Camera not found', req.correlationId)
+        );
+      }
+      if (camera.streamConfig?.type !== 'direct-rtsp') {
+        throw new ValidationError('streamConfig.type must be direct-rtsp for stream tokens');
+      }
+
+      const token = rtspStreamService.createStreamToken(cameraId.toString(), companyId.toString());
+      res.json(
+        successResponse(
+          { token, expiresIn: config.streaming.tokenTtlSeconds },
+          req.correlationId
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// TEST-ONLY: Keep direct-rtsp streams alive while viewing.
+router.post(
+  '/:id/stream/heartbeat',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      const cameraId = new mongoose.Types.ObjectId(req.params.id);
+      const camera = await cameraService.findById(companyId, cameraId);
+      if (!camera) {
+        return res.status(404).json(
+          errorResponse('RESOURCE_NOT_FOUND', 'Camera not found', req.correlationId)
+        );
+      }
+      if (camera.streamConfig?.type !== 'direct-rtsp') {
+        throw new ValidationError('streamConfig.type must be direct-rtsp for stream heartbeat');
+      }
+
+      const result = await rtspStreamService.keepAlive(camera);
+      res.json(successResponse(result, req.correlationId));
     } catch (error) {
       next(error);
     }

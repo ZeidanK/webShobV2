@@ -160,3 +160,26 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added `camera:status` WebSocket event broadcast for real-time updates.
 - Added manual status refresh endpoint for admins and company admins.
 - Added configuration for status monitor enablement and interval.
+
+## 2026-01-22
+### Phase 9-C camera UI enhancements
+- Extended camera APIs with audit log reads, bulk actions, and tag filtering support.
+- Added camera detail page with live preview, editable capabilities/tags/maintenance, and audit log view.
+- Expanded camera list with advanced filters, bulk toolbar, and inline health indicators.
+- Added selection controls in grid/list views and bulk status/tag/delete operations.
+- Wired WebSocket `camera:status` updates into camera list and monitor wall, plus offline toast alerts.
+### Slice 9 verification status
+- Marked Slice 9 DoD items complete based on manual verification; automated tests remain blocked on Alpine MongoMemoryServer.
+### Build fixes
+- Normalized tag query parsing for `/api/cameras` to avoid ParsedQs type errors.
+- Added missing `userId` for VMS monitor discovery audit metadata.
+- Registered RTSP streaming error codes to satisfy backend type checks.
+- Forced readable text colors for camera/VMS selects and action buttons on light backgrounds.
+- Added automatic access token refresh and retry for expired auth responses.
+- Skip undefined/empty query params to prevent invalid ObjectId errors in camera filters.
+- Added camera search auto-complete suggestions based on names, locations, and tags.
+- Added VSCode test tsconfig so Jest globals resolve in backend test files.
+### Slice 10-A scaffolding
+- Added RTSP stream token and heartbeat endpoints for direct-rtsp playback.
+- Added RTSP keep-alive helpers to extend active stream lifetimes.
+- Updated VMS adapter interface to standardize stream URL access and connection testing.

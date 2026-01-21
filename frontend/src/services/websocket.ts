@@ -24,6 +24,9 @@ export enum WebSocketEvent {
   // Reports
   REPORT_CREATED = 'report:created',
   REPORT_UPDATED = 'report:updated',
+
+  // Cameras
+  CAMERA_STATUS = 'camera:status',
   
   // Connection
   CONNECT = 'connect',
@@ -155,6 +158,11 @@ class WebSocketService {
     this.socket.on(WebSocketEvent.REPORT_CREATED, (data: any) => {
       console.log('[WebSocket] Report created', data);
       this.emit(WebSocketEvent.REPORT_CREATED, data);
+    });
+
+    this.socket.on(WebSocketEvent.CAMERA_STATUS, (data: any) => {
+      console.log('[WebSocket] Camera status', data);
+      this.emit(WebSocketEvent.CAMERA_STATUS, data);
     });
   }
 

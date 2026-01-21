@@ -146,6 +146,8 @@
   background: white;
   border-radius: 6px;
   font-size: 0.75rem;
+  /* TEST-ONLY: Keep action labels visible on light backgrounds. */
+  color: #111827;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -348,6 +350,9 @@
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   font-size: 0.875rem;
+  /* TEST-ONLY: Ensure select/input text stays readable. */
+  color: #111827;
+  background: white;
 }
 
 .formHint {
