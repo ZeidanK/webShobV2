@@ -40,6 +40,14 @@ export default function UsersPage() {
   const [refetchCounter, setRefetchCounter] = useState(0);
 
   const currentUser = getCurrentUser();
+  // Guard against missing session data before rendering controls.
+  if (!currentUser) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.error}>Not authenticated</div>
+      </div>
+    );
+  }
 
   const canManageUsers = currentUser && ['admin', 'company_admin', 'super_admin'].includes(currentUser.role);
 

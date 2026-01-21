@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CameraGrid } from './CameraGrid';
-import { api } from '../services/api';
+import { apiClient } from '../services/api';
 import styles from './EventVideoPlayback.module.css';
 
 interface EventVideoPlaybackProps {
@@ -19,9 +19,10 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get(`/events/${eventId}/video-playback`);
-        setEvent(response.data.event);
-        setCameras(response.data.cameras || []);
+        // Fetch event playback data via the shared API client.
+        const response = await apiClient.get<{ event: any; cameras: any[] }>(`/events/${eventId}/video-playback`);
+        setEvent(response.event);
+        setCameras(response.cameras || []);
       } catch (err: any) {
         console.error('Failed to load cameras:', err);
         setError(err.message || 'Failed to load cameras');
@@ -44,9 +45,7 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
             <h2>Event Cameras</h2>
             {event && <p className={styles.eventTitle}>{event.title}</p>}
           </div>
-          <button onClick={onClose} className={styles.closeBtn} title="Close">
-            ✕
-          </button>
+          <button onClick={onClose} className={styles.closeBtn} title="Close">Close</button>
         </div>
 
         <div className={styles.content}>
@@ -59,14 +58,14 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
 
           {error && (
             <div className={styles.error}>
-              <div className={styles.errorIcon}>⚠️</div>
+              <div className={styles.errorIcon}>Error</div>
               <div className={styles.errorText}>{error}</div>
             </div>
           )}
 
           {!loading && !error && cameras.length === 0 && (
             <div className={styles.empty}>
-              <div className={styles.emptyIcon}>📹</div>
+              <div className={styles.emptyIcon}>No cameras</div>
               <div className={styles.emptyTitle}>No cameras found</div>
               <div className={styles.emptyText}>
                 No cameras are located near this event.
@@ -77,9 +76,7 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
           {!loading && !error && cameras.length > 0 && (
             <>
               {camerasWithRecording.length === 0 && (
-                <div className={styles.warning}>
-                  ⚠️ No cameras have recording enabled. Only live feeds available.
-                </div>
+                <div className={styles.warning}>Warning: no cameras have recording enabled. Only live feeds available.</div>
               )}
               <div className={styles.gridContainer}>
                 <CameraGrid cameras={cameras} columns={columns} />
@@ -88,7 +85,7 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                 <div className={styles.footerInfo}>
                   <span className={styles.footerLabel}>Cameras found:</span>
                   <span className={styles.footerValue}>{cameras.length}</span>
-                  <span className={styles.footerDivider}>•</span>
+                  <span className={styles.footerDivider}>/</span>
                   <span className={styles.footerLabel}>With recording:</span>
                   <span className={styles.footerValue}>{camerasWithRecording.length}</span>
                 </div>
@@ -100,3 +97,4 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
     </div>
   );
 }
+

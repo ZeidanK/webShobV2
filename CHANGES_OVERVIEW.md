@@ -191,3 +191,11 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added VMS vs Direct RTSP selector to camera form, with RTSP transport and VMS monitor inputs.
 - Wired direct-rtsp heartbeat pings into LiveView and monitor wall tiles.
 - Extended monitor wall stream loading to handle direct-rtsp cameras.
+### Frontend build fixes
+- Removed unused React imports and resize handler args that were failing `tsc` strict checks.
+- Replaced mojibake UI labels in operator/event playback/report submission flows with ASCII-only text.
+- Fixed operator dashboard filter typing and cleaned up the event list markup.
+- Updated report creation typing to allow optional location payloads.
+- Switched EventVideoPlayback to use `apiClient.get` for typed API responses.
+- Added `frontend/src/test-globals.d.ts` for Vitest + jest-dom type support without module name collisions.
+- Verified `docker-compose exec -T frontend npm run build` passes.

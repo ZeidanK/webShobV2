@@ -215,10 +215,6 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     setDragOverCameraId(null);
   };
 
-  const toggleFocus = (cameraId: string) => {
-    setFocusedCameraId((prev) => (prev === cameraId ? null : cameraId));
-  };
-
   const handleResizePointerDown = (
     cameraId: string,
     direction: 'e' | 's' | 'se' | 'ne' | 'sw' | 'nw',
@@ -246,14 +242,16 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     event.stopPropagation();
   };
 
-  const handleResizePointerMove = (cameraId: string, event: React.PointerEvent<HTMLDivElement>) => {
+  const handleResizePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!allowsDrag) {
       return;
     }
     const start = resizeDragRef.current;
-    if (!start || start.id !== cameraId) {
+    if (!start) {
       return;
     }
+    // TEST-ONLY: Use the active resize target for pointer updates.
+    const cameraId = start.id;
     const gridRect = gridRef.current?.getBoundingClientRect();
     const maxWidth = gridRect ? Math.max(gridRect.width - 8, minTileWidth) : Infinity;
     const maxHeight = gridRect ? Math.max(gridRect.height * 2, minTileHeight) : Infinity;
@@ -279,7 +277,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     event.stopPropagation();
   };
 
-  const handleResizePointerUp = (cameraId: string, event: React.PointerEvent<HTMLDivElement>) => {
+  // TEST-ONLY: End a resize drag without per-camera arguments.
+  const handleResizePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!allowsDrag) {
       return;
     }
@@ -420,8 +419,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeRight}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'e', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -433,8 +432,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeBottom}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 's', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -446,8 +445,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerBr}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'se', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -459,8 +458,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerTr}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'ne', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -472,8 +471,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerBl}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'sw', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -485,8 +484,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerTl}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'nw', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}

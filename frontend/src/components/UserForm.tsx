@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// Keep hook imports minimal for typecheck clarity.
+import { useState } from 'react';
 import { api } from '../services/api';
 import styles from './UserForm.module.css';
 

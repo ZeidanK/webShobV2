@@ -762,11 +762,12 @@ export const api = {
     
     get: (id: string) => apiClient.get<Report>(`/reports/${id}`),
     
+    // Allow optional location fields for report drafts without geodata.
     create: (data: {
       title: string;
       description: string;
       type: string;
-      location: {
+      location?: {
         longitude: number;
         latitude: number;
       };
@@ -775,10 +776,12 @@ export const api = {
       // Transform location to GeoJSON format expected by backend
       const payload = {
         ...data,
-        location: {
-          type: 'Point' as const,
-          coordinates: [data.location.longitude, data.location.latitude],
-        },
+        ...(data.location && {
+          location: {
+            type: 'Point' as const,
+            coordinates: [data.location.longitude, data.location.latitude],
+          },
+        }),
       };
       return apiClient.post<Report>('/reports', payload);
     },

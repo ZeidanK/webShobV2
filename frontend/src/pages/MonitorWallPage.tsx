@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+// TEST-ONLY: Use named hooks to avoid unused default React import.
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CameraGrid, CameraItem } from '../components/CameraGrid';
 import { api, CameraStatus } from '../services/api';
 import { useCameraStatus } from '../hooks/useWebSocket';
@@ -289,7 +290,12 @@ export default function MonitorWallPage() {
             </select>
           </label>
           {/* TEST-ONLY: Use ASCII-only labels to avoid mojibake in operator controls. */}
-          <button onClick={fetchCameras} className={styles.refreshBtn} title="Refresh cameras">
+          {/* TEST-ONLY: Wrap refresh to avoid event-typed callback mismatch. */}
+          <button
+            onClick={() => fetchCameras()}
+            className={styles.refreshBtn}
+            title="Refresh cameras"
+          >
             Refresh
           </button>
           <button onClick={handleResetLayout} className={styles.resetBtn} title="Reset wall layout">
@@ -373,6 +379,7 @@ export default function MonitorWallPage() {
     </div>
   );
 }
+
 
 
 

@@ -14,6 +14,8 @@ interface FormData {
   description: string;
   type: 'incident' | 'maintenance' | 'safety' | 'other';
   location?: LocationData;
+  // Optional user-provided location notes.
+  locationDescription?: string;
 }
 
 const REPORT_TYPES = [
@@ -32,6 +34,7 @@ const ReportSubmissionPage: React.FC = () => {
     description: '',
     type: 'incident',
     location: undefined,
+    locationDescription: '',
   });
 
   const [files, setFiles] = useState<File[]>([]);
@@ -288,13 +291,9 @@ const ReportSubmissionPage: React.FC = () => {
             {formData.location ? (
               <div className={styles.locationInfo}>
                 <div className={styles.locationDisplay}>
-                  <span className={styles.coordinates}>
-                    📍 {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
-                  </span>
+                  <span className={styles.coordinates}>Location: {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}</span>
                   {formData.location.accuracy && (
-                    <span className={styles.accuracy}>
-                      Accuracy: ±{Math.round(formData.location.accuracy)}m
-                    </span>
+                    <span className={styles.accuracy}>Accuracy: +/- {Math.round(formData.location.accuracy)}m</span>
                   )}
                 </div>
                 <button
@@ -358,9 +357,7 @@ const ReportSubmissionPage: React.FC = () => {
                           className={styles.imagePreview}
                         />
                       ) : (
-                        <div className={styles.videoPreview}>
-                          🎥 Video
-                        </div>
+                        <div className={styles.videoPreview}>Video</div>
                       )}
                     </div>
                     <div className={styles.fileInfo}>
@@ -369,14 +366,7 @@ const ReportSubmissionPage: React.FC = () => {
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className={styles.removeFileButton}
-                      aria-label={`Remove ${file.name}`}
-                    >
-                      ×
-                    </button>
+                    <button type="button" onClick={() => removeFile(index)} className={styles.removeFileButton} aria-label={`Remove ${file.name}`}>Remove</button>
                   </div>
                 ))}
               </div>
@@ -411,3 +401,4 @@ const ReportSubmissionPage: React.FC = () => {
 };
 
 export default ReportSubmissionPage;
+

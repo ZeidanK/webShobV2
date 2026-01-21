@@ -63,7 +63,6 @@ export enum ConnectionStatus {
  */
 class WebSocketService {
   private socket: Socket | null = null;
-  private token: string | null = null;
   private connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private listeners: Map<string, Set<EventCallback>> = new Map();
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
@@ -79,7 +78,7 @@ class WebSocketService {
       return;
     }
 
-    this.token = token;
+    // Keep the token only in the socket auth payload to avoid unused state.
     this.setStatus(ConnectionStatus.CONNECTING);
 
     this.socket = io(WS_URL, {
@@ -174,7 +173,6 @@ class WebSocketService {
       console.log('[WebSocket] Disconnecting');
       this.socket.disconnect();
       this.socket = null;
-      this.token = null;
       this.setStatus(ConnectionStatus.DISCONNECTED);
       this.clearAllListeners();
     }
