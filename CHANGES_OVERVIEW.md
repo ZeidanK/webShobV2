@@ -195,6 +195,20 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added unit tests for RTSP stream tokens and HLS path validation.
 - Added a `SKIP_DB_SETUP` guard in test setup to allow non-DB unit tests on Alpine.
 - Ran `npm test -- --runTestsByPath src/services/rtsp-stream.service.test.ts` with `SKIP_DB_SETUP=true` (passed; ts-jest warnings about `isolatedModules` remain).
+### Historical step explanations (Slice 9.0-A to Slice 10-D)
+- 9.0-A: Before only core VMS routes existed; after added camera connection tests, audit logging, LiveView fallback, and demo cleanup to close MVP gaps.
+- 9.0-B: Before no local VMS lab/docs; after added `vms-lab/` compose, README updates, and VMS integration docs.
+- 9.0-C: Before no VMS integration tests/manual runbook; after added VMS route tests and manual HLS check steps.
+- 9-A: Before camera model lacked advanced fields; after added tags/maintenance/capabilities plus geo, status, and bulk ops endpoints.
+- 9-B: Before no background status monitor; after added status job, WebSocket broadcasts, and manual refresh endpoint.
+- 9-C: Before camera UI was basic; after added detail view, bulk tools, and real-time status updates.
+- 10-A: Before RTSP direct streams were unsupported; after added direct-rtsp config, tokens, and heartbeat endpoints.
+- 10-B: Before no streaming cleanup infra; after added FFmpeg install, segment cleanup job, and streaming mounts.
+- 10-C: Before UI couldn't configure direct RTSP; after added form controls, LiveView heartbeat, and wall stream wiring.
+- 10-D: Before no RTSP unit checks; after added token/path unit tests and DB setup guard for Alpine.
+### Slice 11-A progress
+- Added VMS adapter stubs (Milestone/Genetec) and adapter factory scaffolding.
+- Extended VmsServer provider enum with `milestone` and `genetec`, plus `sdkConfig` placeholder.
 ### Frontend build fixes
 - Removed unused React imports and resize handler args that were failing `tsc` strict checks.
 - Replaced mojibake UI labels in operator/event playback/report submission flows with ASCII-only text.

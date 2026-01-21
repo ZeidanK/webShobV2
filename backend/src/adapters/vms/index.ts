@@ -2,7 +2,7 @@
  * VMS Adapters
  * 
  * This directory will contain Video Management System adapters.
- * Adapters will be created in Slice 8-10.
+ * Adapters will be created in Slice 9-11.
  */
 
 // TEST-ONLY: Adapter stream URL shape for live playback.
@@ -25,4 +25,6 @@ export interface IVMSAdapter {
 // - MilestoneAdapter: For Milestone XProtect integration (Phase 2)
 // - GenetecAdapter: For Genetec Security Center integration (Phase 2)
 
-export {};
+export { GenetecAdapter } from './genetec.adapter';
+export { MilestoneAdapter } from './milestone.adapter';
+export { VmsAdapterFactory } from './factory';

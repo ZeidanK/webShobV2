@@ -12,6 +12,7 @@
 
 import mongoose, { Document } from 'mongoose';
 import { Camera, ICamera, CameraStatus, VmsServer, IVmsServer, AuditLog, AuditAction } from '../models';
+import type { VmsProvider } from '../models/vms-server.model';
 import { vmsService, VmsMonitor, StreamUrls } from './vms.service';
 import { rtspStreamService } from './rtsp-stream.service';
 import { NotFoundError, ValidationError, ConflictError } from '../utils/errors';
@@ -82,7 +83,7 @@ export interface CreateCameraInput {
     recordingEnabled?: boolean;
   };
   vms?: {
-    provider?: 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
+    provider?: VmsProvider;
     serverId?: mongoose.Types.ObjectId;
     monitorId?: string;
   };

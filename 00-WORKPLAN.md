@@ -877,22 +877,22 @@ Slice 9.0 provides Shinobi adapter. Slice 10 provides Direct RTSP. This slice ad
 - ❌ Do NOT implement VMS SDK integration
 
 ### Backend Tasks
-- [ ] Create VMS adapter factory pattern
-  - [ ] `VmsAdapterFactory.create(vmsServer)` returns correct adapter
-  - [ ] Support: 'shinobi', 'direct-rtsp', 'milestone', 'genetec', 'other'
-- [ ] Create MilestoneAdapter stub
-  - [ ] Implement interface methods (throw "Not Implemented" errors)
-  - [ ] Document Milestone API requirements in comments
-  - [ ] Add placeholder for authentication flow
-  - [ ] Add `getStreamUrls()` stub → returns error message
-- [ ] Create GenetecAdapter stub
-  - [ ] Implement interface methods (throw "Not Implemented" errors)
-  - [ ] Document Genetec SDK requirements in comments
-  - [ ] Add placeholder for connection logic
-  - [ ] Add `getStreamUrls()` stub → returns error message
-- [ ] Update VmsServer model
-  - [ ] Add 'milestone' and 'genetec' to provider enum
-  - [ ] Add `sdkConfig` field for VMS-specific settings
+- [x] Create VMS adapter factory pattern
+  - [x] `VmsAdapterFactory.create(vmsServer)` returns correct adapter
+  - [x] Support: 'shinobi', 'direct-rtsp', 'milestone', 'genetec', 'other'
+- [x] Create MilestoneAdapter stub
+  - [x] Implement interface methods (throw "Not Implemented" errors)
+  - [x] Document Milestone API requirements in comments
+  - [x] Add placeholder for authentication flow
+  - [x] Add `getStreamUrls()` stub returns error message
+- [x] Create GenetecAdapter stub
+  - [x] Implement interface methods (throw "Not Implemented" errors)
+  - [x] Document Genetec SDK requirements in comments
+  - [x] Add placeholder for connection logic
+  - [x] Add `getStreamUrls()` stub returns error message
+- [x] Update VmsServer model
+  - [x] Add 'milestone' and 'genetec' to provider enum
+  - [x] Add `sdkConfig` field for VMS-specific settings
 - [ ] Update camera VMS connection logic
   - [ ] Check VMS provider before connecting
   - [ ] Show helpful error for unsupported VMS types
@@ -1158,3 +1158,4 @@ Use this checklist after completing each slice:
 ---
 
 *This document guides incremental implementation. Each slice should be completed fully before moving to the next. Do not skip slices or combine multiple slices without explicit approval.*
+
