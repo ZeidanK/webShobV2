@@ -274,6 +274,37 @@ class RtspStreamService {
     }
   }
 
+  // TEST-ONLY: Delete stale HLS segments to keep storage bounded.
+  cleanupOldSegments(): void {
+    const now = Date.now();
+    try {
+      const cameraDirs = fs.readdirSync(this.baseDir, { withFileTypes: true });
+      cameraDirs.forEach((dirent) => {
+        if (!dirent.isDirectory()) {
+          return;
+        }
+        const dirPath = path.join(this.baseDir, dirent.name);
+        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+        entries.forEach((entry) => {
+          if (!entry.isFile() || !entry.name.endsWith('.ts')) {
+            return;
+          }
+          const filePath = path.join(dirPath, entry.name);
+          const stats = fs.statSync(filePath);
+          if (now - stats.mtimeMs > config.streaming.cleanupMaxAgeMs) {
+            fs.unlinkSync(filePath);
+          }
+        });
+      });
+    } catch (error) {
+      logger.warn({
+        action: 'rtsp.stream.cleanup_failed',
+        message: 'Failed to cleanup HLS segments',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   // TEST-ONLY: Touch active stream pipelines to keep them alive.
   touchStream(cameraId: string): boolean {
     const state = this.processes.get(cameraId);

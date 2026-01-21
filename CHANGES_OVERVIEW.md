@@ -183,3 +183,7 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added RTSP stream token and heartbeat endpoints for direct-rtsp playback.
 - Added RTSP keep-alive helpers to extend active stream lifetimes.
 - Updated VMS adapter interface to standardize stream URL access and connection testing.
+### Slice 10-B infrastructure
+- Added RTSP segment cleanup job and configurable cleanup settings.
+- Mounted `/tmp/hls` streaming directory in Docker for direct-rtsp output.
+- Documented FFmpeg as a Direct RTSP prerequisite.

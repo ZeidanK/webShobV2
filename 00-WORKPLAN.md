@@ -797,24 +797,24 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
   - [ ] Define `getStreamUrls()` method signature
   - [ ] Define `testConnection()` method
   - [ ] Define `getPlaybackUrl(timestamp)` stub for Slice 12
-- [~] Implement DirectRTSPAdapter
+- [x] Implement DirectRTSPAdapter
   - [x] Accept RTSP URL as input
   - [x] Spawn FFmpeg process for RTSP → HLS transcoding
-  - [~] Store HLS segments in temp directory (`/tmp/hls/{cameraId}/`)
+  - [x] Store HLS segments in temp directory (`/tmp/hls/{cameraId}/`)
   - [x] Generate HLS playlist URL
   - [x] Implement segment cleanup (delete old segments)
   - [x] Handle FFmpeg process lifecycle (start/stop/restart)
-- [~] Implement stream session management
+- [x] Implement stream session management
   - [x] Track active streams per camera
   - [x] Auto-stop stream after X minutes of inactivity
-  - [ ] Implement heartbeat endpoint to keep stream alive
+  - [x] Implement heartbeat endpoint to keep stream alive
 - [x] Add DirectRTSP configuration to Camera model
   - [x] `streamConfig.type: 'direct-rtsp' | 'vms'`
   - [x] `streamConfig.rtspUrl` for direct cameras
-- [~] Implement stream authentication tokens
+- [x] Implement stream authentication tokens
   - [x] Generate time-limited tokens for HLS access
   - [x] Validate tokens on HLS segment requests
-  - [ ] Add `/api/cameras/:id/stream/token` endpoint
+  - [x] Add `/api/cameras/:id/stream/token` endpoint
 
 ### Frontend Tasks
 - [ ] Update camera form to support both VMS and Direct RTSP
@@ -832,10 +832,10 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
 ### Infrastructure Tasks
 - [x] Install FFmpeg in backend Docker container
   - [x] Add to Dockerfile: `RUN apt-get install -y ffmpeg`
-- [ ] Create HLS segment storage directory
-  - [ ] Add volume mount for `/tmp/hls` in docker-compose
-  - [ ] Implement cleanup cron job (delete segments >1 hour old)
-- [ ] Add FFmpeg to backend dependencies documentation
+  - [x] Create HLS segment storage directory
+    - [x] Add volume mount for `/tmp/hls` in docker-compose
+    - [x] Implement cleanup cron job (delete segments >1 hour old)
+  - [x] Add FFmpeg to backend dependencies documentation
 
 ### Tests
 - [ ] Unit: DirectRTSPAdapter stream URL generation

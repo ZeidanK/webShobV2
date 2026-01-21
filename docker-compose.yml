@@ -34,12 +34,15 @@ services:
       - LOG_LEVEL=debug
       - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
       - AI_SERVICE_URL=http://ai-service:8000
+      - STREAMING_BASE_DIR=/tmp/hls
       # Test logger configuration (dev only)
       - TEST_LOG_DIR=/app/logs
       - TEST_LOG_PREFIX=test-run
     volumes:
       # Persist test logs to host
       - ./logs:/app/logs
+      # Persist HLS output for direct-rtsp streams
+      - ./streams:/tmp/hls
     depends_on:
       mongodb:
         condition: service_healthy

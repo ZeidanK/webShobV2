@@ -82,6 +82,7 @@ Before running the project, ensure you have the following installed:
 - **Git**: For cloning the repository
 - **Node.js**: Version 18 LTS (if running services locally without Docker)
 - **Python**: Version 3.9+ (if running AI service locally)
+- **FFmpeg**: Required for Direct RTSP streaming (installed in backend Docker image)
 
 ### System Requirements
 
