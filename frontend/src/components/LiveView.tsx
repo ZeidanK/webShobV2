@@ -58,6 +58,7 @@ interface StreamState {
 
 export const LiveView: React.FC<LiveViewProps> = ({
   streamUrl,
+  embedUrl,
   cameraName,
   snapshotUrl,
   autoPlay = true,

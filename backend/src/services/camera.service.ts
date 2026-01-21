@@ -31,6 +31,7 @@ export interface CameraFilters {
   vmsServerId?: mongoose.Types.ObjectId;
   hasVms?: boolean;
   search?: string;
+  tags?: string[];
   isDeleted?: boolean;
 }
 
@@ -47,6 +48,18 @@ export interface CreateCameraInput {
   name: string;
   description?: string;
   streamUrl?: string;
+  capabilities?: {
+    ptz?: boolean;
+    audio?: boolean;
+    motionDetection?: boolean;
+  };
+  maintenanceSchedule?: {
+    intervalDays?: number;
+    lastServiceAt?: Date;
+    nextServiceAt?: Date;
+    notes?: string;
+  };
+  tags?: string[];
   // TEST-ONLY: Stream configuration for Direct RTSP scaffolding.
   streamConfig?: {
     type: 'vms' | 'direct-rtsp';
@@ -86,6 +99,18 @@ export interface UpdateCameraInput {
   name?: string;
   description?: string;
   streamUrl?: string;
+  capabilities?: {
+    ptz?: boolean;
+    audio?: boolean;
+    motionDetection?: boolean;
+  };
+  maintenanceSchedule?: {
+    intervalDays?: number;
+    lastServiceAt?: Date;
+    nextServiceAt?: Date;
+    notes?: string;
+  };
+  tags?: string[];
   // TEST-ONLY: Stream configuration for Direct RTSP scaffolding.
   streamConfig?: {
     type?: 'vms' | 'direct-rtsp';
@@ -119,6 +144,17 @@ export interface CameraWithStreams extends CameraData {
 }
 
 class CameraService {
+  // Normalize tag inputs to trimmed, unique values.
+  private normalizeTags(tags?: string[]): string[] | undefined {
+    if (!tags) {
+      return undefined;
+    }
+    const normalized = tags
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+    return Array.from(new Set(normalized));
+  }
+
   // TEST-ONLY: Persist a camera audit entry for VMS-related updates.
   private async writeAuditLog(
     action: AuditAction,
@@ -234,6 +270,7 @@ class CameraService {
 
     const camera = new Camera({
       ...data,
+      tags: this.normalizeTags(data.tags),
       companyId,
       createdBy: userId,
       updatedBy: userId,
@@ -296,6 +333,10 @@ class CameraService {
         { description: { $regex: filters.search, $options: 'i' } },
         { 'location.address': { $regex: filters.search, $options: 'i' } },
       ];
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      query.tags = { $in: filters.tags };
     }
 
     logger.info('Camera query', {
@@ -394,6 +435,21 @@ class CameraService {
 
     if (data.settings) {
       camera.settings = { ...camera.settings, ...data.settings };
+    }
+
+    if (data.capabilities) {
+      camera.capabilities = { ...camera.capabilities, ...data.capabilities };
+    }
+
+    if (data.maintenanceSchedule) {
+      camera.maintenanceSchedule = {
+        ...camera.maintenanceSchedule,
+        ...data.maintenanceSchedule,
+      };
+    }
+
+    if (data.tags !== undefined) {
+      camera.tags = this.normalizeTags(data.tags) || [];
     }
 
     if (data.metadata) {
@@ -703,6 +759,99 @@ class CameraService {
     return Camera.find(query)
       .limit(limit)
       .lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * Find cameras by status.
+   */
+  async findByStatus(
+    companyId: mongoose.Types.ObjectId | null | undefined,
+    status: CameraStatus
+  ): Promise<ICamera[]> {
+    const query: Record<string, unknown> = { status, isDeleted: false };
+    if (companyId) {
+      query.companyId = companyId;
+    }
+    return Camera.find(query).lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * Find cameras by tag.
+   */
+  async findByTag(
+    companyId: mongoose.Types.ObjectId | null | undefined,
+    tag: string
+  ): Promise<ICamera[]> {
+    const query: Record<string, unknown> = {
+      tags: tag,
+      isDeleted: false,
+    };
+    if (companyId) {
+      query.companyId = companyId;
+    }
+    return Camera.find(query).lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * Bulk update camera status.
+   */
+  async bulkUpdateStatus(
+    companyId: mongoose.Types.ObjectId,
+    cameraIds: mongoose.Types.ObjectId[],
+    status: CameraStatus,
+    userId?: mongoose.Types.ObjectId
+  ): Promise<number> {
+    const result = await Camera.updateMany(
+      { companyId, _id: { $in: cameraIds }, isDeleted: false },
+      { $set: { status, updatedBy: userId, lastModified: new Date() } }
+    );
+    return result.modifiedCount || 0;
+  }
+
+  /**
+   * Bulk delete cameras by ID (soft delete).
+   */
+  async bulkDelete(
+    companyId: mongoose.Types.ObjectId,
+    cameraIds: mongoose.Types.ObjectId[],
+    userId?: mongoose.Types.ObjectId
+  ): Promise<number> {
+    const result = await Camera.updateMany(
+      { companyId, _id: { $in: cameraIds }, isDeleted: false },
+      { $set: { isDeleted: true, updatedBy: userId, lastModified: new Date() } }
+    );
+    return result.modifiedCount || 0;
+  }
+
+  /**
+   * Bulk tag cameras with add/remove/set behavior.
+   */
+  async bulkTag(
+    companyId: mongoose.Types.ObjectId,
+    cameraIds: mongoose.Types.ObjectId[],
+    tags: string[],
+    mode: 'add' | 'remove' | 'set',
+    userId?: mongoose.Types.ObjectId
+  ): Promise<number> {
+    const normalizedTags = this.normalizeTags(tags) || [];
+    const update: Record<string, unknown> = {
+      updatedBy: userId,
+      lastModified: new Date(),
+    };
+
+    if (mode === 'set') {
+      update.tags = normalizedTags;
+    } else if (mode === 'add') {
+      update.$addToSet = { tags: { $each: normalizedTags } };
+    } else {
+      update.$pull = { tags: { $in: normalizedTags } };
+    }
+
+    const result = await Camera.updateMany(
+      { companyId, _id: { $in: cameraIds }, isDeleted: false },
+      update
+    );
+    return result.modifiedCount || 0;
   }
 
   /**

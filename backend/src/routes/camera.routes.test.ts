@@ -367,6 +367,57 @@ describe('Camera Routes Integration Tests', () => {
     });
   });
 
+  // TEST-ONLY: VMS streaming and import coverage for camera routes.
+  describe('GET /api/cameras/:id/streams', () => {
+    it('should return Shinobi stream URLs for connected camera', async () => {
+      const camera = await Camera.create({
+        companyId: company._id,
+        name: 'Stream Camera',
+        location: { type: 'Point', coordinates: [34.78, 32.08] },
+        vms: {
+          serverId: vmsServer._id,
+          monitorId: 'monitor-123',
+          provider: 'shinobi',
+        },
+      });
+
+      const response = await request(app)
+        .get(`/api/cameras/${camera._id}/streams`)
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.hls).toContain('/hls/');
+      expect(response.body.data.embed).toContain('/embed/');
+      expect(response.body.data.snapshot).toContain('/jpeg/');
+    });
+  });
+
+  describe('POST /api/cameras/vms/import', () => {
+    it('should import monitors into cameras', async () => {
+      const response = await request(app)
+        .post('/api/cameras/vms/import')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          serverId: vmsServer._id.toString(),
+          monitors: [
+            {
+              monitorId: 'monitor-1',
+              name: 'Imported Camera',
+              location: { coordinates: [34.78, 32.08], address: 'Lab' },
+            },
+          ],
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.created).toBe(1);
+
+      const created = await Camera.findOne({ 'vms.monitorId': 'monitor-1' });
+      expect(created).not.toBeNull();
+    });
+  });
+
   describe('DELETE /api/cameras/:id', () => {
     it('should soft delete camera', async () => {
       const camera = await Camera.create({

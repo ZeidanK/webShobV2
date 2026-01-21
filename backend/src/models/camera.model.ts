@@ -19,6 +19,21 @@ export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
 /** TEST-ONLY: Stream configuration types for Phase 2 scaffolding. */
 export type StreamConfigType = 'vms' | 'direct-rtsp';
 
+/** Camera capability flags */
+export interface CameraCapabilities {
+  ptz?: boolean;
+  audio?: boolean;
+  motionDetection?: boolean;
+}
+
+/** Maintenance schedule metadata */
+export interface CameraMaintenanceSchedule {
+  intervalDays?: number;
+  lastServiceAt?: Date;
+  nextServiceAt?: Date;
+  notes?: string;
+}
+
 /** Camera document interface */
 export interface ICamera extends Document {
   /** Multi-tenant isolation */
@@ -49,6 +64,15 @@ export interface ICamera extends Document {
   
   /** Camera status */
   status: CameraStatus;
+
+  /** Optional capability flags */
+  capabilities?: CameraCapabilities;
+
+  /** Maintenance schedule tracking */
+  maintenanceSchedule?: CameraMaintenanceSchedule;
+
+  /** Tag list for categorization */
+  tags?: string[];
   
   /** Physical location */
   location: {
@@ -182,6 +206,47 @@ const CameraSchema = new Schema<ICamera>(
       },
       default: 'offline',
     },
+    capabilities: {
+      ptz: {
+        type: Boolean,
+        default: false,
+      },
+      audio: {
+        type: Boolean,
+        default: false,
+      },
+      motionDetection: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    maintenanceSchedule: {
+      intervalDays: {
+        type: Number,
+        min: [1, 'Maintenance interval must be at least 1 day'],
+      },
+      lastServiceAt: {
+        type: Date,
+      },
+      nextServiceAt: {
+        type: Date,
+      },
+      notes: {
+        type: String,
+        trim: true,
+        maxlength: [500, 'Maintenance notes must be less than 500 characters'],
+      },
+    },
+    tags: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (values: string[]) {
+          return Array.isArray(values) && values.every((value) => value.trim().length > 0);
+        },
+        message: 'Tags must be non-empty strings',
+      },
+    },
     location: {
       type: {
         type: String,
@@ -275,6 +340,7 @@ const CameraSchema = new Schema<ICamera>(
 CameraSchema.index({ companyId: 1, isDeleted: 1 });
 CameraSchema.index({ companyId: 1, name: 1 });
 CameraSchema.index({ companyId: 1, status: 1 });
+CameraSchema.index({ companyId: 1, tags: 1 });
 CameraSchema.index({ 'vms.serverId': 1 });
 CameraSchema.index({ 'vms.monitorId': 1 });
 CameraSchema.index({ 'metadata.source': 1 });

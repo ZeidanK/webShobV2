@@ -594,8 +594,9 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
   - [x] Keep existing Camera fields from your architecture
 
 ### Backend Tasks - VMS Controller & Routes
+*Note: controller logic implemented via existing service/route layer (no standalone vmsController.ts file).*
 - [ ] Port `vmsController.ts` from patch
-  - [ ] Add `companyId` filtering to ALL queries (critical for multi-tenant)
+  - [x] Add `companyId` filtering to ALL queries (critical for multi-tenant)
   - [x] Port `POST /api/vms/servers` (create VMS server)
   - [x] Port `GET /api/vms/servers` (list, company-scoped)
   - [x] Port `GET /api/vms/servers/:id` (get single)
@@ -605,7 +606,7 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
   - [x] Port `POST /api/vms/servers/:id/monitors/import` (batch import)
   - [x] Add audit log entries for VMS operations
   - [x] Add correlationId logging
-  - [ ] Add OpenAPI/Swagger annotations
+  - [x] Add OpenAPI/Swagger annotations
 - [x] Port `vms.ts` routes from patch
   - [x] Mount at `/api/vms`
   - [x] Add auth middleware to all routes
@@ -637,7 +638,7 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
   - [x] Implement HLS.js video player
   - [x] Add iframe fallback for non-HLS browsers
   - [x] Add loading/error states
-  - [ ] Adapt to your component styling
+  - [x] Adapt to your component styling
 - [x] Create VMS server management UI
   - [x] VMS server list page
   - [x] Add/edit VMS server form
@@ -651,32 +652,32 @@ This slice ports tested code from `camera-connection-complete.patch` which inclu
   - [x] Add demo cleanup action
 
 ### Docker/Infrastructure Tasks
-- [ ] Create `vms-lab/` directory for Shinobi testing
-- [ ] Port Shinobi Docker Compose setup
-  - [ ] Shinobi service (port 8080)
-  - [ ] MySQL service for Shinobi
-  - [ ] Add to `.gitignore`
-- [ ] Document Shinobi setup in README
-  - [ ] How to start Shinobi: `cd vms-lab && docker-compose up -d`
-  - [ ] Default credentials and API key generation
-  - [ ] How to create test cameras/monitors
+- [x] Create `vms-lab/` directory for Shinobi testing
+- [x] Port Shinobi Docker Compose setup
+  - [x] Shinobi service (port 8080)
+  - [x] MySQL service for Shinobi
+  - [x] Add to `.gitignore`
+- [x] Document Shinobi setup in README
+  - [x] How to start Shinobi: `cd vms-lab && docker-compose up -d`
+  - [x] Default credentials and API key generation
+  - [x] How to create test cameras/monitors
 
 ### Documentation Tasks
-- [ ] Create `docs/VMS_INTEGRATION.md`
-  - [ ] Shinobi setup guide
-  - [ ] API endpoints documentation
-  - [ ] Stream URL formats
-  - [ ] Connection testing flow
-- [ ] Update API documentation with VMS endpoints
-- [ ] Add Shinobi testing guide for developers
+- [x] Create `docs/VMS_INTEGRATION.md`
+  - [x] Shinobi setup guide
+  - [x] API endpoints documentation
+  - [x] Stream URL formats
+  - [x] Connection testing flow
+- [x] Update API documentation with VMS endpoints
+- [x] Add Shinobi testing guide for developers
 
 ### Tests
-- [ ] Integration: VMS server CRUD with tenant isolation
-- [ ] Integration: Camera-VMS connect/disconnect
-- [ ] Integration: Stream URL generation for Shinobi
-- [ ] Integration: Monitor discovery and import
-- [ ] Manual: HLS playback in browser
-- [ ] Manual: Shinobi connection test
+- [x] Integration: VMS server CRUD with tenant isolation
+- [x] Integration: Camera-VMS connect/disconnect
+- [x] Integration: Stream URL generation for Shinobi
+- [x] Integration: Monitor discovery and import
+- [~] Manual: HLS playback in browser (verified, revisit with tooling)
+- [~] Manual: Shinobi connection test (verified, revisit with tooling)
 
 ### Definition of Done (Slice 9.0)
 - [x] VMS server can be registered (Shinobi credentials)
@@ -721,23 +722,23 @@ Enhance camera CRUD beyond Boaz's work with advanced features: status monitoring
 - ❌ Do NOT implement PTZ controls yet
 
 ### Backend Tasks
-- [ ] Extend Camera model with additional fields
-  - [ ] Add `capabilities` field (PTZ, audio, motion detection)
-  - [ ] Add `maintenanceSchedule` field
-  - [ ] Add `tags` array for categorization
-- [ ] Implement advanced camera queries
-  - [ ] `GET /api/cameras/near?lat=X&lng=Y&radius=Z` (geo-spatial)
-  - [ ] `GET /api/cameras/status/:status` (filter by status)
-  - [ ] `GET /api/cameras/tags/:tag` (filter by tag)
+- [x] Extend Camera model with additional fields
+  - [x] Add `capabilities` field (PTZ, audio, motion detection)
+  - [x] Add `maintenanceSchedule` field
+  - [x] Add `tags` array for categorization
+- [x] Implement advanced camera queries
+  - [x] `GET /api/cameras/near?lat=X&lng=Y&radius=Z` (geo-spatial)
+  - [x] `GET /api/cameras/status/:status` (filter by status)
+  - [x] `GET /api/cameras/tags/:tag` (filter by tag)
 - [ ] Create status monitoring service
   - [ ] Background job to check camera health
   - [ ] Ping RTSP/VMS endpoints periodically
   - [ ] Update camera status (online, offline, error)
   - [ ] Emit `camera:status` WebSocket event on changes
-- [ ] Implement bulk operations
-  - [ ] `POST /api/cameras/bulk/update` (bulk status update)
-  - [ ] `POST /api/cameras/bulk/delete` (bulk delete)
-  - [ ] `POST /api/cameras/bulk/tag` (bulk tagging)
+- [x] Implement bulk operations
+  - [x] `POST /api/cameras/bulk/update` (bulk status update)
+  - [x] `POST /api/cameras/bulk/delete` (bulk delete)
+  - [x] `POST /api/cameras/bulk/tag` (bulk tagging)
 
 ### Frontend Tasks
 - [ ] Enhance camera list page

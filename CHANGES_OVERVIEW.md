@@ -125,3 +125,23 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - LiveView now supports iframe fallback via `embedUrl` when HLS is unsupported or absent.
 - Monitor wall and camera modal now retain embed/snapshot URLs for fallback playback.
 - VMS settings now include a cleanup action to remove `vms-import` demo cameras.
+
+### Slice 9-B VMS lab + docs
+- Added `vms-lab/docker-compose.yml` for local Shinobi testing.
+- Added Shinobi lab instructions to README and documentation index.
+- Added `docs/VMS_INTEGRATION.md` with endpoints, URL formats, and test flow.
+- Added vms-lab data paths to `.gitignore` to prevent committing lab data.
+- Normalized VMS settings UI labels to ASCII and fixed the cleanup action wiring.
+- Confirmed Swagger annotations cover VMS endpoints and marked the workplan task complete.
+
+### Slice 9-C tests + manual checks
+- Added VMS route integration tests for test connection, monitor discovery, and monitor import.
+- Added camera route integration tests for stream URL generation and VMS import.
+- Documented manual HLS playback and connection test steps in `docs/VMS_INTEGRATION.md`.
+
+## 2026-01-20
+### Slice 9-A camera metadata + query endpoints
+- Extended camera model with capability flags, maintenance scheduling, and tag arrays.
+- Added status and tag filter endpoints plus a `/cameras/near` alias for geo queries.
+- Normalized tags on create/update and added tag-based filtering in list queries.
+- Added bulk status update, delete, and tag operations with tenant scoping.

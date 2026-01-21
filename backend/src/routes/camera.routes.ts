@@ -39,6 +39,16 @@ const parseCookieHeader = (header?: string): Record<string, string> => {
   }, {});
 };
 
+// Validate and map string IDs to ObjectId instances.
+const parseObjectIdList = (values: string[]): mongoose.Types.ObjectId[] => {
+  return values.map((value) => {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+      throw new ValidationError(`Invalid ObjectId: ${value}`);
+    }
+    return new mongoose.Types.ObjectId(value);
+  });
+};
+
 // TEST-ONLY: Extract stream token from HLS URL for cookie fallback.
 const extractStreamToken = (hlsUrl: string): string | null => {
   try {
@@ -134,6 +144,175 @@ router.get(
       });
 
       res.json(successResponse(result.cameras, req.correlationId, pagination));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Keep specialized collection routes ahead of /:id to avoid path conflicts.
+
+/**
+ * @swagger
+ * /cameras/status/{status}:
+ *   get:
+ *     summary: List cameras by status
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: status
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [online, offline, error, maintenance]
+ *     responses:
+ *       200:
+ *         description: List of cameras with the requested status
+ */
+router.get(
+  '/status/:status',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = req.user!.role === UserRole.SUPER_ADMIN
+        ? null
+        : new mongoose.Types.ObjectId(req.user!.companyId);
+      const status = req.params.status as CameraStatus;
+
+      // Validate status values before hitting the database.
+      if (!['online', 'offline', 'error', 'maintenance'].includes(status)) {
+        throw new ValidationError('status must be one of: online, offline, error, maintenance');
+      }
+
+      const cameras = await cameraService.findByStatus(companyId, status);
+      res.json(successResponse(cameras, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/tags/{tag}:
+ *   get:
+ *     summary: List cameras by tag
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tag
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of cameras with the requested tag
+ */
+router.get(
+  '/tags/:tag',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = req.user!.role === UserRole.SUPER_ADMIN
+        ? null
+        : new mongoose.Types.ObjectId(req.user!.companyId);
+      const tag = req.params.tag;
+
+      if (!tag || tag.trim().length === 0) {
+        throw new ValidationError('tag is required');
+      }
+
+      const cameras = await cameraService.findByTag(companyId, tag);
+      res.json(successResponse(cameras, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/near:
+ *   get:
+ *     summary: Find cameras near a location (alias for /nearby)
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: maxDistance
+ *         schema:
+ *           type: number
+ *           default: 5000
+ *     responses:
+ *       200:
+ *         description: List of nearby cameras
+ */
+router.get(
+  '/near',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = req.user!.role === UserRole.SUPER_ADMIN
+        ? null
+        : new mongoose.Types.ObjectId(req.user!.companyId);
+      const { lng, lat, maxDistance, limit } = req.query;
+
+      if (!lng || !lat) {
+        throw new ValidationError('lng and lat query parameters are required');
+      }
+
+      const cameras = await cameraService.findNearby(
+        companyId,
+        [parseFloat(lng as string), parseFloat(lat as string)],
+        maxDistance ? parseInt(maxDistance as string, 10) : 5000,
+        limit ? parseInt(limit as string, 10) : 10
+      );
+
+      res.json(successResponse(cameras, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Legacy alias for /near to preserve existing clients.
+router.get(
+  '/nearby',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = req.user!.role === UserRole.SUPER_ADMIN
+        ? null
+        : new mongoose.Types.ObjectId(req.user!.companyId);
+      const { lng, lat, maxDistance, limit } = req.query;
+
+      if (!lng || !lat) {
+        throw new ValidationError('lng and lat query parameters are required');
+      }
+
+      const cameras = await cameraService.findNearby(
+        companyId,
+        [parseFloat(lng as string), parseFloat(lat as string)],
+        maxDistance ? parseInt(maxDistance as string, 10) : 5000,
+        limit ? parseInt(limit as string, 10) : 10
+      );
+
+      res.json(successResponse(cameras, req.correlationId));
     } catch (error) {
       next(error);
     }
@@ -244,7 +423,21 @@ router.post(
       const companyId = new mongoose.Types.ObjectId(targetCompanyId);
       const userId = new mongoose.Types.ObjectId(req.user!.id);
 
-      const { name, description, streamUrl, streamConfig, type, status, location, settings, vms, metadata } = req.body;
+      const {
+        name,
+        description,
+        streamUrl,
+        streamConfig,
+        type,
+        status,
+        capabilities,
+        maintenanceSchedule,
+        tags,
+        location,
+        settings,
+        vms,
+        metadata,
+      } = req.body;
 
       // Validate required fields
       if (!name) {
@@ -253,11 +446,18 @@ router.post(
       if (!location?.coordinates || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
         throw new ValidationError('location.coordinates must be [longitude, latitude]');
       }
+      // Validate optional tag inputs.
+      if (tags !== undefined && !Array.isArray(tags)) {
+        throw new ValidationError('tags must be an array of strings');
+      }
 
       const data: CreateCameraInput = {
         name,
         description,
         streamUrl,
+        capabilities,
+        maintenanceSchedule,
+        tags,
         // TEST-ONLY: Stream config scaffolding for Direct RTSP.
         streamConfig,
         type,
@@ -316,7 +516,20 @@ router.put(
       const userId = new mongoose.Types.ObjectId(req.user!.id);
       const cameraId = new mongoose.Types.ObjectId(req.params.id);
 
-      const { name, description, streamUrl, streamConfig, type, status, location, settings, metadata } = req.body;
+      const {
+        name,
+        description,
+        streamUrl,
+        streamConfig,
+        type,
+        status,
+        capabilities,
+        maintenanceSchedule,
+        tags,
+        location,
+        settings,
+        metadata,
+      } = req.body;
 
       const data: UpdateCameraInput = {};
       if (name !== undefined) data.name = name;
@@ -326,6 +539,9 @@ router.put(
       if (streamConfig !== undefined) data.streamConfig = streamConfig;
       if (type !== undefined) data.type = type;
       if (status !== undefined) data.status = status;
+      if (capabilities !== undefined) data.capabilities = capabilities;
+      if (maintenanceSchedule !== undefined) data.maintenanceSchedule = maintenanceSchedule;
+      if (tags !== undefined) data.tags = tags;
       if (location !== undefined) data.location = location;
       if (settings !== undefined) data.settings = settings;
       if (metadata !== undefined) data.metadata = metadata;
@@ -372,6 +588,181 @@ router.delete(
       res.json(
         successResponse({ message: 'Camera deleted successfully' }, req.correlationId)
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/bulk/update:
+ *   post:
+ *     summary: Bulk update camera status
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cameraIds
+ *               - status
+ *             properties:
+ *               cameraIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               status:
+ *                 type: string
+ *                 enum: [online, offline, error, maintenance]
+ *     responses:
+ *       200:
+ *         description: Bulk update result
+ */
+router.post(
+  '/bulk/update',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const targetCompanyId = req.user!.role === UserRole.SUPER_ADMIN && req.body.companyId
+        ? req.body.companyId
+        : req.user!.companyId;
+      const companyId = new mongoose.Types.ObjectId(targetCompanyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
+      const { cameraIds, status } = req.body;
+
+      if (!Array.isArray(cameraIds) || cameraIds.length === 0) {
+        throw new ValidationError('cameraIds must be a non-empty array');
+      }
+      if (!status) {
+        throw new ValidationError('status is required');
+      }
+
+      const ids = parseObjectIdList(cameraIds);
+      const updated = await cameraService.bulkUpdateStatus(companyId, ids, status, userId);
+      res.json(successResponse({ updated }, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/bulk/delete:
+ *   post:
+ *     summary: Bulk delete cameras by ID
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cameraIds
+ *             properties:
+ *               cameraIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Bulk delete result
+ */
+router.post(
+  '/bulk/delete',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const targetCompanyId = req.user!.role === UserRole.SUPER_ADMIN && req.body.companyId
+        ? req.body.companyId
+        : req.user!.companyId;
+      const companyId = new mongoose.Types.ObjectId(targetCompanyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
+      const { cameraIds } = req.body;
+
+      if (!Array.isArray(cameraIds) || cameraIds.length === 0) {
+        throw new ValidationError('cameraIds must be a non-empty array');
+      }
+
+      const ids = parseObjectIdList(cameraIds);
+      const deleted = await cameraService.bulkDelete(companyId, ids, userId);
+      res.json(successResponse({ deleted }, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cameras/bulk/tag:
+ *   post:
+ *     summary: Bulk tag cameras
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cameraIds
+ *               - tags
+ *               - mode
+ *             properties:
+ *               cameraIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               mode:
+ *                 type: string
+ *                 enum: [add, remove, set]
+ *     responses:
+ *       200:
+ *         description: Bulk tag result
+ */
+router.post(
+  '/bulk/tag',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const targetCompanyId = req.user!.role === UserRole.SUPER_ADMIN && req.body.companyId
+        ? req.body.companyId
+        : req.user!.companyId;
+      const companyId = new mongoose.Types.ObjectId(targetCompanyId);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
+      const { cameraIds, tags, mode } = req.body;
+
+      if (!Array.isArray(cameraIds) || cameraIds.length === 0) {
+        throw new ValidationError('cameraIds must be a non-empty array');
+      }
+      if (!Array.isArray(tags) || tags.length === 0) {
+        throw new ValidationError('tags must be a non-empty array');
+      }
+      if (!mode || !['add', 'remove', 'set'].includes(mode)) {
+        throw new ValidationError('mode must be one of: add, remove, set');
+      }
+
+      const ids = parseObjectIdList(cameraIds);
+      const updated = await cameraService.bulkTag(companyId, ids, tags, mode, userId);
+      res.json(successResponse({ updated }, req.correlationId));
     } catch (error) {
       next(error);
     }
@@ -849,62 +1240,6 @@ router.get(
   }
 );
 
-/**
- * @swagger
- * /cameras/nearby:
- *   get:
- *     summary: Find cameras near a location
- *     tags: [Cameras]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: lng
- *         required: true
- *         schema:
- *           type: number
- *       - in: query
- *         name: lat
- *         required: true
- *         schema:
- *           type: number
- *       - in: query
- *         name: maxDistance
- *         schema:
- *           type: number
- *           default: 5000
- *     responses:
- *       200:
- *         description: List of nearby cameras
- */
-router.get(
-  '/nearby',
-  authenticate,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Super admins can see all cameras, others see only their company's cameras
-      const companyId = req.user!.role === UserRole.SUPER_ADMIN 
-        ? null 
-        : new mongoose.Types.ObjectId(req.user!.companyId);
-      const { lng, lat, maxDistance, limit } = req.query;
-
-      if (!lng || !lat) {
-        throw new ValidationError('lng and lat query parameters are required');
-      }
-
-      const cameras = await cameraService.findNearby(
-        companyId,
-        [parseFloat(lng as string), parseFloat(lat as string)],
-        maxDistance ? parseInt(maxDistance as string, 10) : 5000,
-        limit ? parseInt(limit as string, 10) : 10
-      );
-
-      res.json(successResponse(cameras, req.correlationId));
-    } catch (error) {
-      next(error);
-    }
-  }
-);
 
 /**
  * @swagger

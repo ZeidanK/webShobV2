@@ -258,7 +258,7 @@ export default function VmsSettingsPage() {
 
     try {
       setCleaning(server._id);
-      const result = await api.cameras.deleteCamerasBySource('vms-import');
+      const result = await api.deleteCamerasBySource('vms-import');
       alert(`Deleted ${result.deletedCount} imported camera(s).`);
       fetchServers();
     } catch (err) {
@@ -282,13 +282,11 @@ export default function VmsSettingsPage() {
 
   return (
     <div className={styles.container}>
-      <Link to="/cameras" className={styles.backLink}>
-        ← Back to Cameras
-      </Link>
+      <Link to="/cameras" className={styles.backLink}>\n        Back to Cameras\n      </Link>
 
       {/* Header */}
       <div className={styles.header}>
-        <h1 className={styles.title}>⚙️ VMS Settings</h1>
+        <h1 className={styles.title}>VMS Settings</h1>
         <button className={styles.addButton} onClick={() => openModal()}>
           + Add VMS Server
         </button>
@@ -296,8 +294,7 @@ export default function VmsSettingsPage() {
 
       {/* Error State */}
       {error && (
-        <div className={styles.emptyState}>
-          <span>⚠️</span>
+        <div className={styles.emptyState}>\n          <span>Error</span>
           <h3>Error</h3>
           <p>{error}</p>
           <button className={styles.addButton} onClick={fetchServers}>
@@ -308,8 +305,7 @@ export default function VmsSettingsPage() {
 
       {/* Empty State */}
       {!error && servers.length === 0 && (
-        <div className={styles.emptyState}>
-          <span>🖥️</span>
+        <div className={styles.emptyState}>\n          <span>Error</span>
           <h3>No VMS Servers Configured</h3>
           <p>Add a VMS server to connect cameras and view live streams.</p>
           <button className={styles.addButton} onClick={() => openModal()}>
@@ -341,25 +337,26 @@ export default function VmsSettingsPage() {
                     onClick={() => handleTestConnection(server)}
                     disabled={testing === server._id}
                   >
-                    {testing === server._id ? '...' : '🔌 Test'}
+                    {testing === server._id ? '...' : 'Test'}
                   </button>
                   <button
                     className={styles.actionButton}
                     onClick={() => handleDiscoverMonitors(server)}
                     disabled={loadingMonitors === server._id}
                   >
-                    {loadingMonitors === server._id ? '...' : '🔍 Discover'}
+                    {loadingMonitors === server._id ? '...' : 'Discover'}
                   </button>
                   <button
                     className={styles.actionButton}
                     onClick={() => openModal(server)}
                   >
-                    ✏️
-                  `</button>
-                  {/* TEST-ONLY: Cleanup imported demo cameras for this VMS. */}`n                      <button`n                        className={`${styles.actionButton} ${styles.danger}`}
+                    Edit
+                  </button>
+                  <button
+                    className={`${styles.actionButton} ${styles.danger}`}
                     onClick={() => handleDelete(server)}
                   >
-                    🗑️
+                    Delete
                   </button>
                 </div>
               </div>
@@ -378,7 +375,7 @@ export default function VmsSettingsPage() {
               {/* Test Result */}
               {testResult && testResult.serverId === server._id && (
                 <div className={`${styles.testResult} ${testResult.success ? styles.success : styles.error}`}>
-                  {testResult.success ? '✓' : '✗'} {testResult.message}
+                  {testResult.success ? 'OK' : 'Failed'} {testResult.message}
                 </div>
               )}
 
@@ -416,7 +413,7 @@ export default function VmsSettingsPage() {
                           className={styles.importButton}
                           onClick={() => handleImportCamera(server, monitor)}
                         >
-                          📥 Import
+                          Import
                         </button>
                       </div>
                     ))}
@@ -440,7 +437,7 @@ export default function VmsSettingsPage() {
                 className={styles.modalClose}
                 onClick={() => setShowModal(false)}
               >
-                ×
+                Close
               </button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -627,6 +624,10 @@ export default function VmsSettingsPage() {
     </div>
   );
 }
+
+
+
+
 
 
 

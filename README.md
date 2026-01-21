@@ -145,6 +145,19 @@ Open your browser and navigate to:
 - **AI Service**: http://localhost:8000
 
 - **Shinobi VMS**: http://localhost:8080 (default: admin@shinobi.local / admin123)
+
+### Shinobi VMS Lab (Local)
+
+If you want a local Shinobi instance for VMS testing, use the dedicated lab stack:
+
+```bash
+cd vms-lab
+docker-compose up -d
+```
+
+If the default credentials above do not work, create an admin in the Shinobi UI and
+generate API keys from the Shinobi account settings.
+Create monitors in Shinobi so they appear in the VMS discovery list.
 ### 6. Verify Everything is Working
 
 Check the health endpoints:
@@ -584,6 +597,7 @@ Additional documentation is available in the `docs/` folder:
 - [Testing Strategy](docs/02-TESTING_STRATEGY.md) - Unit, integration, and contract testing
 - [Logging & Observability](docs/03-LOGGING_OBSERVABILITY.md) - Structured logging and metrics
 - [WebSocket Events](docs/04-WEBSOCKET_EVENTS.md) - Real-time event specifications
+- [VMS Integration](docs/VMS_INTEGRATION.md) - Shinobi setup and VMS API endpoints
 
 See also the main design documents:
 
