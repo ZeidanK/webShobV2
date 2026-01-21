@@ -191,6 +191,10 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added VMS vs Direct RTSP selector to camera form, with RTSP transport and VMS monitor inputs.
 - Wired direct-rtsp heartbeat pings into LiveView and monitor wall tiles.
 - Extended monitor wall stream loading to handle direct-rtsp cameras.
+### Slice 10-D checks
+- Added unit tests for RTSP stream tokens and HLS path validation.
+- Added a `SKIP_DB_SETUP` guard in test setup to allow non-DB unit tests on Alpine.
+- Ran `npm test -- --runTestsByPath src/services/rtsp-stream.service.test.ts` with `SKIP_DB_SETUP=true` (passed; ts-jest warnings about `isolatedModules` remain).
 ### Frontend build fixes
 - Removed unused React imports and resize handler args that were failing `tsc` strict checks.
 - Replaced mojibake UI labels in operator/event playback/report submission flows with ASCII-only text.

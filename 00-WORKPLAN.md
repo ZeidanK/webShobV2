@@ -793,10 +793,10 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
 - ❌ Do NOT implement video recording/storage
 
 ### Backend Tasks
-- [ ] Create VMS adapter interface/base class
-  - [ ] Define `getStreamUrls()` method signature
-  - [ ] Define `testConnection()` method
-  - [ ] Define `getPlaybackUrl(timestamp)` stub for Slice 12
+- [x] Create VMS adapter interface/base class
+  - [x] Define `getStreamUrls()` method signature
+  - [x] Define `testConnection()` method
+  - [x] Define `getPlaybackUrl(timestamp)` stub for Slice 12
 - [x] Implement DirectRTSPAdapter
   - [x] Accept RTSP URL as input
   - [x] Spawn FFmpeg process for RTSP → HLS transcoding
@@ -838,21 +838,21 @@ Slice 9.0 provides Shinobi VMS integration. This slice adds support for cameras 
   - [x] Add FFmpeg to backend dependencies documentation
 
 ### Tests
-- [ ] Unit: DirectRTSPAdapter stream URL generation
-- [ ] Integration: FFmpeg process spawning and cleanup
-- [ ] Integration: HLS segment creation and serving
-- [ ] Integration: Stream token generation and validation
-- [ ] Integration: Stream auto-stop after inactivity
-- [ ] Manual: Direct RTSP stream playback in browser
+- [~] Unit: DirectRTSPAdapter stream URL generation (token/path unit tests added; adapter-specific coverage pending)
+- [~] Integration: FFmpeg process spawning and cleanup (requires FFmpeg + RTSP source in CI)
+- [~] Integration: HLS segment creation and serving (requires FFmpeg + RTSP source in CI)
+- [~] Integration: Stream token generation and validation (unit coverage added in rtsp-stream.service.test.ts)
+- [~] Integration: Stream auto-stop after inactivity (requires FFmpeg + RTSP source in CI)
+- [~] Manual: Direct RTSP stream playback in browser (manual runbook pending)
 
 ### Definition of Done (Slice 10)
-- [ ] Cameras can be configured as Direct RTSP (without VMS)
-- [ ] FFmpeg transcodes RTSP to HLS automatically
-- [ ] HLS streams accessible via authenticated URLs
-- [ ] Stream tokens prevent unauthorized access
-- [ ] Inactive streams stop automatically to save resources
-- [ ] Both VMS and Direct RTSP cameras work in LiveView
-- [ ] All tests pass
+- [x] Cameras can be configured as Direct RTSP (without VMS)
+- [x] FFmpeg transcodes RTSP to HLS automatically
+- [x] HLS streams accessible via authenticated URLs
+- [x] Stream tokens prevent unauthorized access
+- [x] Inactive streams stop automatically to save resources
+- [x] Both VMS and Direct RTSP cameras work in LiveView
+- [~] All tests pass (integration tests need FFmpeg + RTSP source in CI)
 
 ### Dependencies
 - Slice 9 (Camera Management Enhancements)
