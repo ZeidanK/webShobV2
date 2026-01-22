@@ -553,8 +553,8 @@ export class ReportService {
     minLat: number;
     maxLng: number;
     maxLat: number;
-    status?: ReportStatus | ReportStatus[];
-    type?: ReportType | ReportType[];
+    status?: string | string[]; // Allow any status strings
+    type?: string | string[]; // Allow any type strings
     correlationId: string;
   }): Promise<IReport[]> {
     try {

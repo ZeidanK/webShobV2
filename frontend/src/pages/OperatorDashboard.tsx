@@ -101,7 +101,7 @@ export function OperatorDashboard() {
         setEvents([]);
       }
 
-      if ((displayMode === 'reports' || displayMode === 'both') && mapFilters.display.showReports) {
+      if (displayMode === 'reports' || displayMode === 'both') {
         // Reports filters mirror the API query shape with optional status/type.
         const reportFilters = { ...mapBounds } as {
           minLng: number;
