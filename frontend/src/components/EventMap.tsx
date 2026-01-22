@@ -32,6 +32,7 @@ interface EventMapProps {
   onEventNearby?: (event: Event) => void;
   onReportClick?: (report: Report) => void;
   onCameraClick?: (camera: Camera) => void;
+  onCameraDetails?: (camera: Camera) => void;
   onEventRadiusView?: (event: Event, radius: number) => void;
   selectedEventId?: string;
   showCameraClusters?: boolean;
@@ -206,6 +207,7 @@ export function EventMap({
   onEventNearby,
   onReportClick,
   onCameraClick,
+  onCameraDetails,
   onEventRadiusView,
   onContextMenu,
   selectedEventId,
@@ -299,7 +301,13 @@ export function EventMap({
                               className={`${styles.popupButton} ${styles.popupButtonPrimary}`}
                               onClick={() => onCameraClick?.(camera)}
                             >
-                              View Camera
+                              View Live
+                            </button>
+                            <button
+                              className={`${styles.popupButton} ${styles.popupButtonSecondary}`}
+                              onClick={() => onCameraDetails?.(camera)}
+                            >
+                              Camera Details
                             </button>
                           </div>
                         </div>

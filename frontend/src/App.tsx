@@ -18,6 +18,7 @@ import ReportSubmissionPage from './pages/ReportSubmissionPage';
 import ReportDetailPage from './pages/ReportDetailPage';
 import CamerasPage from './pages/CamerasPage';
 import CameraFormPage from './pages/CameraFormPage';
+import CameraDetailPage from './pages/CameraDetailPage';
 import MonitorWallPage from './pages/MonitorWallPage';
 import VmsSettingsPage from './pages/VmsSettingsPage';
 import { websocketService } from './services/websocket';
@@ -175,6 +176,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="admin">
               <CameraFormPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="cameras/:id" 
+          element={
+            <ProtectedRoute requiredRole="operator">
+              <CameraDetailPage />
             </ProtectedRoute>
           } 
         />

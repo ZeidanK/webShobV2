@@ -250,9 +250,21 @@ export function OperatorDashboard() {
     }
   }, [navigate, nearbyMaxCameras]);
   
-  // Handle camera click
+  // Handle camera live view (open in monitor wall)
   const handleCameraClick = useCallback((camera: Camera) => {
-    console.log('[OperatorDashboard] Camera clicked:', camera._id);
+    console.log('[OperatorDashboard] Opening camera in monitor wall:', camera._id);
+    sessionStorage.setItem('monitorWallContext', JSON.stringify({
+      source: 'map-camera',
+      cameraIds: [camera._id],
+      cameraName: camera.name,
+      timestamp: new Date().toISOString(),
+    }));
+    navigate('/cameras/monitor-wall');
+  }, [navigate]);
+  
+  // Handle camera details view
+  const handleCameraDetails = useCallback((camera: Camera) => {
+    console.log('[OperatorDashboard] Navigating to camera details:', camera._id);
     navigate(`/cameras/${camera._id}`);
   }, [navigate]);
   
@@ -473,6 +485,7 @@ export function OperatorDashboard() {
           onEventClick={handleEventClick}
           onEventRadiusView={handleViewNearbyCameras}
           onCameraClick={handleCameraClick}
+          onCameraDetails={handleCameraDetails}
           onContextMenu={handleContextMenu}
           selectedEventId={selectedEventId}
           showCameraClusters={mapFilters.display.clusterCameras}
