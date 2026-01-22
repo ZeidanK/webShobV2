@@ -82,6 +82,12 @@ export interface CreateCameraInput {
     fps?: number;
     recordingEnabled?: boolean;
   };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
+  };
   vms?: {
     provider?: VmsProvider;
     serverId?: mongoose.Types.ObjectId;
@@ -132,6 +138,12 @@ export interface UpdateCameraInput {
     resolution?: string;
     fps?: number;
     recordingEnabled?: boolean;
+  };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
   };
   metadata?: Record<string, unknown>;
 }
@@ -436,6 +448,10 @@ class CameraService {
 
     if (data.settings) {
       camera.settings = { ...camera.settings, ...data.settings };
+    }
+
+    if (data.recording) {
+      camera.recording = { ...camera.recording, ...data.recording };
     }
 
     if (data.capabilities) {

@@ -85,6 +85,11 @@
   transition: all 0.2s;
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .primaryButton {
   composes: button;
   background: #3b82f6;
@@ -103,6 +108,15 @@
 
 .secondaryButton:hover {
   background: #e5e7eb;
+}
+
+.playbackBadge {
+  background: #1f2937;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  margin-left: 0.5rem;
 }
 
 .dangerButton {

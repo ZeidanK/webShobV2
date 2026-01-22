@@ -285,6 +285,12 @@ export interface Camera {
     fps?: number;
     recordingEnabled?: boolean;
   };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
+  };
   vms?: {
     provider?: VmsProvider;
     serverId?: string;
@@ -347,6 +353,12 @@ export interface CreateCameraInput {
     fps?: number;
     recordingEnabled?: boolean;
   };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
+  };
   vms?: {
     serverId?: string;
     monitorId?: string;
@@ -372,6 +384,12 @@ export interface UpdateCameraInput {
     resolution?: string;
     fps?: number;
     recordingEnabled?: boolean;
+  };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
   };
   metadata?: Record<string, unknown>;
 }

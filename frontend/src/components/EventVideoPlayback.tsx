@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CameraGrid } from './CameraGrid';
 import { apiClient } from '../services/api';
 import styles from './EventVideoPlayback.module.css';
@@ -13,6 +13,8 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // TEST-ONLY: Layout selection for playback grid sizing.
+  const [layout, setLayout] = useState<'auto' | '1x1' | '2x2' | '3x3'>('auto');
 
   useEffect(() => {
     const fetchPlayback = async () => {
@@ -35,7 +37,14 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
   }, [eventId]);
 
   const camerasWithRecording = cameras.filter((c) => c.hasRecording);
-  const columns = cameras.length <= 4 ? 2 : cameras.length <= 9 ? 3 : 4;
+  const columns = layout === '1x1' ? 1 : layout === '2x2' ? 2 : layout === '3x3' ? 3 : cameras.length <= 4 ? 2 : cameras.length <= 9 ? 3 : 4;
+  // TEST-ONLY: Normalize event playback data to CameraGrid fields.
+  const gridCameras = useMemo(() => cameras.map((camera) => ({
+    id: camera.cameraId ?? camera.id,
+    name: camera.name,
+    streamUrl: camera.streamUrl,
+    status: camera.status,
+  })), [cameras]);
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -78,8 +87,31 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
               {camerasWithRecording.length === 0 && (
                 <div className={styles.warning}>Warning: no cameras have recording enabled. Only live feeds available.</div>
               )}
+              {/* TEST-ONLY: Playback toolbar with layout + availability summary. */}
+              <div className={styles.toolbar}>
+                <div className={styles.toolbarInfo}>
+                  <span className={styles.infoLabel}>Cameras:</span>
+                  <span className={styles.infoValue}>{cameras.length}</span>
+                  <span className={styles.infoDivider}>/</span>
+                  <span className={styles.infoLabel}>With recording:</span>
+                  <span className={styles.infoValue}>{camerasWithRecording.length}</span>
+                </div>
+                <label className={styles.layoutLabel}>
+                  Layout
+                  <select
+                    className={styles.layoutSelect}
+                    value={layout}
+                    onChange={(event) => setLayout(event.target.value as typeof layout)}
+                  >
+                    <option value="auto">Auto</option>
+                    <option value="1x1">1x1</option>
+                    <option value="2x2">2x2</option>
+                    <option value="3x3">3x3</option>
+                  </select>
+                </label>
+              </div>
               <div className={styles.gridContainer}>
-                <CameraGrid cameras={cameras} columns={columns} />
+                <CameraGrid cameras={gridCameras} columns={columns} />
               </div>
               <div className={styles.footer}>
                 <div className={styles.footerInfo}>

@@ -16,4 +16,14 @@ export class GenetecAdapter implements IVMSAdapter {
     // Stub implementation for Slice 11: not yet supported.
     throw new AppError('RESOURCE_NOT_FOUND', 'Genetec adapter is not implemented', 501);
   }
+
+  async checkRecordingAvailability(_cameraId: string, _timestamp: Date): Promise<{ available: boolean; reason?: string }> {
+    // TEST-ONLY: Stub implementation for Slice 11: not yet supported.
+    throw new AppError('RESOURCE_NOT_FOUND', 'Genetec adapter is not implemented', 501);
+  }
+
+  async getRecordingRange(_cameraId: string): Promise<{ start?: Date; end?: Date } | null> {
+    // TEST-ONLY: Stub implementation for Slice 11: not yet supported.
+    throw new AppError('RESOURCE_NOT_FOUND', 'Genetec adapter is not implemented', 501);
+  }
 }

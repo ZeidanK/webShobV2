@@ -38,6 +38,12 @@ All adapters implement the shared interface in `backend/src/adapters/vms/index.t
   - Stream URL generation
   - Playback URL generation
 
+## Direct RTSP Recording (Phase 2)
+Direct RTSP streams do not support recording in the MVP. Phase 2 requires:
+- A storage pipeline for HLS segments or recorded MP4 clips.
+- Retention policies per camera (`retentionDays`).
+- A playback URL service that maps timestamps to stored segments.
+
 ## Testing Guidelines
 - Unit: verify `VmsAdapterFactory.create()` returns the correct adapter.
 - Unit: verify Milestone/Genetec stubs throw "not implemented" errors.

@@ -969,35 +969,35 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - ❌ Do NOT implement video editing
 
 ### Backend Tasks
-- [ ] Extend VMS adapter interface with playback methods
-  - [ ] `getPlaybackUrl(timestamp, duration)` → returns playback stream URL
-  - [ ] `checkRecordingAvailability(timestamp)` → boolean
-  - [ ] `getRecordingRange()` → returns available date range
-- [ ] Implement playback for Shinobi adapter
-  - [ ] Shinobi playback URL format research
-  - [ ] Generate time-aligned playback URLs
-  - [ ] Handle "no recording" gracefully
-- [ ] Implement playback stub for Direct RTSP
-  - [ ] Return "Recording not available" (no storage in MVP)
-  - [ ] Document Phase 2 recording storage requirements
-- [ ] Implement event video playback endpoint
-  - [ ] `GET /api/events/:id/video-playback`
-  - [ ] Find cameras near event location (geo-spatial query)
-  - [ ] Generate playback URLs for each camera at event timestamp
+- [x] Extend VMS adapter interface with playback methods
+  - [x] `getPlaybackUrl(timestamp, duration)` → returns playback stream URL
+  - [x] `checkRecordingAvailability(timestamp)` → boolean
+  - [x] `getRecordingRange()` → returns available date range
+- [x] Implement playback for Shinobi adapter
+  - [x] Shinobi playback URL format research
+  - [x] Generate time-aligned playback URLs
+  - [~] Handle "no recording" gracefully
+- [x] Implement playback stub for Direct RTSP
+  - [x] Return "Recording not available" (no storage in MVP)
+  - [x] Document Phase 2 recording storage requirements
+- [~] Implement event video playback endpoint
+  - [x] `GET /api/events/:id/video-playback`
+  - [x] Find cameras near event location (geo-spatial query)
+  - [x] Generate playback URLs for each camera at event timestamp
   - [ ] Return array of `{ cameraId, cameraName, playbackUrl, available }`
-- [ ] Add recording configuration to Camera model
-  - [ ] `recording.enabled` boolean
-  - [ ] `recording.retentionDays` integer
-  - [ ] `recording.vmsHandled` boolean (true for VMS-based recording)
+- [x] Add recording configuration to Camera model
+  - [x] `recording.enabled` boolean
+  - [x] `recording.retentionDays` integer
+  - [x] `recording.vmsHandled` boolean (true for VMS-based recording)
 
 ### Frontend Tasks
-- [ ] Create EventVideoPlayback component
-  - [ ] Triggered from event detail page
-  - [ ] "View Video" button (disabled if no cameras nearby)
-- [ ] Implement multi-camera playback layout
-  - [ ] Grid view: 1x1, 2x2, 3x3 layouts
-  - [ ] Each camera in separate video player
-  - [ ] Show camera name and status
+- [x] Create EventVideoPlayback component
+  - [x] Triggered from event detail page
+  - [x] "View Video" button (disabled if no cameras nearby)
+- [x] Implement multi-camera playback layout
+  - [x] Grid view: 1x1, 2x2, 3x3 layouts
+  - [x] Each camera in separate video player
+  - [x] Show camera name and status
 - [ ] Add timeline scrubber
   - [ ] Horizontal timeline with event marker
   - [ ] Seek to specific time
@@ -1006,12 +1006,12 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
   - [ ] Play/pause all cameras together
   - [ ] Sync seek operations
   - [ ] Show sync status indicator
-- [ ] Handle "no recording" gracefully
+- [~] Handle "no recording" gracefully
   - [ ] Show message: "Recording not available for this camera"
   - [ ] Suggest enabling recording or checking VMS
-- [ ] Link from event detail to playback
-  - [ ] "View Video" button in event detail
-  - [ ] Badge showing # of cameras with recording
+- [x] Link from event detail to playback
+  - [x] "View Video" button in event detail
+  - [x] Badge showing # of cameras with recording
 
 ### Tests
 - [ ] Integration: playback URL generation for Shinobi
@@ -1021,13 +1021,13 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - [ ] Manual: Timeline scrubber functionality
 
 ### Definition of Done (Slice 12)
-- [ ] Operator can access playback from event detail page
-- [ ] Playback URLs generated for cameras with recording
-- [ ] Multiple cameras shown in grid layout
+- [x] Operator can access playback from event detail page
+- [x] Playback URLs generated for cameras with recording
+- [x] Multiple cameras shown in grid layout
 - [ ] Playback synchronized across cameras
 - [ ] Timeline scrubber allows seeking
-- [ ] Graceful handling when no recording exists
-- [ ] UI shows which cameras have recording available
+- [~] Graceful handling when no recording exists
+- [~] UI shows which cameras have recording available
 - [~] All tests pass
 
 ### Dependencies

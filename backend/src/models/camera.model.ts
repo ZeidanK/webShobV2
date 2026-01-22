@@ -87,6 +87,13 @@ export interface ICamera extends Document {
     fps?: number;
     recordingEnabled?: boolean;
   };
+
+  /** TEST-ONLY: Recording configuration (Slice 12) */
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
+  };
   
   /** VMS integration data */
   vms?: {
@@ -291,10 +298,24 @@ const CameraSchema = new Schema<ICamera>(
         default: false,
       },
     },
+    recording: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      retentionDays: {
+        type: Number,
+        min: [1, 'Retention days must be at least 1'],
+        max: [3650, 'Retention days must be at most 3650'],
+      },
+      vmsHandled: {
+        type: Boolean,
+      },
+    },
     vms: {
       provider: {
         type: String,
-        enum: ['shinobi', 'zoneminder', 'agentdvr', 'other'],
+        enum: ['shinobi', 'zoneminder', 'agentdvr', 'milestone', 'genetec', 'other'],
       },
       serverId: {
         type: Schema.Types.ObjectId,

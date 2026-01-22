@@ -17,7 +17,12 @@ export interface StreamUrls {
 export interface IVMSAdapter {
   getStreamUrls(cameraId: string): Promise<StreamUrls>;
   testConnection(): Promise<{ success: boolean; message?: string }>;
+  // TEST-ONLY: Playback URL generation for recorded streams (Slice 12).
   getPlaybackUrl(cameraId: string, startTime: Date, endTime?: Date): Promise<string>;
+  // TEST-ONLY: Recording availability probe for a specific time (Slice 12).
+  checkRecordingAvailability(cameraId: string, timestamp: Date): Promise<{ available: boolean; reason?: string }>;
+  // TEST-ONLY: Recording range lookup for a camera (Slice 12).
+  getRecordingRange(cameraId: string): Promise<{ start?: Date; end?: Date } | null>;
 }
 
 // Adapters to be implemented:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, Event, Report } from '../services/api';
+import { api, apiClient, Event, Report } from '../services/api';
 import { websocketService, WebSocketEvent } from '../services/websocket';
 import { EventVideoPlayback } from '../components/EventVideoPlayback';
 import styles from './EventDetailPage.module.css';
@@ -19,6 +19,11 @@ export default function EventDetailPage() {
   const [useManualInput, setUseManualInput] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [showVideoPlayback, setShowVideoPlayback] = useState(false);
+  // TEST-ONLY: Playback summary for "View Cameras" availability and badge.
+  const [playbackSummary, setPlaybackSummary] = useState<{ total: number; withRecording: number }>({
+    total: 0,
+    withRecording: 0,
+  });
 
   const loadEvent = async () => {
     if (!id) return;
@@ -39,7 +44,24 @@ export default function EventDetailPage() {
   useEffect(() => {
     loadEvent();
     loadAvailableReports();
+    loadPlaybackSummary();
   }, [id]);
+
+  // TEST-ONLY: Fetch playback summary to enable/disable playback action.
+  const loadPlaybackSummary = async () => {
+    if (!id) return;
+    try {
+      const response = await apiClient.get<{ cameras: Array<{ hasRecording?: boolean }> }>(
+        `/events/${id}/video-playback`
+      );
+      const cameras = response.cameras || [];
+      const withRecording = cameras.filter((camera) => camera.hasRecording).length;
+      setPlaybackSummary({ total: cameras.length, withRecording });
+    } catch (err) {
+      console.error('[EventDetailPage] Error loading playback summary:', err);
+      setPlaybackSummary({ total: 0, withRecording: 0 });
+    }
+  };
 
   const loadAvailableReports = async () => {
     try {
@@ -177,9 +199,17 @@ export default function EventDetailPage() {
     return (
       <div className={styles.eventDetailPage}>
         <div className={styles.error}>{error || 'Event not found'}</div>
-        <button className={styles.secondaryButton} onClick={() => navigate('/events')}>
-          Back to Events
-        </button>
+        <button 
+            className={styles.secondaryButton}
+            onClick={() => setShowVideoPlayback(true)}
+            title="View cameras near event location"
+            disabled={playbackSummary.total === 0}
+          >
+            View Cameras
+            {playbackSummary.withRecording > 0 && (
+              <span className={styles.playbackBadge}>{playbackSummary.withRecording}</span>
+            )}
+          </button>
       </div>
     );
   }
@@ -191,8 +221,9 @@ export default function EventDetailPage() {
 
   return (
     <div className={styles.eventDetailPage}>
+      {/* Keep ASCII labels to avoid encoding issues in UI text. */}
       <button className={styles.backButton} onClick={() => navigate('/events')}>
-        ← Back to Events
+        Back to Events
       </button>
 
       <div className={styles.header}>
@@ -226,6 +257,7 @@ export default function EventDetailPage() {
         </div>
 
         <div className={styles.actions}>
+          {/* TEST-ONLY: Action toolbar includes playback access for nearby cameras. */}
           {canAssign && (
             <button 
               className={styles.primaryButton}
@@ -246,7 +278,7 @@ export default function EventDetailPage() {
           )}
           {canClose && (
             <button 
-              className={styles.secondaryButton}
+              className={styles.dangerButton}
               onClick={() => handleStatusChange('closed')}
               disabled={actionLoading}
             >
@@ -266,8 +298,12 @@ export default function EventDetailPage() {
             className={styles.secondaryButton}
             onClick={() => setShowVideoPlayback(true)}
             title="View cameras near event location"
+            disabled={playbackSummary.total === 0}
           >
-            📹 View Cameras
+            View Cameras
+            {playbackSummary.withRecording > 0 && (
+              <span className={styles.playbackBadge}>{playbackSummary.withRecording}</span>
+            )}
           </button>
         </div>
       </div>
@@ -411,7 +447,7 @@ export default function EventDetailPage() {
                       </h4>
                       {reportData && (
                         <p className={styles.reportMeta}>
-                          {reportData.type} • {reportData.status} • {formatDate(reportData.createdAt)}
+                          {reportData.type} - {reportData.status} - {formatDate(reportData.createdAt)}
                         </p>
                       )}
                       {event.status !== 'closed' && (
@@ -455,3 +491,4 @@ export default function EventDetailPage() {
     </div>
   );
 }
+

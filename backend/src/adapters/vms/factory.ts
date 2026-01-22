@@ -36,6 +36,12 @@ export class VmsAdapterFactory {
             getPlaybackUrl: async () => {
               throw new Error('Shinobi adapter is handled via vmsService');
             },
+            checkRecordingAvailability: async () => {
+              throw new Error('Shinobi adapter is handled via vmsService');
+            },
+            getRecordingRange: async () => {
+              throw new Error('Shinobi adapter is handled via vmsService');
+            },
           },
           capabilities: {
             supportsLive: true,
@@ -53,6 +59,12 @@ export class VmsAdapterFactory {
               throw new Error('Direct RTSP streams are handled via rtspStreamService');
             },
             getPlaybackUrl: async () => {
+              throw new Error('Direct RTSP playback is not supported');
+            },
+            checkRecordingAvailability: async () => {
+              throw new Error('Direct RTSP playback is not supported');
+            },
+            getRecordingRange: async () => {
               throw new Error('Direct RTSP playback is not supported');
             },
           },
@@ -85,6 +97,12 @@ export class VmsAdapterFactory {
               throw new Error(`Unsupported VMS provider: ${provider}`);
             },
             getPlaybackUrl: async () => {
+              throw new Error(`Unsupported VMS provider: ${provider}`);
+            },
+            checkRecordingAvailability: async () => {
+              throw new Error(`Unsupported VMS provider: ${provider}`);
+            },
+            getRecordingRange: async () => {
               throw new Error(`Unsupported VMS provider: ${provider}`);
             },
           },

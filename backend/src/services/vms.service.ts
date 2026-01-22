@@ -554,6 +554,104 @@ class VmsService {
   }
 
   /**
+   * TEST-ONLY: Resolve playback URL for a VMS camera (Slice 12).
+   */
+  async getPlaybackUrl(
+    server: IVmsServer,
+    monitorId: string,
+    startTime: Date,
+    endTime?: Date
+  ): Promise<string | null> {
+    switch (server.provider) {
+      case 'shinobi': {
+        // TEST-ONLY: Resolve the closest Shinobi MP4 clip for the requested time.
+        const match = await this.findShinobiPlaybackClip(server, monitorId, startTime, endTime);
+        if (!match?.filename) {
+          return null;
+        }
+        const apiKey = server.auth?.apiKey;
+        const groupKey = server.auth?.groupKey;
+        if (!apiKey || !groupKey) {
+          return null;
+        }
+        const playbackBaseUrl = (server.publicBaseUrl || server.baseUrl).replace(/\/+$/, '');
+        const href = match.href || `/${apiKey}/videos/${groupKey}/${monitorId}/${match.filename}`;
+        return `${playbackBaseUrl}${href.startsWith('/') ? '' : '/'}${href}`;
+      }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * TEST-ONLY: Check recording availability for a specific time (Slice 12).
+   */
+  async checkRecordingAvailability(
+    server: IVmsServer,
+    monitorId: string,
+    timestamp: Date
+  ): Promise<{ available: boolean; reason?: string }> {
+    switch (server.provider) {
+      case 'shinobi': {
+        const match = await this.findShinobiPlaybackClip(server, monitorId, timestamp);
+        if (match?.filename) {
+          return { available: true };
+        }
+        return { available: false, reason: 'No recording found for requested time' };
+      }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
+      default:
+        return { available: false, reason: `Playback not supported for ${server.provider}` };
+    }
+  }
+
+  /**
+   * TEST-ONLY: Fetch recording range metadata for a camera (Slice 12).
+   */
+  async getRecordingRange(
+    server: IVmsServer,
+    monitorId: string
+  ): Promise<{ start?: Date; end?: Date } | null> {
+    switch (server.provider) {
+      case 'shinobi': {
+        const videos = await this.fetchShinobiVideos(server, monitorId, 50);
+        if (videos.length === 0) {
+          return null;
+        }
+        const times = videos
+          .map((video) => {
+            const start = Date.parse(video.time || '');
+            const end = Date.parse(video.end || '');
+            return {
+              start: Number.isNaN(start) ? undefined : start,
+              end: Number.isNaN(end) ? undefined : end,
+            };
+          })
+          .filter((entry) => entry.start !== undefined);
+        if (times.length === 0) {
+          return null;
+        }
+        const minStart = Math.min(...times.map((entry) => entry.start as number));
+        const maxEnd = Math.max(...times.map((entry) => (entry.end ?? entry.start) as number));
+        return { start: new Date(minStart), end: new Date(maxEnd) };
+      }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
+      default:
+        return null;
+    }
+  }
+
+  /**
    * Get monitor status for a VMS camera
    */
   async getMonitorStatus(
@@ -702,6 +800,69 @@ class VmsService {
       embed: `${streamBaseUrl}/${apiKey}/embed/${groupKey}/${monitorId}`,
       snapshot: `${streamBaseUrl}/${apiKey}/jpeg/${groupKey}/${monitorId}/s.jpg`,
     };
+  }
+
+  // TEST-ONLY: Shinobi videos metadata used for playback selection.
+  private async fetchShinobiVideos(
+    server: IVmsServer,
+    monitorId: string,
+    limit: number
+  ): Promise<Array<{ time?: string; end?: string; filename?: string; href?: string }>> {
+    const { baseUrl, auth } = server;
+    if (!auth?.apiKey || !auth?.groupKey) {
+      return [];
+    }
+    const url = `${baseUrl}/${auth.apiKey}/videos/${auth.groupKey}/${monitorId}?limit=${limit}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      throw new Error(`Shinobi returned status ${response.status}`);
+    }
+    const payload = await response.json();
+    const videos = Array.isArray(payload?.videos) ? payload.videos : [];
+    return videos.map((video: Record<string, unknown>) => ({
+      time: typeof video.time === 'string' ? video.time : undefined,
+      end: typeof video.end === 'string' ? video.end : undefined,
+      filename: typeof video.filename === 'string' ? video.filename : undefined,
+      href: typeof video.href === 'string' ? video.href : undefined,
+    }));
+  }
+
+  // TEST-ONLY: Find the Shinobi playback clip that covers the requested timestamp.
+  private async findShinobiPlaybackClip(
+    server: IVmsServer,
+    monitorId: string,
+    startTime: Date,
+    endTime?: Date
+  ): Promise<{ time?: string; end?: string; filename?: string; href?: string } | null> {
+    const videos = await this.fetchShinobiVideos(server, monitorId, 50);
+    if (videos.length === 0) {
+      return null;
+    }
+    const target = startTime.getTime();
+    const boundedTarget = endTime ? Math.min(endTime.getTime(), target) : target;
+    const match = videos.find((video) => {
+      const start = Date.parse(video.time || '');
+      const end = Date.parse(video.end || '');
+      if (Number.isNaN(start)) {
+        return false;
+      }
+      if (!Number.isNaN(end)) {
+        return boundedTarget >= start && boundedTarget <= end;
+      }
+      return boundedTarget >= start;
+    });
+    if (match?.filename) {
+      return match;
+    }
+    const fallback = videos.find((video) => {
+      const start = Date.parse(video.time || '');
+      return !Number.isNaN(start) && boundedTarget >= start;
+    });
+    return fallback ?? videos[0] ?? null;
   }
 
   /**
