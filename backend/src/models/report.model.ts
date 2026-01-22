@@ -76,7 +76,7 @@ export interface ILocation {
 export interface IReport extends Document {
   title: string;
   description: string;
-  type: ReportType;
+  type: string; // Allow any string for flexible report types (can match ReportType enum or custom types)
   source: ReportSource;
   status: ReportStatus;
   
@@ -169,8 +169,8 @@ const reportSchema = new Schema<IReport>(
     },
     type: {
       type: String,
-      enum: Object.values(ReportType),
       required: [true, 'Report type is required'],
+      trim: true,
       index: true,
     },
     source: {

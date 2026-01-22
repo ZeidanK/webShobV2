@@ -25,10 +25,10 @@ export class ReportService {
   static async createReport(data: {
     title: string;
     description: string;
-    type: ReportType;
+    type: string; // Allow any string for flexible report types
     location: {
-      longitude: number;
-      latitude: number;
+      type: 'Point';
+      coordinates: [number, number]; // GeoJSON format: [longitude, latitude]
     };
     locationDescription?: string;
     companyId: string;
@@ -65,10 +65,7 @@ export class ReportService {
         source: data.source || ReportSource.CITIZEN,
         status: ReportStatus.PENDING,
         companyId: data.companyId,
-        location: {
-          type: 'Point',
-          coordinates: [data.location.longitude, data.location.latitude],
-        },
+        location: data.location, // Already in GeoJSON format
         locationDescription: data.locationDescription,
         reportedBy: data.reportedBy,
         reporterName: `${user.firstName} ${user.lastName}`,

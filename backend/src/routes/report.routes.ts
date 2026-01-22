@@ -204,8 +204,9 @@ router.post(
         throw new AppError('VALIDATION_ERROR', 'Location coordinates must be numbers', 400);
       }
 
-      if (!Object.values(ReportType).includes(type)) {
-        throw new AppError('VALIDATION_ERROR', `Invalid report type. Must be one of: ${Object.values(ReportType).join(', ')}`, 400);
+      // Type validation: accept any string (custom types, event types, or predefined types)
+      if (typeof type !== 'string' || !type.trim()) {
+        throw new AppError('VALIDATION_ERROR', 'Report type must be a non-empty string', 400);
       }
 
       const report = await ReportService.createReport({
