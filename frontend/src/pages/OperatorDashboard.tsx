@@ -46,6 +46,9 @@ export function OperatorDashboard() {
       hasVms: null,
       search: '',
     },
+    reports: {
+      status: [],
+    },
   });
   
   // Context menu state
@@ -99,8 +102,11 @@ export function OperatorDashboard() {
 
       if ((displayMode === 'reports' || displayMode === 'both') && mapFilters.display.showReports) {
         const reportFilters = { ...mapBounds };
-        // Only apply status filter for reports (they don't have priority)
-        if (statusFilter !== 'all' && ['pending', 'verified', 'rejected'].includes(statusFilter)) {
+        
+        // Apply filter overlay filters for reports
+        if (mapFilters.reports.status.length > 0) {
+          reportFilters.status = mapFilters.reports.status[0]; // Use first selected status
+        } else if (statusFilter !== 'all' && ['pending', 'verified', 'rejected'].includes(statusFilter)) {
           reportFilters.status = statusFilter;
         }
         
@@ -501,6 +507,27 @@ export function OperatorDashboard() {
             onClose={() => setShowFilterOverlay(false)}
             eventCount={events.length}
             cameraCount={cameras.length}
+            reportCount={reports.length}
+            cameraCounts={{
+              online: cameras.filter(c => c.status === 'online').length,
+              offline: cameras.filter(c => c.status === 'offline').length,
+              maintenance: cameras.filter(c => c.status === 'maintenance').length,
+              error: cameras.filter(c => c.status === 'error').length,
+            }}
+            eventCounts={{
+              active: events.filter(e => e.status === 'active').length,
+              assigned: events.filter(e => e.status === 'assigned').length,
+              resolved: events.filter(e => e.status === 'resolved').length,
+              critical: events.filter(e => e.priority === 'critical').length,
+              high: events.filter(e => e.priority === 'high').length,
+              medium: events.filter(e => e.priority === 'medium').length,
+              low: events.filter(e => e.priority === 'low').length,
+            }}
+            reportCounts={{
+              pending: reports.filter(r => r.status === 'pending').length,
+              verified: reports.filter(r => r.status === 'verified').length,
+              rejected: reports.filter(r => r.status === 'rejected').length,
+            }}
           />
         )}
         
