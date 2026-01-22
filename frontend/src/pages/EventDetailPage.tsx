@@ -51,7 +51,7 @@ export default function EventDetailPage() {
   const loadPlaybackSummary = async () => {
     if (!id) return;
     try {
-      const response = await apiClient.get<{ cameras: Array<{ hasRecording?: boolean }> }>(
+      const response = await apiClient.get<{ cameras: Array<{ available?: boolean; hasRecording?: boolean }> }>(
         `/events/${id}/video-playback`
       );
       const cameras = response.cameras || [];

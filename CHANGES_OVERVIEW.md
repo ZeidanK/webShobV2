@@ -215,6 +215,10 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Fixed event detail action toolbar to restore Close action, remove duplicate playback button, and normalize ASCII labels.
 - Added per-camera "recording not available" list with guidance to enable recording or check VMS retention.
 - Playback badge now counts cameras with playback available at the event timestamp.
+### Slice 12-C playback controls
+- Added event timeline scrubber with an event marker and current time display.
+- Added synchronized play/pause and seek controls across playback tiles with sync status indicator.
+- Playback grid now uses MP4 playback URLs for Shinobi clips while retaining status headers.
 ### Historical step explanations (Slice 9.0-A to Slice 10-D)
 - 9.0-A: Before only core VMS routes existed; after added camera connection tests, audit logging, LiveView fallback, and demo cleanup to close MVP gaps.
 - 9.0-B: Before no local VMS lab/docs; after added `vms-lab/` compose, README updates, and VMS integration docs.

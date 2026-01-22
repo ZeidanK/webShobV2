@@ -1041,6 +1041,7 @@ router.get(
             playbackReason = 'No VMS monitor linked';
           }
 
+          // TEST-ONLY: Include playback metadata fields expected by the UI.
           return {
             cameraId: camera._id,
             cameraName: camera.name,

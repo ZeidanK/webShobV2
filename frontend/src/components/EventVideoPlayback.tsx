@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
-import { CameraGrid } from './CameraGrid';
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { apiClient } from '../services/api';
 import styles from './EventVideoPlayback.module.css';
 
@@ -15,6 +14,14 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
   const [error, setError] = useState<string | null>(null);
   // TEST-ONLY: Layout selection for playback grid sizing.
   const [layout, setLayout] = useState<'auto' | '1x1' | '2x2' | '3x3'>('auto');
+  // TEST-ONLY: Track playback timeline state for synchronized controls.
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'drift'>('synced');
+  const [masterCameraId, setMasterCameraId] = useState<string | null>(null);
+  // TEST-ONLY: Store per-camera video elements for synced controls.
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
     const fetchPlayback = async () => {
@@ -41,13 +48,87 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
   const unavailableCameras = cameras.filter((camera) => !camera.available);
   const layoutCount = camerasWithPlayback.length > 0 ? camerasWithPlayback.length : cameras.length;
   const columns = layout === '1x1' ? 1 : layout === '2x2' ? 2 : layout === '3x3' ? 3 : layoutCount <= 4 ? 2 : layoutCount <= 9 ? 3 : 4;
-  // TEST-ONLY: Normalize event playback data to CameraGrid fields.
-  const gridCameras = useMemo(() => camerasWithPlayback.map((camera) => ({
+  // TEST-ONLY: Normalize event playback data for video tiles.
+  const playbackCameras = useMemo(() => camerasWithPlayback.map((camera) => ({
     id: camera.cameraId ?? camera.id,
     name: camera.cameraName ?? camera.name,
-    streamUrl: camera.playbackUrl ?? camera.streamUrl,
+    playbackUrl: camera.playbackUrl ?? camera.streamUrl,
     status: camera.status,
   })), [camerasWithPlayback]);
+
+  useEffect(() => {
+    if (playbackCameras.length === 0) {
+      setMasterCameraId(null);
+      return;
+    }
+    if (!masterCameraId || !playbackCameras.some((camera) => camera.id === masterCameraId)) {
+      setMasterCameraId(playbackCameras[0].id);
+    }
+  }, [masterCameraId, playbackCameras]);
+
+  useEffect(() => {
+    // TEST-ONLY: Reset playback state when event cameras reload.
+    setPlaybackPosition(0);
+    setPlaybackDuration(0);
+    setIsPlaying(false);
+    setSyncStatus('synced');
+  }, [eventId, cameras.length]);
+
+  const formatTime = (value: number) => {
+    if (!Number.isFinite(value) || value < 0) {
+      return '00:00';
+    }
+    const minutes = Math.floor(value / 60);
+    const seconds = Math.floor(value % 60);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const updateSyncStatus = (masterTime: number) => {
+    const driftThreshold = 0.5;
+    const drifted = playbackCameras.some((camera) => {
+      const video = videoRefs.current[camera.id];
+      if (!video || Number.isNaN(video.currentTime)) {
+        return false;
+      }
+      return Math.abs(video.currentTime - masterTime) > driftThreshold;
+    });
+    setSyncStatus(drifted ? 'drift' : 'synced');
+  };
+
+  const setAllCurrentTime = (nextTime: number) => {
+    playbackCameras.forEach((camera) => {
+      const video = videoRefs.current[camera.id];
+      if (video && Number.isFinite(nextTime)) {
+        video.currentTime = nextTime;
+      }
+    });
+  };
+
+  const handlePlayAll = () => {
+    playbackCameras.forEach((camera) => {
+      const video = videoRefs.current[camera.id];
+      if (video) {
+        video.play().catch(() => {
+          // TEST-ONLY: Playback may require user gesture; ignore per-camera failures.
+        });
+      }
+    });
+    setIsPlaying(true);
+  };
+
+  const handlePauseAll = () => {
+    playbackCameras.forEach((camera) => {
+      const video = videoRefs.current[camera.id];
+      video?.pause();
+    });
+    setIsPlaying(false);
+  };
+
+  const handleSeek = (nextTime: number) => {
+    setPlaybackPosition(nextTime);
+    setAllCurrentTime(nextTime);
+    updateSyncStatus(nextTime);
+  };
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -116,6 +197,44 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                   <span className={styles.infoDivider}>/</span>
                   <span className={styles.infoLabel}>With recording:</span>
                   <span className={styles.infoValue}>{camerasWithPlayback.length}</span>
+                  <span className={styles.infoDivider}>/</span>
+                  <span className={styles.infoLabel}>Sync:</span>
+                  <span className={styles.infoValue}>
+                    {syncStatus === 'synced' ? 'Synced' : 'Drift'}
+                  </span>
+                </div>
+                <div className={styles.timelineControls}>
+                  <button
+                    type="button"
+                    className={styles.timelineButton}
+                    onClick={isPlaying ? handlePauseAll : handlePlayAll}
+                  >
+                    {isPlaying ? 'Pause' : 'Play'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.timelineButton}
+                    onClick={() => handleSeek(0)}
+                  >
+                    Jump to Event
+                  </button>
+                  <div className={styles.timeDisplay}>
+                    {formatTime(playbackPosition)} / {formatTime(playbackDuration)}
+                  </div>
+                  <div className={styles.timelineTrack}>
+                    <span className={styles.eventMarker} title="Event time" />
+                    <span className={styles.eventMarkerLabel}>Event</span>
+                    <input
+                      className={styles.timeline}
+                      type="range"
+                      min={0}
+                      max={playbackDuration || 0}
+                      step={0.1}
+                      value={playbackPosition}
+                      onChange={(event) => handleSeek(parseFloat(event.target.value))}
+                      disabled={playbackDuration === 0}
+                    />
+                  </div>
                 </div>
                 <label className={styles.layoutLabel}>
                   Layout
@@ -132,7 +251,42 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                 </label>
               </div>
               <div className={styles.gridContainer}>
-                <CameraGrid cameras={gridCameras} columns={columns} />
+                <div className={styles.playbackGrid} style={{ '--grid-columns': columns } as CSSProperties}>
+                  {playbackCameras.map((camera) => (
+                    <div key={camera.id} className={styles.playbackTile}>
+                      <div className={styles.playbackHeader}>
+                        <span className={styles.playbackName}>{camera.name}</span>
+                        <span className={styles.playbackStatus}>{camera.status ?? 'unknown'}</span>
+                      </div>
+                      <video
+                        ref={(node) => {
+                          videoRefs.current[camera.id] = node;
+                        }}
+                        className={styles.playbackVideo}
+                        src={camera.playbackUrl}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onLoadedMetadata={(event) => {
+                          const target = event.currentTarget;
+                          if (camera.id === masterCameraId && Number.isFinite(target.duration)) {
+                            setPlaybackDuration(target.duration);
+                          }
+                        }}
+                        onTimeUpdate={(event) => {
+                          if (camera.id !== masterCameraId) {
+                            return;
+                          }
+                          const current = event.currentTarget.currentTime;
+                          setPlaybackPosition(current);
+                          updateSyncStatus(current);
+                        }}
+                        onPlay={() => setIsPlaying(true)}
+                        onPause={() => setIsPlaying(false)}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className={styles.footer}>
                 <div className={styles.footerInfo}>

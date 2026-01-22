@@ -999,13 +999,13 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
   - [x] Each camera in separate video player
   - [x] Show camera name and status
 - [ ] Add timeline scrubber
-  - [ ] Horizontal timeline with event marker
-  - [ ] Seek to specific time
-  - [ ] Show current playback time
-- [ ] Synchronize playback across cameras
-  - [ ] Play/pause all cameras together
-  - [ ] Sync seek operations
-  - [ ] Show sync status indicator
+  - [x] Horizontal timeline with event marker
+  - [x] Seek to specific time
+  - [x] Show current playback time
+- [x] Synchronize playback across cameras
+  - [x] Play/pause all cameras together
+  - [x] Sync seek operations
+  - [x] Show sync status indicator
 - [x] Handle "no recording" gracefully
   - [x] Show message: "Recording not available for this camera"
   - [x] Suggest enabling recording or checking VMS
@@ -1025,7 +1025,8 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - [x] Playback URLs generated for cameras with recording
 - [x] Multiple cameras shown in grid layout
 - [ ] Playback synchronized across cameras
-- [ ] Timeline scrubber allows seeking
+- [x] Playback synchronized across cameras
+- [x] Timeline scrubber allows seeking
 - [x] Graceful handling when no recording exists
 - [x] UI shows which cameras have recording available
 - [~] All tests pass
