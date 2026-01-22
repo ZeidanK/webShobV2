@@ -55,7 +55,8 @@ export default function EventDetailPage() {
         `/events/${id}/video-playback`
       );
       const cameras = response.cameras || [];
-      const withRecording = cameras.filter((camera) => camera.hasRecording).length;
+      // TEST-ONLY: Badge reflects cameras with playback available at the event time.
+      const withRecording = cameras.filter((camera) => camera.available).length;
       setPlaybackSummary({ total: cameras.length, withRecording });
     } catch (err) {
       console.error('[EventDetailPage] Error loading playback summary:', err);

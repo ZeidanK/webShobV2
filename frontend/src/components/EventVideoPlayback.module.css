@@ -185,6 +185,37 @@
   flex-shrink: 0;
 }
 
+/* Playback availability list for cameras without recordings. */
+.unavailable {
+  padding: 0.75rem 1.5rem 1rem;
+  background: #1d1d1d;
+  border-bottom: 1px solid #2e2e2e;
+  color: #d1d1d1;
+  font-size: 0.9rem;
+}
+
+.unavailableTitle {
+  font-weight: 600;
+  color: #f8d7da;
+  margin-bottom: 0.5rem;
+}
+
+.unavailableList {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #cfcfcf;
+}
+
+.unavailableItem {
+  margin: 0.2rem 0;
+}
+
+.unavailableHint {
+  margin-top: 0.6rem;
+  color: #9aa0a6;
+  font-size: 0.85rem;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;

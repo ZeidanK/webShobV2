@@ -36,15 +36,18 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
     fetchPlayback();
   }, [eventId]);
 
-  const camerasWithRecording = cameras.filter((c) => c.hasRecording);
-  const columns = layout === '1x1' ? 1 : layout === '2x2' ? 2 : layout === '3x3' ? 3 : cameras.length <= 4 ? 2 : cameras.length <= 9 ? 3 : 4;
+  // TEST-ONLY: Track playback availability for each camera in the event.
+  const camerasWithPlayback = cameras.filter((camera) => camera.available);
+  const unavailableCameras = cameras.filter((camera) => !camera.available);
+  const layoutCount = camerasWithPlayback.length > 0 ? camerasWithPlayback.length : cameras.length;
+  const columns = layout === '1x1' ? 1 : layout === '2x2' ? 2 : layout === '3x3' ? 3 : layoutCount <= 4 ? 2 : layoutCount <= 9 ? 3 : 4;
   // TEST-ONLY: Normalize event playback data to CameraGrid fields.
-  const gridCameras = useMemo(() => cameras.map((camera) => ({
+  const gridCameras = useMemo(() => camerasWithPlayback.map((camera) => ({
     id: camera.cameraId ?? camera.id,
-    name: camera.name,
-    streamUrl: camera.streamUrl,
+    name: camera.cameraName ?? camera.name,
+    streamUrl: camera.playbackUrl ?? camera.streamUrl,
     status: camera.status,
-  })), [cameras]);
+  })), [camerasWithPlayback]);
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -84,8 +87,26 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
 
           {!loading && !error && cameras.length > 0 && (
             <>
-              {camerasWithRecording.length === 0 && (
-                <div className={styles.warning}>Warning: no cameras have recording enabled. Only live feeds available.</div>
+              {camerasWithPlayback.length === 0 && (
+                <div className={styles.warning}>
+                  No recordings found for this event time. Enable recording or check VMS retention settings.
+                </div>
+              )}
+              {unavailableCameras.length > 0 && (
+                <div className={styles.unavailable}>
+                  <div className={styles.unavailableTitle}>Recording not available for:</div>
+                  <ul className={styles.unavailableList}>
+                    {unavailableCameras.map((camera) => (
+                      <li key={camera.cameraId ?? camera.id} className={styles.unavailableItem}>
+                        {camera.cameraName ?? camera.name}
+                        {camera.playbackReason ? ` (${camera.playbackReason})` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={styles.unavailableHint}>
+                    Enable recording in Shinobi or confirm the camera has stored clips for the event time.
+                  </div>
+                </div>
               )}
               {/* TEST-ONLY: Playback toolbar with layout + availability summary. */}
               <div className={styles.toolbar}>
@@ -94,7 +115,7 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                   <span className={styles.infoValue}>{cameras.length}</span>
                   <span className={styles.infoDivider}>/</span>
                   <span className={styles.infoLabel}>With recording:</span>
-                  <span className={styles.infoValue}>{camerasWithRecording.length}</span>
+                  <span className={styles.infoValue}>{camerasWithPlayback.length}</span>
                 </div>
                 <label className={styles.layoutLabel}>
                   Layout
@@ -119,7 +140,7 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                   <span className={styles.footerValue}>{cameras.length}</span>
                   <span className={styles.footerDivider}>/</span>
                   <span className={styles.footerLabel}>With recording:</span>
-                  <span className={styles.footerValue}>{camerasWithRecording.length}</span>
+                  <span className={styles.footerValue}>{camerasWithPlayback.length}</span>
                 </div>
               </div>
             </>

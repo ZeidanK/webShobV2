@@ -984,7 +984,7 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
   - [x] `GET /api/events/:id/video-playback`
   - [x] Find cameras near event location (geo-spatial query)
   - [x] Generate playback URLs for each camera at event timestamp
-  - [ ] Return array of `{ cameraId, cameraName, playbackUrl, available }`
+  - [x] Return array of `{ cameraId, cameraName, playbackUrl, available }`
 - [x] Add recording configuration to Camera model
   - [x] `recording.enabled` boolean
   - [x] `recording.retentionDays` integer
@@ -1006,9 +1006,9 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
   - [ ] Play/pause all cameras together
   - [ ] Sync seek operations
   - [ ] Show sync status indicator
-- [~] Handle "no recording" gracefully
-  - [ ] Show message: "Recording not available for this camera"
-  - [ ] Suggest enabling recording or checking VMS
+- [x] Handle "no recording" gracefully
+  - [x] Show message: "Recording not available for this camera"
+  - [x] Suggest enabling recording or checking VMS
 - [x] Link from event detail to playback
   - [x] "View Video" button in event detail
   - [x] Badge showing # of cameras with recording
@@ -1026,8 +1026,8 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - [x] Multiple cameras shown in grid layout
 - [ ] Playback synchronized across cameras
 - [ ] Timeline scrubber allows seeking
-- [~] Graceful handling when no recording exists
-- [~] UI shows which cameras have recording available
+- [x] Graceful handling when no recording exists
+- [x] UI shows which cameras have recording available
 - [~] All tests pass
 
 ### Dependencies

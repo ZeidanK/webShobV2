@@ -208,10 +208,13 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Expanded event playback endpoint to include playback availability metadata per camera.
 - Implemented Shinobi playback URL resolution using `/videos` metadata and MP4 clip selection.
 - Recording availability and range now derived from Shinobi video listings (limited to recent clips).
+- Event playback responses now include `cameraName`, `playbackUrl`, and `available` fields for frontend use.
 ### Slice 12-B frontend playback shell
 - Added playback toolbar with layout selection and recording counts.
 - Added event detail playback badge and disabled state when no nearby cameras.
 - Fixed event detail action toolbar to restore Close action, remove duplicate playback button, and normalize ASCII labels.
+- Added per-camera "recording not available" list with guidance to enable recording or check VMS retention.
+- Playback badge now counts cameras with playback available at the event timestamp.
 ### Historical step explanations (Slice 9.0-A to Slice 10-D)
 - 9.0-A: Before only core VMS routes existed; after added camera connection tests, audit logging, LiveView fallback, and demo cleanup to close MVP gaps.
 - 9.0-B: Before no local VMS lab/docs; after added `vms-lab/` compose, README updates, and VMS integration docs.

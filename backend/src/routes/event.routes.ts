@@ -999,7 +999,7 @@ router.get(
       const servers = serverIds.length > 0 ? await VmsServer.find(serverQuery) : [];
       const serverById = new Map(servers.map((server) => [server._id.toString(), server]));
 
-      // TEST-ONLY: Build playback metadata per camera (availability depends on VMS + recording config).
+      // TEST-ONLY: Build playback metadata per camera for event playback responses.
       const playbackCameras = await Promise.all(
         nearbyCameras.map(async (camera: any) => {
           const recordingEnabled =
@@ -1043,9 +1043,10 @@ router.get(
 
           return {
             cameraId: camera._id,
+            cameraName: camera.name,
             name: camera.name,
             streamUrl: camera.streamUrl,
-            hasRecording: hasVms,
+            hasRecording: recordingEnabled,
             playbackUrl,
             available,
             playbackReason,
