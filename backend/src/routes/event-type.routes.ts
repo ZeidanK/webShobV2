@@ -129,7 +129,7 @@ const router = express.Router();
  */
 router.get('/', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const eventTypes = await EventTypeService.getAvailableEventTypes(new mongoose.Types.ObjectId(req.user!.companyId));
@@ -170,7 +170,7 @@ router.get('/',
  */
 router.get('/company', 
   authenticate, 
-  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const eventTypes = await EventTypeService.getCompanyEventTypes(new mongoose.Types.ObjectId(req.user!.companyId));
@@ -217,7 +217,7 @@ router.get('/company',
  */
 router.get('/:id', 
   authenticate, 
-  requireAnyRole(UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const eventType = await EventTypeService.getEventTypeById(req.params.id, new mongoose.Types.ObjectId(req.user!.companyId));
@@ -266,7 +266,7 @@ router.get('/:id',
  */
 router.post('/', 
   authenticate, 
-  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, description, color, icon } = req.body;
@@ -359,7 +359,7 @@ router.post('/',
  */
 router.patch('/:id', 
   authenticate, 
-  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, description, color, icon, isActive } = req.body;
@@ -442,7 +442,7 @@ router.patch('/:id',
  */
 router.delete('/:id', 
   authenticate, 
-  requireAnyRole(UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const eventType = await EventTypeService.deleteEventType(
@@ -463,6 +463,140 @@ router.delete('/:id',
       });
       
       res.status(200).json(successResponse(eventType, req.correlationId!));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/event-types/tree:
+ *   get:
+ *     summary: Get event types as hierarchical tree
+ *     description: Returns event types with parent-child relationships
+ *     tags: [Event Types]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Event type tree retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       color:
+ *                         type: string
+ *                       icon:
+ *                         type: string
+ *                       children:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/tree', 
+  authenticate, 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.OPERATOR, UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.VIEWER), 
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tree = await EventTypeService.getEventTypesTree(new mongoose.Types.ObjectId(req.user!.companyId));
+      res.status(200).json(successResponse(tree, req.correlationId!));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/event-types/{id}/subtypes:
+ *   post:
+ *     summary: Create a subtype of an existing event type
+ *     tags: [Event Types]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Parent event type ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateEventTypeRequest'
+ *     responses:
+ *       201:
+ *         description: Subtype created successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Parent type not found
+ */
+router.post('/:id/subtypes', 
+  authenticate, 
+  requireAnyRole(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_ADMIN), 
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parentTypeId = req.params.id;
+      
+      // Get parent type
+      const parentType = await EventTypeService.getEventTypeById(
+        parentTypeId,
+        new mongoose.Types.ObjectId(req.user!.companyId)
+      );
+      
+      if (!parentType) {
+        throw new AppError('EVENT_TYPE_NOT_FOUND', 'Parent event type not found', 404);
+      }
+      
+      // Use findOrCreateType to create the subtype
+      const subtypeId = await EventTypeService.findOrCreateType(
+        req.body.name,
+        parentType.name,
+        new mongoose.Types.ObjectId(req.user!.companyId),
+        'manual' as any
+      );
+      
+      // Fetch the created subtype
+      const subtype = await EventTypeService.getEventTypeById(
+        subtypeId,
+        new mongoose.Types.ObjectId(req.user!.companyId)
+      );
+      
+      logger.info('Event subtype created', {
+        action: 'event_subtype.created',
+        subtypeId: subtype._id,
+        parentId: parentType._id,
+        name: req.body.name,
+        createdBy: req.user!.id,
+        companyId: req.user!.companyId,
+        correlationId: req.correlationId,
+      });
+      
+      res.status(201).json(successResponse(subtype, req.correlationId!));
     } catch (error) {
       next(error);
     }

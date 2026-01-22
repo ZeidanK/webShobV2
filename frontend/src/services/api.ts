@@ -85,12 +85,15 @@ export interface Report {
 export interface EventType {
   _id: string;
   name: string;
-  category: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  icon: string;
+  description?: string;
+  icon?: string;
   color: string;
+  parentTypeId?: string;
+  hierarchyPath: string[];
+  source: 'system' | 'manual' | 'auto-report';
   isSystemDefault: boolean;
   companyId?: string;
+  children?: EventType[]; // For tree structure
   createdAt: string;
   updatedAt: string;
 }
@@ -848,18 +851,25 @@ export const api = {
 
   // Event Types (Slice 4)
   eventTypes: {
-    list: (params?: { category?: string; severity?: string }) =>
-      apiClient.get<EventType[]>('/event-types', params),
+    list: () => apiClient.get<EventType[]>('/event-types'),
+    
+    tree: () => apiClient.get<EventType[]>('/event-types/tree'),
 
     get: (id: string) => apiClient.get<EventType>(`/event-types/${id}`),
 
     create: (data: {
       name: string;
-      category: string;
-      severity: 'low' | 'medium' | 'high' | 'critical';
-      icon: string;
+      description?: string;
+      icon?: string;
       color: string;
     }) => apiClient.post<EventType>('/event-types', data),
+    
+    createSubtype: (parentId: string, data: {
+      name: string;
+      description?: string;
+      icon?: string;
+      color: string;
+    }) => apiClient.post<EventType>(`/event-types/${parentId}/subtypes`, data),
   },
 
   // Cameras (Slice 9.0)

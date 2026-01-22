@@ -266,11 +266,38 @@ export default function EventFormPage() {
             onChange={(e) => handleChange('eventTypeId', e.target.value)}
           >
             <option value="">Select an event type...</option>
-            {eventTypes.map(type => (
-              <option key={type._id} value={type._id}>
-                {type.name} ({type.category})
-              </option>
-            ))}
+            {eventTypes
+              .filter(type => !type.parentTypeId) // Show only parent types at top level
+              .map(parentType => (
+                <optgroup key={parentType._id} label={parentType.name}>
+                  <option value={parentType._id}>{parentType.name}</option>
+                  {eventTypes
+                    .filter(subtype => subtype.parentTypeId === parentType._id)
+                    .map(subtype => (
+                      <option key={subtype._id} value={subtype._id}>
+                        &nbsp;&nbsp;→ {subtype.name}
+                      </option>
+                    ))
+                  }
+                </optgroup>
+              ))}
+            {/* Types without parents (legacy/standalone) */}
+            {eventTypes
+              .filter(type => !type.parentTypeId && 
+                !eventTypes.some(t => t.parentTypeId === type._id))
+              .length === 0 ? null : (
+              <optgroup label="Other">
+                {eventTypes
+                  .filter(type => !type.parentTypeId && 
+                    !eventTypes.some(t => t.parentTypeId === type._id))
+                  .map(type => (
+                    <option key={type._id} value={type._id}>
+                      {type.name}
+                    </option>
+                  ))
+                }
+              </optgroup>
+            )}
           </select>
           {errors.eventTypeId && <div className={styles.errorMessage}>{errors.eventTypeId}</div>}
         </div>
