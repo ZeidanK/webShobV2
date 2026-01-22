@@ -32,7 +32,7 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/event_monitoring_dev
       - JWT_SECRET=development-secret-change-in-production
       - LOG_LEVEL=debug
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://shobweb.da3wa.org,https://shobweb.da3wa.org:5173
       - AI_SERVICE_URL=http://ai-service:8000
       - STREAMING_BASE_DIR=/tmp/hls
       # Test logger configuration (dev only)
@@ -86,7 +86,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=/api
-      - VITE_WS_URL=http://localhost:3000  # WebSocket connection URL
+      - VITE_WS_URL=http://localhost:3000  # WebSocket connection URL for local development
     volumes:
       - ./frontend:/app
       - /app/node_modules
