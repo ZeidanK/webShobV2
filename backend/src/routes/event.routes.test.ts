@@ -746,8 +746,14 @@ describe('Event Routes', () => {
         },
       });
 
-      // TEST-ONLY: Stub VMS playback URL resolution.
-      jest.spyOn(vmsService, 'getPlaybackUrl').mockResolvedValue('http://localhost:8080/test.mp4');
+      // TEST-ONLY: Stub VMS playback resolution and token creation.
+      jest.spyOn(vmsService, 'getPlaybackInfo').mockResolvedValue({
+        playbackUrl: 'http://localhost:8080/test.mp4',
+        filename: '2026-01-22T06-10-09.mp4',
+        clipStart: new Date('2026-01-22T06:10:09Z'),
+        clipEnd: new Date('2026-01-22T06:15:04Z'),
+      });
+      jest.spyOn(vmsService, 'createPlaybackToken').mockReturnValue('playback-token');
 
       const response = await request(app)
         .get(`/api/events/${event._id}/video-playback`)
@@ -757,7 +763,7 @@ describe('Event Routes', () => {
       expect(response.body.data.cameras).toHaveLength(1);
       expect(response.body.data.cameras[0]).toMatchObject({
         available: true,
-        playbackUrl: 'http://localhost:8080/test.mp4',
+        playbackUrl: expect.stringContaining('/api/cameras/'),
       });
     });
 
@@ -834,7 +840,13 @@ describe('Event Routes', () => {
         },
       });
 
-      jest.spyOn(vmsService, 'getPlaybackUrl').mockResolvedValue('http://localhost:8080/test.mp4');
+      jest.spyOn(vmsService, 'getPlaybackInfo').mockResolvedValue({
+        playbackUrl: 'http://localhost:8080/test.mp4',
+        filename: '2026-01-22T06-10-09.mp4',
+        clipStart: new Date('2026-01-22T06:10:09Z'),
+        clipEnd: new Date('2026-01-22T06:15:04Z'),
+      });
+      jest.spyOn(vmsService, 'createPlaybackToken').mockReturnValue('playback-token');
 
       const response = await request(app)
         .get(`/api/events/${event._id}/video-playback`)

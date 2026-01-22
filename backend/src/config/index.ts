@@ -51,6 +51,7 @@ export const config = {
     idleTimeoutMs: parseInt(process.env.STREAMING_IDLE_TIMEOUT_MS || '300000', 10),
     cleanupIntervalMs: parseInt(process.env.STREAMING_CLEANUP_INTERVAL_MS || '300000', 10),
     cleanupMaxAgeMs: parseInt(process.env.STREAMING_CLEANUP_MAX_AGE_MS || '3600000', 10),
+    playbackLookupLimit: parseInt(process.env.STREAMING_PLAYBACK_LOOKUP_LIMIT || '200', 10),
     publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
     transcodeEnabled: process.env.STREAMING_TRANSCODE_ENABLED === 'true',
     transcodePreset: process.env.STREAMING_TRANSCODE_PRESET || 'veryfast',

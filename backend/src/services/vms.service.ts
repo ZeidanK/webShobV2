@@ -10,10 +10,12 @@
  */
 
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus, AuditLog, AuditAction } from '../models';
 import { AppError, ErrorCodes, NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { VmsAdapterFactory, type VmsAdapterCapabilities } from '../adapters/vms/factory';
+import { config } from '../config';
 
 /** Monitor info returned from VMS discovery */
 export interface VmsMonitor {
@@ -31,6 +33,15 @@ export interface StreamUrls {
   embed?: string;
   snapshot?: string;
   raw?: string;
+}
+
+interface PlaybackTokenPayload {
+  scope: 'vms-playback';
+  cameraId: string;
+  companyId: string;
+  serverId: string;
+  monitorId: string;
+  filename: string;
 }
 
 /** Pagination options */
@@ -108,6 +119,53 @@ class VmsService {
     }
 
     return { baseUrl: trimmedBaseUrl };
+  }
+  // TEST-ONLY: Validate Shinobi playback filenames to prevent traversal.
+  private validateShinobiPlaybackFilename(filename: string): boolean {
+    return /^[0-9TZ\-:]+\.mp4$/i.test(filename);
+  }
+
+  // TEST-ONLY: Expose playback filename validation for route guards.
+  isValidPlaybackFilename(filename: string): boolean {
+    return this.validateShinobiPlaybackFilename(filename);
+  }
+
+  // TEST-ONLY: Create a short-lived playback token for proxying Shinobi clips.
+  createPlaybackToken(
+    cameraId: string,
+    companyId: string,
+    serverId: string,
+    monitorId: string,
+    filename: string
+  ): string {
+    const payload: PlaybackTokenPayload = {
+      scope: 'vms-playback',
+      cameraId,
+      companyId,
+      serverId,
+      monitorId,
+      filename,
+    };
+    return jwt.sign(payload, config.jwt.secret, { expiresIn: config.streaming.tokenTtlSeconds });
+  }
+
+  // TEST-ONLY: Verify playback token payload and scope.
+  verifyPlaybackToken(token: string): PlaybackTokenPayload {
+    try {
+      const decoded = jwt.verify(token, config.jwt.secret) as PlaybackTokenPayload;
+      if (decoded.scope !== 'vms-playback') {
+        throw new AppError(ErrorCodes.PLAYBACK_TOKEN_INVALID, 'Invalid playback token scope', 401);
+      }
+      return decoded;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new AppError(ErrorCodes.PLAYBACK_TOKEN_EXPIRED, 'Playback token expired', 401);
+      }
+      throw new AppError(ErrorCodes.PLAYBACK_TOKEN_INVALID, 'Invalid playback token', 401);
+    }
   }
   // TEST-ONLY: normalize Shinobi monitor status to a camera status.
   private mapShinobiStatus(status?: string): CameraStatus {
@@ -562,21 +620,37 @@ class VmsService {
     startTime: Date,
     endTime?: Date
   ): Promise<string | null> {
+    const info = await this.getPlaybackInfo(server, monitorId, startTime, endTime);
+    return info?.playbackUrl ?? null;
+  }
+
+  /**
+   * TEST-ONLY: Resolve playback details for a VMS camera (Slice 12).
+   */
+  async getPlaybackInfo(
+    server: IVmsServer,
+    monitorId: string,
+    startTime: Date,
+    endTime?: Date
+  ): Promise<{ playbackUrl: string; filename: string; clipStart?: Date; clipEnd?: Date } | null> {
     switch (server.provider) {
       case 'shinobi': {
-        // TEST-ONLY: Resolve the closest Shinobi MP4 clip for the requested time.
         const match = await this.findShinobiPlaybackClip(server, monitorId, startTime, endTime);
-        if (!match?.filename) {
+        if (!match?.filename || !this.validateShinobiPlaybackFilename(match.filename)) {
           return null;
         }
-        const apiKey = server.auth?.apiKey;
-        const groupKey = server.auth?.groupKey;
-        if (!apiKey || !groupKey) {
+        const playbackUrl = this.buildShinobiPlaybackUrl(
+          server,
+          monitorId,
+          match.filename,
+          false
+        );
+        if (!playbackUrl) {
           return null;
         }
-        const playbackBaseUrl = (server.publicBaseUrl || server.baseUrl).replace(/\/+$/, '');
-        const href = match.href || `/${apiKey}/videos/${groupKey}/${monitorId}/${match.filename}`;
-        return `${playbackBaseUrl}${href.startsWith('/') ? '' : '/'}${href}`;
+        const clipStart = match.time ? new Date(match.time) : undefined;
+        const clipEnd = match.end ? new Date(match.end) : undefined;
+        return { playbackUrl, filename: match.filename, clipStart, clipEnd };
       }
       case 'milestone':
       case 'genetec':
@@ -585,6 +659,17 @@ class VmsService {
       default:
         return null;
     }
+  }
+
+  /**
+   * TEST-ONLY: Build an internal playback download URL for proxying clips.
+   */
+  getPlaybackDownloadUrl(
+    server: IVmsServer,
+    monitorId: string,
+    filename: string
+  ): string | null {
+    return this.buildShinobiPlaybackUrl(server, monitorId, filename, false);
   }
 
   /**
@@ -621,7 +706,7 @@ class VmsService {
   ): Promise<{ start?: Date; end?: Date } | null> {
     switch (server.provider) {
       case 'shinobi': {
-        const videos = await this.fetchShinobiVideos(server, monitorId, 50);
+        const videos = await this.fetchShinobiVideos(server, monitorId);
         if (videos.length === 0) {
           return null;
         }
@@ -802,11 +887,27 @@ class VmsService {
     };
   }
 
+  // TEST-ONLY: Build a Shinobi playback URL for MP4 clips.
+  private buildShinobiPlaybackUrl(
+    server: IVmsServer,
+    monitorId: string,
+    filename: string,
+    usePublicBaseUrl: boolean
+  ): string | null {
+    const apiKey = server.auth?.apiKey;
+    const groupKey = server.auth?.groupKey;
+    if (!apiKey || !groupKey) {
+      return null;
+    }
+    const base = (usePublicBaseUrl ? server.publicBaseUrl || server.baseUrl : server.baseUrl).replace(/\/+$/, '');
+    return `${base}/${apiKey}/videos/${groupKey}/${monitorId}/${encodeURIComponent(filename)}`;
+  }
+
   // TEST-ONLY: Shinobi videos metadata used for playback selection.
   private async fetchShinobiVideos(
     server: IVmsServer,
     monitorId: string,
-    limit: number
+    limit = config.streaming.playbackLookupLimit
   ): Promise<Array<{ time?: string; end?: string; filename?: string; href?: string }>> {
     const { baseUrl, auth } = server;
     if (!auth?.apiKey || !auth?.groupKey) {

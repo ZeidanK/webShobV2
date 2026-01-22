@@ -10,6 +10,7 @@ import { UserRole } from '../models/user.model';
 import { AppError } from '../utils/errors';
 import { successResponse } from '../utils/response';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 const router = express.Router();
 
@@ -998,6 +999,8 @@ router.get(
       }
       const servers = serverIds.length > 0 ? await VmsServer.find(serverQuery) : [];
       const serverById = new Map(servers.map((server) => [server._id.toString(), server]));
+      const playbackBaseUrl =
+        config.streaming.publicBaseUrl || `${req.protocol}://${req.get('host')}`;
 
       // TEST-ONLY: Build playback metadata per camera for event playback responses.
       const playbackCameras = await Promise.all(
@@ -1008,6 +1011,9 @@ router.get(
           let playbackUrl: string | undefined;
           let available = false;
           let playbackReason: string | undefined;
+          let playbackClipStart: string | undefined;
+          let playbackClipEnd: string | undefined;
+          let playbackOffsetSeconds: number | undefined;
 
           if (hasVms && camera.vms?.monitorId && recordingEnabled) {
             const server = serverById.get(camera.vms.serverId.toString());
@@ -1015,13 +1021,36 @@ router.get(
               playbackReason = 'VMS server not found';
             } else {
               try {
-                const url = await vmsService.getPlaybackUrl(
+                const playbackInfo = await vmsService.getPlaybackInfo(
                   server,
                   camera.vms.monitorId,
                   playbackTimestamp
                 );
-                if (url) {
-                  playbackUrl = url;
+                if (playbackInfo?.playbackUrl && playbackInfo.filename) {
+                  const token = vmsService.createPlaybackToken(
+                    camera._id.toString(),
+                    camera.companyId.toString(),
+                    server._id.toString(),
+                    camera.vms.monitorId,
+                    playbackInfo.filename
+                  );
+                  playbackUrl = `${playbackBaseUrl}/api/cameras/${camera._id}/playback/${encodeURIComponent(
+                    playbackInfo.filename
+                  )}?token=${encodeURIComponent(token)}`;
+                  if (playbackInfo.clipStart) {
+                    playbackClipStart = playbackInfo.clipStart.toISOString();
+                  }
+                  if (playbackInfo.clipEnd) {
+                    playbackClipEnd = playbackInfo.clipEnd.toISOString();
+                  }
+                  if (playbackInfo.clipStart) {
+                    const offset = (playbackTimestamp.getTime() - playbackInfo.clipStart.getTime()) / 1000;
+                    const duration = playbackInfo.clipEnd
+                      ? (playbackInfo.clipEnd.getTime() - playbackInfo.clipStart.getTime()) / 1000
+                      : undefined;
+                    const clamped = Math.max(0, offset);
+                    playbackOffsetSeconds = duration ? Math.min(clamped, duration) : clamped;
+                  }
                   available = true;
                 } else {
                   playbackReason = 'Playback URL not available';
@@ -1051,6 +1080,9 @@ router.get(
             playbackUrl,
             available,
             playbackReason,
+            playbackClipStart,
+            playbackClipEnd,
+            playbackOffsetSeconds,
             location: camera.location,
             status: camera.status,
           };

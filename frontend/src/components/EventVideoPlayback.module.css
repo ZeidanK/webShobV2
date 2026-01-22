@@ -270,6 +270,7 @@
   min-width: 140px;
 }
 
+/* TEST-ONLY: Playback timeline event marker positioning. */
 .timelineTrack {
   position: relative;
   flex: 1;
@@ -280,21 +281,21 @@
 
 .eventMarker {
   position: absolute;
-  left: 0;
+  left: var(--event-marker-left, 0%);
   top: 50%;
   width: 8px;
   height: 8px;
   background: #22c55e;
   border-radius: 50%;
-  transform: translate(-2px, -50%);
+  transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px #0f172a;
 }
 
 .eventMarkerLabel {
   position: absolute;
-  left: 8px;
+  left: var(--event-marker-left, 0%);
   top: 50%;
-  transform: translateY(-160%);
+  transform: translate(-50%, -160%);
   font-size: 0.7rem;
   color: #22c55e;
 }

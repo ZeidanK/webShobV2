@@ -35,6 +35,11 @@ Shinobi URL patterns used by the backend:
 
 If `publicBaseUrl` is set, the backend uses it for playback URLs.
 
+### Playback Proxy (MP4 Clips)
+Event playback uses a backend proxy endpoint so the Shinobi API key is never exposed to the browser.
+The UI receives a signed playback URL in this format:
+`/api/cameras/:id/playback/:filename?token=...`
+
 ## API Endpoints
 
 VMS server management:

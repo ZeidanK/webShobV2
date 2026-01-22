@@ -2,12 +2,14 @@
  * Camera Routes
  * 
  * API endpoints for camera management including VMS integration.
- * All routes require authentication and filter by user's companyId.
+ * TEST-ONLY: Routes require authentication unless explicitly noted (playback proxy uses tokens).
  * 
  * Base path: /api/cameras
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
@@ -980,6 +982,93 @@ router.get(
       }
 
       res.json(successResponse(streams, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// TEST-ONLY: Proxy Shinobi playback clips without exposing API keys.
+router.get(
+  '/:id/playback/:filename',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = typeof req.query.token === 'string' ? req.query.token : '';
+      if (!token) {
+        throw new AppError('MISSING_AUTH_TOKEN', 'Playback token is required', 401);
+      }
+      const payload = vmsService.verifyPlaybackToken(token);
+      if (payload.cameraId !== req.params.id) {
+        throw new AppError('FORBIDDEN', 'Playback token does not match camera', 403);
+      }
+      if (payload.filename !== req.params.filename) {
+        throw new AppError('FORBIDDEN', 'Playback token does not match clip', 403);
+      }
+      if (!vmsService.isValidPlaybackFilename(req.params.filename)) {
+        throw new ValidationError('Invalid playback filename');
+      }
+
+      const companyId = new mongoose.Types.ObjectId(payload.companyId);
+      const cameraId = new mongoose.Types.ObjectId(payload.cameraId);
+      const camera = await cameraService.findById(companyId, cameraId);
+      if (!camera || camera.isDeleted) {
+        throw new AppError('RESOURCE_NOT_FOUND', 'Camera not found', 404);
+      }
+      if (!camera.vms?.serverId || !camera.vms?.monitorId) {
+        throw new AppError('RESOURCE_NOT_FOUND', 'VMS monitor not linked', 404);
+      }
+      if (
+        camera.vms.serverId.toString() !== payload.serverId ||
+        camera.vms.monitorId !== payload.monitorId
+      ) {
+        throw new AppError('FORBIDDEN', 'Playback token does not match VMS metadata', 403);
+      }
+
+      const server = await vmsService.findByIdWithAuth(companyId, new mongoose.Types.ObjectId(payload.serverId));
+      if (!server) {
+        throw new AppError('VMS_SERVER_NOT_FOUND', 'VMS server not found', 404);
+      }
+      if (server.provider !== 'shinobi') {
+        throw new ValidationError('Playback proxy supports Shinobi only');
+      }
+
+      const upstreamUrl = vmsService.getPlaybackDownloadUrl(
+        server,
+        payload.monitorId,
+        payload.filename
+      );
+      if (!upstreamUrl) {
+        throw new AppError('VMS_CONNECTION_FAILED', 'Playback URL could not be generated', 502);
+      }
+
+      const upstreamResponse = await fetch(upstreamUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'video/mp4' },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!upstreamResponse.ok) {
+        throw new AppError(
+          'VMS_CONNECTION_FAILED',
+          `Playback fetch failed with status ${upstreamResponse.status}`,
+          502
+        );
+      }
+
+      res.status(200);
+      res.setHeader('Content-Type', upstreamResponse.headers.get('content-type') || 'video/mp4');
+      const length = upstreamResponse.headers.get('content-length');
+      if (length) {
+        res.setHeader('Content-Length', length);
+      }
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+
+      if (!upstreamResponse.body) {
+        return res.end();
+      }
+
+      const readable = Readable.fromWeb(upstreamResponse.body as any);
+      await pipeline(readable, res);
     } catch (error) {
       next(error);
     }

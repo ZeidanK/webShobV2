@@ -980,7 +980,7 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - [x] Implement playback stub for Direct RTSP
   - [x] Return "Recording not available" (no storage in MVP)
   - [x] Document Phase 2 recording storage requirements
-- [~] Implement event video playback endpoint
+- [x] Implement event video playback endpoint
   - [x] `GET /api/events/:id/video-playback`
   - [x] Find cameras near event location (geo-spatial query)
   - [x] Generate playback URLs for each camera at event timestamp
@@ -998,7 +998,7 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
   - [x] Grid view: 1x1, 2x2, 3x3 layouts
   - [x] Each camera in separate video player
   - [x] Show camera name and status
-- [ ] Add timeline scrubber
+- [x] Add timeline scrubber
   - [x] Horizontal timeline with event marker
   - [x] Seek to specific time
   - [x] Show current playback time
@@ -1024,7 +1024,6 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
 - [x] Operator can access playback from event detail page
 - [x] Playback URLs generated for cameras with recording
 - [x] Multiple cameras shown in grid layout
-- [ ] Playback synchronized across cameras
 - [x] Playback synchronized across cameras
 - [x] Timeline scrubber allows seeking
 - [x] Graceful handling when no recording exists

@@ -20,8 +20,14 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
   const [isPlaying, setIsPlaying] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'drift'>('synced');
   const [masterCameraId, setMasterCameraId] = useState<string | null>(null);
+  const [eventOffsetSeconds, setEventOffsetSeconds] = useState(0);
+  const [eventMarkerPercent, setEventMarkerPercent] = useState(0);
   // TEST-ONLY: Store per-camera video elements for synced controls.
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  // TEST-ONLY: Track clip durations to size the shared timeline.
+  const durationsRef = useRef<Record<string, number>>({});
+  // TEST-ONLY: Auto-seek once to the event offset after metadata loads.
+  const autoSeekRef = useRef(false);
 
   useEffect(() => {
     const fetchPlayback = async () => {
@@ -54,6 +60,9 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
     name: camera.cameraName ?? camera.name,
     playbackUrl: camera.playbackUrl ?? camera.streamUrl,
     status: camera.status,
+    clipStart: camera.playbackClipStart,
+    clipEnd: camera.playbackClipEnd,
+    eventOffsetSeconds: camera.playbackOffsetSeconds,
   })), [camerasWithPlayback]);
 
   useEffect(() => {
@@ -72,7 +81,31 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
     setPlaybackDuration(0);
     setIsPlaying(false);
     setSyncStatus('synced');
+    setEventOffsetSeconds(0);
+    setEventMarkerPercent(0);
+    autoSeekRef.current = false;
+    durationsRef.current = {};
   }, [eventId, cameras.length]);
+
+  useEffect(() => {
+    if (!masterCameraId) {
+      setEventOffsetSeconds(0);
+      return;
+    }
+    // TEST-ONLY: Use master clip offset to anchor the event marker and seek target.
+    const master = playbackCameras.find((camera) => camera.id === masterCameraId);
+    const offset = master?.eventOffsetSeconds ?? 0;
+    setEventOffsetSeconds(offset);
+  }, [masterCameraId, playbackCameras]);
+
+  useEffect(() => {
+    if (playbackDuration <= 0) {
+      setEventMarkerPercent(0);
+      return;
+    }
+    const percent = Math.max(0, Math.min(100, (eventOffsetSeconds / playbackDuration) * 100));
+    setEventMarkerPercent(percent);
+  }, [eventOffsetSeconds, playbackDuration]);
 
   const formatTime = (value: number) => {
     if (!Number.isFinite(value) || value < 0) {
@@ -121,7 +154,11 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
       const video = videoRefs.current[camera.id];
       video?.pause();
     });
-    setIsPlaying(false);
+    const anyPlaying = playbackCameras.some((camera) => {
+      const video = videoRefs.current[camera.id];
+      return video ? !video.paused : false;
+    });
+    setIsPlaying(anyPlaying);
   };
 
   const handleSeek = (nextTime: number) => {
@@ -214,14 +251,17 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                   <button
                     type="button"
                     className={styles.timelineButton}
-                    onClick={() => handleSeek(0)}
+                    onClick={() => handleSeek(eventOffsetSeconds)}
                   >
                     Jump to Event
                   </button>
                   <div className={styles.timeDisplay}>
                     {formatTime(playbackPosition)} / {formatTime(playbackDuration)}
                   </div>
-                  <div className={styles.timelineTrack}>
+                  <div
+                    className={styles.timelineTrack}
+                    style={{ '--event-marker-left': `${eventMarkerPercent}%` } as CSSProperties}
+                  >
                     <span className={styles.eventMarker} title="Event time" />
                     <span className={styles.eventMarkerLabel}>Event</span>
                     <input
@@ -267,15 +307,26 @@ export function EventVideoPlayback({ eventId, onClose }: EventVideoPlaybackProps
                         muted
                         playsInline
                         preload="metadata"
-                        onLoadedMetadata={(event) => {
-                          const target = event.currentTarget;
-                          if (camera.id === masterCameraId && Number.isFinite(target.duration)) {
-                            setPlaybackDuration(target.duration);
-                          }
-                        }}
-                        onTimeUpdate={(event) => {
-                          if (camera.id !== masterCameraId) {
-                            return;
+                      onLoadedMetadata={(event) => {
+                        const target = event.currentTarget;
+                        if (Number.isFinite(target.duration)) {
+                          durationsRef.current[camera.id] = target.duration;
+                          const maxDuration = Math.max(...Object.values(durationsRef.current));
+                          setPlaybackDuration(maxDuration);
+                        }
+                        if (camera.id === masterCameraId && !autoSeekRef.current) {
+                          autoSeekRef.current = true;
+                          const targetOffset = camera.eventOffsetSeconds ?? 0;
+                          const maxOffset = Number.isFinite(target.duration) ? target.duration : targetOffset;
+                          const clampedOffset = Math.min(Math.max(0, targetOffset), maxOffset);
+                          setPlaybackPosition(clampedOffset);
+                          setAllCurrentTime(clampedOffset);
+                          updateSyncStatus(clampedOffset);
+                        }
+                      }}
+                      onTimeUpdate={(event) => {
+                        if (camera.id !== masterCameraId) {
+                          return;
                           }
                           const current = event.currentTarget.currentTime;
                           setPlaybackPosition(current);

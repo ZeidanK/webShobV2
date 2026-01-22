@@ -219,6 +219,10 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added event timeline scrubber with an event marker and current time display.
 - Added synchronized play/pause and seek controls across playback tiles with sync status indicator.
 - Playback grid now uses MP4 playback URLs for Shinobi clips while retaining status headers.
+### Playback hardening
+- Added signed playback proxy endpoint to keep Shinobi API keys off the client.
+- Playback responses now include clip timing metadata to align the timeline marker with event time.
+- Playback lookup limit is configurable (`STREAMING_PLAYBACK_LOOKUP_LIMIT`) to reduce false "no recording" results.
 ### Slice 12-D tests and runbook
 - Added event playback route tests for playback URL availability, no-recording state, and geo radius filtering.
 - Documented manual playback verification steps in `docs/LOCAL_TESTING_GUIDE.md`.
