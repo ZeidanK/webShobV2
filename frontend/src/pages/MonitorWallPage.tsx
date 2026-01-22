@@ -257,6 +257,11 @@ export default function MonitorWallPage() {
     }
   }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbyContext]);
 
+  const handleBackToMap = useCallback(() => {
+    // Navigate back to the operator dashboard map
+    navigate('/');
+  }, [navigate]);
+
   const handleExitNearbyMode = useCallback(async () => {
     // Return to full camera wall
     sessionStorage.removeItem(nearbyCameraContextKey);

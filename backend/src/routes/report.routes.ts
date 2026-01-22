@@ -194,8 +194,14 @@ router.post(
         throw new AppError('VALIDATION_ERROR', 'Title, description, type, and location are required', 400);
       }
 
-      if (!location.longitude || !location.latitude) {
-        throw new AppError('VALIDATION_ERROR', 'Location must include longitude and latitude', 400);
+      // Validate GeoJSON format
+      if (location.type !== 'Point' || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+        throw new AppError('VALIDATION_ERROR', 'Location must be in GeoJSON Point format with coordinates [longitude, latitude]', 400);
+      }
+
+      const [longitude, latitude] = location.coordinates;
+      if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+        throw new AppError('VALIDATION_ERROR', 'Location coordinates must be numbers', 400);
       }
 
       if (!Object.values(ReportType).includes(type)) {

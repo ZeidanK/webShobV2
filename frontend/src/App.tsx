@@ -19,7 +19,6 @@ import ReportDetailPage from './pages/ReportDetailPage';
 import CamerasPage from './pages/CamerasPage';
 import CameraDetailPage from './pages/CameraDetailPage';
 import CameraFormPage from './pages/CameraFormPage';
-import CameraDetailPage from './pages/CameraDetailPage';
 import MonitorWallPage from './pages/MonitorWallPage';
 import VmsSettingsPage from './pages/VmsSettingsPage';
 import { websocketService } from './services/websocket';

@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, EventType } from '../services/api';
 import styles from './ReportSubmissionPage.module.css';
 
 interface LocationData {
@@ -12,17 +12,21 @@ interface LocationData {
 interface FormData {
   title: string;
   description: string;
-  type: 'incident' | 'maintenance' | 'safety' | 'other';
+  type: string;
+  customType?: string;
   location?: LocationData;
+  manualLat?: string;
+  manualLng?: string;
   // Optional user-provided location notes.
   locationDescription?: string;
 }
 
-const REPORT_TYPES = [
+const DEFAULT_REPORT_TYPES = [
   { value: 'incident', label: 'Security Incident' },
   { value: 'maintenance', label: 'Maintenance Request' },
   { value: 'safety', label: 'Safety Concern' },
   { value: 'other', label: 'Other' },
+  { value: 'custom', label: 'Custom Type...' },
 ] as const;
 
 const ReportSubmissionPage: React.FC = () => {
@@ -33,7 +37,10 @@ const ReportSubmissionPage: React.FC = () => {
     title: '',
     description: '',
     type: 'incident',
+    customType: '',
     location: undefined,
+    manualLat: '',
+    manualLng: '',
     locationDescription: '',
   });
 
@@ -43,6 +50,23 @@ const ReportSubmissionPage: React.FC = () => {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string>('');
   const [submitError, setSubmitError] = useState<string>('');
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
+  const [useManualLocation, setUseManualLocation] = useState(false);
+
+  useEffect(() => {
+    const fetchEventTypes = async () => {
+      try {
+        const types = await api.eventTypes.list();
+        setEventTypes(types);
+      } catch (error) {
+        console.error('Failed to load event types:', error);
+      } finally {
+        setLoadingTypes(false);
+      }
+    };
+    fetchEventTypes();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -52,6 +76,32 @@ const ReportSubmissionPage: React.FC = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleManualLocation = () => {
+    const lat = parseFloat(formData.manualLat || '');
+    const lng = parseFloat(formData.manualLng || '');
+
+    if (isNaN(lat) || isNaN(lng)) {
+      setLocationError('Please enter valid latitude and longitude');
+      return;
+    }
+
+    if (lat < -90 || lat > 90) {
+      setLocationError('Latitude must be between -90 and 90');
+      return;
+    }
+
+    if (lng < -180 || lng > 180) {
+      setLocationError('Longitude must be between -180 and 180');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      location: { lat, lng },
+    }));
+    setLocationError('');
   };
 
   const handleGetLocation = () => {
@@ -180,21 +230,30 @@ const ReportSubmissionPage: React.FC = () => {
         throw new Error('Description is required');
       }
 
+      // Determine the report type
+      const reportType = formData.type === 'custom' 
+        ? (formData.customType?.trim() || 'other')
+        : formData.type;
+
       // Create the report
-      const reportData = {
+      const reportData: Record<string, unknown> = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        type: formData.type,
-        ...(formData.location && {
-          location: {
-            longitude: formData.location.lng,
-            latitude: formData.location.lat,
-          },
-        }),
-        ...(formData.locationDescription && {
-          locationDescription: formData.locationDescription.trim(),
-        }),
+        type: reportType,
       };
+
+      // Add location if provided
+      if (formData.location) {
+        reportData.location = {
+          longitude: formData.location.lng,
+          latitude: formData.location.lat,
+        };
+      }
+
+      // Add location description if provided
+      if (formData.locationDescription) {
+        reportData.locationDescription = formData.locationDescription.trim();
+      }
 
       const report = await api.reports.create(reportData);
 
@@ -256,14 +315,43 @@ const ReportSubmissionPage: React.FC = () => {
               value={formData.type}
               onChange={handleInputChange}
               required
+              disabled={loadingTypes}
             >
-              {REPORT_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
+              {loadingTypes ? (
+                <option>Loading types...</option>
+              ) : (
+                <>
+                  {DEFAULT_REPORT_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                  {eventTypes.length > 0 && <option disabled>── Event Types ──</option>}
+                  {eventTypes.map((type) => (
+                    <option key={type._id} value={type.name}>
+                      {type.name}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
+
+          {formData.type === 'custom' && (
+            <div className={styles.field}>
+              <label htmlFor="customType">Custom Type*</label>
+              <input
+                type="text"
+                id="customType"
+                name="customType"
+                value={formData.customType}
+                onChange={handleInputChange}
+                placeholder="Enter custom report type"
+                maxLength={50}
+                required
+              />
+            </div>
+          )}
 
           <div className={styles.field}>
             <label htmlFor="description">Description*</label>
@@ -298,21 +386,68 @@ const ReportSubmissionPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, location: undefined }))}
+                  onClick={() => setFormData(prev => ({ ...prev, location: undefined, manualLat: '', manualLng: '' }))}
                   className={styles.removeLocationButton}
                 >
                   Remove Location
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleGetLocation}
-                disabled={isGettingLocation}
-                className={styles.locationButton}
-              >
-                {isGettingLocation ? 'Getting Location...' : 'Get Current Location'}
-              </button>
+              <>
+                <div className={styles.locationButtons}>
+                  <button
+                    type="button"
+                    onClick={handleGetLocation}
+                    disabled={isGettingLocation || useManualLocation}
+                    className={styles.locationButton}
+                  >
+                    {isGettingLocation ? 'Getting Location...' : 'Get Current Location'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUseManualLocation(!useManualLocation)}
+                    className={styles.locationButton}
+                  >
+                    {useManualLocation ? 'Cancel Manual Entry' : 'Enter Manually'}
+                  </button>
+                </div>
+
+                {useManualLocation && (
+                  <div className={styles.manualLocationFields}>
+                    <div className={styles.field}>
+                      <label htmlFor="manualLat">Latitude</label>
+                      <input
+                        type="number"
+                        id="manualLat"
+                        name="manualLat"
+                        value={formData.manualLat}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 32.0853"
+                        step="any"
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="manualLng">Longitude</label>
+                      <input
+                        type="number"
+                        id="manualLng"
+                        name="manualLng"
+                        value={formData.manualLng}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 34.7818"
+                        step="any"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleManualLocation}
+                      className={styles.locationButton}
+                    >
+                      Set Location
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             {locationError && (

@@ -922,7 +922,7 @@ class VmsService {
     if (!response.ok) {
       throw new Error(`Shinobi returned status ${response.status}`);
     }
-    const payload = await response.json();
+    const payload = await response.json() as { videos?: unknown };
     const videos = Array.isArray(payload?.videos) ? payload.videos : [];
     return videos.map((video: Record<string, unknown>) => ({
       time: typeof video.time === 'string' ? video.time : undefined,
