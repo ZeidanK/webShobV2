@@ -36,6 +36,19 @@ $env:SKIP_DB_SETUP="true"
 npm test -- --runTestsByPath src/services/rtsp-stream.service.test.ts
 ```
 
+## Slice 12: Playback integration tests (requires MongoMemoryServer)
+Run these from `backend/`:
+```
+npm test -- --runTestsByPath src/routes/event.routes.test.ts
+```
+
+## Slice 12: Manual playback checks
+1. Open an event detail page and click "View Cameras".
+2. Confirm the playback badge reflects available recordings for the event time.
+3. Verify the timeline scrubber updates current time and the "Event" marker is visible.
+4. Use Play/Pause to start and stop all playback tiles.
+5. Scrub the timeline and confirm all tiles seek together (sync status should stay "Synced").
+
 ## Optional full backend test run (host)
 ```
 npm test

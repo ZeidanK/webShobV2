@@ -1014,11 +1014,11 @@ Slices 9.0-11 provide live streaming. This slice adds historical/recorded video 
   - [x] Badge showing # of cameras with recording
 
 ### Tests
-- [ ] Integration: playback URL generation for Shinobi
-- [ ] Integration: camera selection by event location
-- [ ] Integration: no recording handling
-- [ ] Manual: Multi-camera playback synchronization
-- [ ] Manual: Timeline scrubber functionality
+- [~] Integration: playback URL generation for Shinobi
+- [~] Integration: camera selection by event location
+- [~] Integration: no recording handling
+- [~] Manual: Multi-camera playback synchronization
+- [~] Manual: Timeline scrubber functionality
 
 ### Definition of Done (Slice 12)
 - [x] Operator can access playback from event detail page

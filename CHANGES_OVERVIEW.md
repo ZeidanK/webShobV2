@@ -219,6 +219,10 @@ Interaction mode gates click focus vs drag swapping for operator workflow flexib
 - Added event timeline scrubber with an event marker and current time display.
 - Added synchronized play/pause and seek controls across playback tiles with sync status indicator.
 - Playback grid now uses MP4 playback URLs for Shinobi clips while retaining status headers.
+### Slice 12-D tests and runbook
+- Added event playback route tests for playback URL availability, no-recording state, and geo radius filtering.
+- Documented manual playback verification steps in `docs/LOCAL_TESTING_GUIDE.md`.
+- Container test run for `event.routes.test.ts` failed on Alpine due to MongoMemoryServer unsupported distro.
 ### Historical step explanations (Slice 9.0-A to Slice 10-D)
 - 9.0-A: Before only core VMS routes existed; after added camera connection tests, audit logging, LiveView fallback, and demo cleanup to close MVP gaps.
 - 9.0-B: Before no local VMS lab/docs; after added `vms-lab/` compose, README updates, and VMS integration docs.
