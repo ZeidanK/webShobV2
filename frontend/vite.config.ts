@@ -17,7 +17,13 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',  // Allow external connections
     port: 5173,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'shobweb.da3wa.org',
+    ],
     proxy: {
       '/api': {
         target: 'http://backend:3000',
