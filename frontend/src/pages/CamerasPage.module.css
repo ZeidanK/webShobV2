@@ -99,6 +99,69 @@
   flex-wrap: wrap;
 }
 
+.bulkToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.bulkSelection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bulkActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bulkButton {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  /* TEST-ONLY: Ensure bulk button labels are readable on light backgrounds. */
+  color: #111827;
+  cursor: pointer;
+}
+
+.bulkPrimary {
+  padding: 0.5rem 0.75rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.bulkDanger {
+  padding: 0.5rem 0.75rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.bulkCount {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 .searchInput {
   flex: 1;
   min-width: 200px;
@@ -115,6 +178,8 @@
   font-size: 0.875rem;
   background: white;
   min-width: 150px;
+  /* TEST-ONLY: Force readable select text in dark layouts. */
+  color: #111827;
 }
 
 /* Camera Grid */
@@ -140,6 +205,19 @@
   position: relative;
   aspect-ratio: 16/9;
   background: #1a1a2e;
+  cursor: pointer;
+}
+
+.selectionBox {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: rgba(17, 24, 39, 0.7);
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.selectionBox input {
   cursor: pointer;
 }
 
@@ -204,6 +282,13 @@
   border-radius: 4px;
 }
 
+.listStatusBadge {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .statusBadge.online {
   background: #10b981;
   color: white;
@@ -244,6 +329,27 @@
   gap: 0.25rem;
 }
 
+.cameraTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tagPill {
+  font-size: 0.75rem;
+  background: #e5e7eb;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+}
+
+.cameraMeta {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
 .cameraActions {
   display: flex;
   gap: 0.5rem;
@@ -256,6 +362,8 @@
   background: white;
   border-radius: 6px;
   font-size: 0.75rem;
+  /* TEST-ONLY: Ensure button labels remain visible on light backgrounds. */
+  color: #111827;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -288,7 +396,7 @@
 
 .listHeader {
   display: grid;
-  grid-template-columns: 1fr 120px 120px 100px 150px;
+  grid-template-columns: 60px 1fr 120px 120px 100px 140px 180px;
   gap: 1rem;
   padding: 0.75rem 1rem;
   background: #f9fafb;
@@ -301,7 +409,7 @@
 
 .listRow {
   display: grid;
-  grid-template-columns: 1fr 120px 120px 100px 150px;
+  grid-template-columns: 60px 1fr 120px 120px 100px 140px 180px;
   gap: 1rem;
   padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
@@ -315,6 +423,11 @@
 
 .listRow:last-child {
   border-bottom: none;
+}
+
+.listCheckbox {
+  display: flex;
+  justify-content: center;
 }
 
 /* Live View Modal */
@@ -440,6 +553,9 @@
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   font-size: 0.875rem;
+  /* TEST-ONLY: Keep form field text visible against white backgrounds. */
+  color: #111827;
+  background: white;
 }
 
 .formTextarea {
@@ -451,6 +567,20 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.radioGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.radioOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  /* TEST-ONLY: Keep radio options readable on light backgrounds. */
+  color: #111827;
 }
 
 .formHint {

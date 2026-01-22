@@ -11,6 +11,8 @@ import { Event, EventStatus, EventPriority } from '../models/event.model';
 import { EventType } from '../models/event-type.model';
 import { Report, ReportType, ReportSource, ReportStatus } from '../models/report.model';
 import { UserRole } from '../models/user.model';
+import { Camera, VmsServer } from '../models';
+import { vmsService } from '../services/vms.service';
 
 describe('Event Routes', () => {
   const app = createApp();
@@ -693,6 +695,167 @@ describe('Event Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('INVALID_STATE_TRANSITION');
+    });
+  });
+
+  describe('GET /api/events/:id/video-playback', () => {
+    let event: any;
+
+    beforeEach(async () => {
+      event = await Event.create({
+        title: 'Playback Event',
+        description: 'Playback test event',
+        companyId: company1._id,
+        eventTypeId: eventType1._id,
+        priority: EventPriority.MEDIUM,
+        status: EventStatus.ACTIVE,
+        location: { type: 'Point', coordinates: [34.7818, 32.0853] },
+        createdBy: admin1._id,
+        reportIds: [],
+      });
+    });
+
+    afterEach(async () => {
+      await Camera.deleteMany({});
+      await VmsServer.deleteMany({});
+      jest.restoreAllMocks();
+    });
+
+    it('should return playback URL when recording is available', async () => {
+      // TEST-ONLY: Seed a Shinobi VMS server and linked camera for playback.
+      const vmsServer = await VmsServer.create({
+        name: 'Shinobi Playback',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        publicBaseUrl: 'http://localhost:8080',
+        auth: { apiKey: 'test-api', groupKey: 'test-group' },
+        companyId: company1._id,
+      });
+
+      await Camera.create({
+        name: 'Playback Camera',
+        companyId: company1._id,
+        type: 'ip',
+        status: 'online',
+        location: { type: 'Point', coordinates: [34.7818, 32.0853] },
+        recording: { enabled: true, retentionDays: 7, vmsHandled: true },
+        vms: {
+          provider: 'shinobi',
+          serverId: vmsServer._id,
+          monitorId: 'monitor-1',
+        },
+      });
+
+      // TEST-ONLY: Stub VMS playback resolution and token creation.
+      jest.spyOn(vmsService, 'getPlaybackInfo').mockResolvedValue({
+        playbackUrl: 'http://localhost:8080/test.mp4',
+        filename: '2026-01-22T06-10-09.mp4',
+        clipStart: new Date('2026-01-22T06:10:09Z'),
+        clipEnd: new Date('2026-01-22T06:15:04Z'),
+      });
+      jest.spyOn(vmsService, 'createPlaybackToken').mockReturnValue('playback-token');
+
+      const response = await request(app)
+        .get(`/api/events/${event._id}/video-playback`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.cameras).toHaveLength(1);
+      expect(response.body.data.cameras[0]).toMatchObject({
+        available: true,
+        playbackUrl: expect.stringContaining('/api/cameras/'),
+      });
+    });
+
+    it('should mark playback unavailable when recording is disabled', async () => {
+      const vmsServer = await VmsServer.create({
+        name: 'Shinobi Playback',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        publicBaseUrl: 'http://localhost:8080',
+        auth: { apiKey: 'test-api', groupKey: 'test-group' },
+        companyId: company1._id,
+      });
+
+      await Camera.create({
+        name: 'No Recording Camera',
+        companyId: company1._id,
+        type: 'ip',
+        status: 'online',
+        location: { type: 'Point', coordinates: [34.7818, 32.0853] },
+        recording: { enabled: false, retentionDays: 7, vmsHandled: true },
+        vms: {
+          provider: 'shinobi',
+          serverId: vmsServer._id,
+          monitorId: 'monitor-2',
+        },
+      });
+
+      const response = await request(app)
+        .get(`/api/events/${event._id}/video-playback`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.cameras[0]).toMatchObject({
+        available: false,
+        playbackReason: 'Recording not enabled',
+      });
+    });
+
+    it('should only include cameras within the search radius', async () => {
+      const vmsServer = await VmsServer.create({
+        name: 'Shinobi Playback',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        publicBaseUrl: 'http://localhost:8080',
+        auth: { apiKey: 'test-api', groupKey: 'test-group' },
+        companyId: company1._id,
+      });
+
+      await Camera.create({
+        name: 'Nearby Camera',
+        companyId: company1._id,
+        type: 'ip',
+        status: 'online',
+        location: { type: 'Point', coordinates: [34.7818, 32.0853] },
+        recording: { enabled: true, retentionDays: 7, vmsHandled: true },
+        vms: {
+          provider: 'shinobi',
+          serverId: vmsServer._id,
+          monitorId: 'monitor-3',
+        },
+      });
+
+      await Camera.create({
+        name: 'Far Camera',
+        companyId: company1._id,
+        type: 'ip',
+        status: 'online',
+        location: { type: 'Point', coordinates: [35.7818, 33.0853] },
+        recording: { enabled: true, retentionDays: 7, vmsHandled: true },
+        vms: {
+          provider: 'shinobi',
+          serverId: vmsServer._id,
+          monitorId: 'monitor-4',
+        },
+      });
+
+      jest.spyOn(vmsService, 'getPlaybackInfo').mockResolvedValue({
+        playbackUrl: 'http://localhost:8080/test.mp4',
+        filename: '2026-01-22T06-10-09.mp4',
+        clipStart: new Date('2026-01-22T06:10:09Z'),
+        clipEnd: new Date('2026-01-22T06:15:04Z'),
+      });
+      jest.spyOn(vmsService, 'createPlaybackToken').mockReturnValue('playback-token');
+
+      const response = await request(app)
+        .get(`/api/events/${event._id}/video-playback`)
+        .query({ radius: 500 })
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.cameras).toHaveLength(1);
+      expect(response.body.data.cameras[0].cameraName).toBe('Nearby Camera');
     });
   });
 });

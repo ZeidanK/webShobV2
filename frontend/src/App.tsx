@@ -17,13 +17,14 @@ import ReportsPage from './pages/ReportsPage';
 import ReportSubmissionPage from './pages/ReportSubmissionPage';
 import ReportDetailPage from './pages/ReportDetailPage';
 import CamerasPage from './pages/CamerasPage';
+import CameraDetailPage from './pages/CameraDetailPage';
 import CameraFormPage from './pages/CameraFormPage';
 import CameraDetailPage from './pages/CameraDetailPage';
 import MonitorWallPage from './pages/MonitorWallPage';
 import VmsSettingsPage from './pages/VmsSettingsPage';
 import { websocketService } from './services/websocket';
 import { ToastContainer, useToast } from './components/Toast';
-import { useEventCreated, useReportCreated } from './hooks/useWebSocket';
+import { useEventCreated, useReportCreated, useCameraStatus } from './hooks/useWebSocket';
 
 function App() {
   // Use state to track authentication - only update when explicitly changed
@@ -74,6 +75,13 @@ function App() {
   // Listen for real-time report updates
   useReportCreated((report) => {
     toast.info('New Report', `${report.title} from ${report.reporterName}`);
+  });
+
+  // Notify operators when a camera goes offline.
+  useCameraStatus((payload: { cameraId: string; status: string; previousStatus?: string }) => {
+    if (payload?.status === 'offline' && payload.previousStatus !== 'offline') {
+      toast.warning('Camera Offline', `Camera ${payload.cameraId} went offline`);
+    }
   });
 
   return (

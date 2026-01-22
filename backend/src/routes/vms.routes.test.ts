@@ -5,7 +5,7 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { app } from '../app';
-import { Company, User, UserRole, CompanyStatus, VmsServer } from '../models';
+import { Company, User, UserRole, CompanyStatus, VmsServer, Camera } from '../models';
 import { AuthService } from '../services';
 import { setupTestDB, teardownTestDB, clearDatabase } from '../test/helpers';
 
@@ -13,6 +13,7 @@ describe('VMS Routes Integration Tests', () => {
   let company: any;
   let adminToken: string;
   let operatorToken: string;
+  let fetchMock: jest.Mock;
 
   beforeAll(async () => {
     await setupTestDB();
@@ -23,6 +24,10 @@ describe('VMS Routes Integration Tests', () => {
   });
 
   beforeEach(async () => {
+    // Mock fetch for Shinobi API calls.
+    fetchMock = jest.fn();
+    (global as typeof global & { fetch: jest.Mock }).fetch = fetchMock;
+
     // Create test company
     company = await Company.create({
       name: 'Test Security Company',
@@ -66,6 +71,7 @@ describe('VMS Routes Integration Tests', () => {
 
   afterEach(async () => {
     await clearDatabase();
+    fetchMock.mockReset();
   });
 
   describe('POST /api/vms', () => {
@@ -363,6 +369,146 @@ describe('VMS Routes Integration Tests', () => {
         .expect(403);
 
       expect(response.body.success).toBe(false);
+    });
+  });
+
+  // Coverage for capability endpoint responses.
+  describe('GET /api/vms/:id/capabilities', () => {
+    it('should return capability flags for Shinobi', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Shinobi Capabilities',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        auth: { apiKey: 'key1', groupKey: 'group1' },
+      });
+
+      const response = await request(app)
+        .get(`/api/vms/${server._id}/capabilities`)
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.provider).toBe('shinobi');
+      expect(response.body.data.capabilities.supportsLive).toBe(true);
+      expect(response.body.data.capabilities.supportsPlayback).toBe(true);
+      expect(response.body.data.capabilities.supportsExport).toBe(false);
+    });
+
+    it('should return disabled capabilities for Milestone stubs', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Milestone Stub',
+        provider: 'milestone',
+        baseUrl: 'http://milestone.local:8080',
+      });
+
+      const response = await request(app)
+        .get(`/api/vms/${server._id}/capabilities`)
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.provider).toBe('milestone');
+      expect(response.body.data.capabilities).toEqual({
+        supportsLive: false,
+        supportsPlayback: false,
+        supportsExport: false,
+      });
+    });
+  });
+
+  // VMS test + discovery + import coverage.
+  describe('POST /api/vms/:id/test', () => {
+    it('should test a Shinobi server connection', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Test Shinobi',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        auth: { apiKey: 'key1', groupKey: 'group1' },
+      });
+
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [{ mid: 'cam-1' }],
+      });
+
+      const response = await request(app)
+        .post(`/api/vms/${server._id}/test`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.success).toBe(true);
+      expect(response.body.data.monitors).toBe(1);
+    });
+  });
+
+  describe('GET /api/vms/:id/monitors', () => {
+    it('should discover monitors from Shinobi', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Test Shinobi',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        auth: { apiKey: 'key1', groupKey: 'group1' },
+      });
+
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          { mid: 'cam-1', name: 'Entrance', status: 'Watching' },
+        ],
+      });
+
+      const response = await request(app)
+        .get(`/api/vms/${server._id}/monitors`)
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].id).toBe('cam-1');
+      expect(response.body.data[0].name).toBe('Entrance');
+    });
+  });
+
+  describe('POST /api/vms/:id/monitors/import', () => {
+    it('should import selected monitors as cameras', async () => {
+      const server = await VmsServer.create({
+        companyId: company._id,
+        name: 'Test Shinobi',
+        provider: 'shinobi',
+        baseUrl: 'http://shinobi.local:8080',
+        auth: { apiKey: 'key1', groupKey: 'group1' },
+      });
+
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          { mid: 'cam-1', name: 'Entrance', status: 'Watching' },
+          { mid: 'cam-2', name: 'Lobby', status: 'Watching' },
+        ],
+      });
+
+      const response = await request(app)
+        .post(`/api/vms/${server._id}/monitors/import`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          monitorIds: ['cam-1'],
+          defaultLocation: { coordinates: [34.78, 32.08], address: 'Test' },
+          source: 'vms-import',
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveLength(1);
+      const created = await Camera.find({ 'vms.monitorId': 'cam-1' });
+      expect(created).toHaveLength(1);
     });
   });
 });

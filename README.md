@@ -82,6 +82,7 @@ Before running the project, ensure you have the following installed:
 - **Git**: For cloning the repository
 - **Node.js**: Version 18 LTS (if running services locally without Docker)
 - **Python**: Version 3.9+ (if running AI service locally)
+- **FFmpeg**: Required for Direct RTSP streaming (installed in backend Docker image)
 
 ### System Requirements
 
@@ -145,6 +146,19 @@ Open your browser and navigate to:
 - **AI Service**: http://localhost:8000
 
 - **Shinobi VMS**: http://localhost:8080 (default: admin@shinobi.local / admin123)
+
+### Shinobi VMS Lab (Local)
+
+If you want a local Shinobi instance for VMS testing, use the dedicated lab stack:
+
+```bash
+cd vms-lab
+docker-compose up -d
+```
+
+If the default credentials above do not work, create an admin in the Shinobi UI and
+generate API keys from the Shinobi account settings.
+Create monitors in Shinobi so they appear in the VMS discovery list.
 ### 6. Verify Everything is Working
 
 Check the health endpoints:
@@ -236,8 +250,16 @@ The backend API is built with Node.js, Express, and TypeScript.
 - `NODE_ENV=development`
 - `PORT=3000`
 - `MONGODB_URI=mongodb://mongodb:27017/event_monitoring_dev`
-- `JWT_SECRET=development-secret-change-in-production`
-- `LOG_LEVEL=debug`
+  - `JWT_SECRET=development-secret-change-in-production`
+  - `LOG_LEVEL=debug`
+  - `STREAMING_BASE_DIR=/tmp/hls` (Direct RTSP output directory)
+  - `STREAMING_CLEANUP_INTERVAL_MS=300000` (segment cleanup interval)
+  - `STREAMING_CLEANUP_MAX_AGE_MS=3600000` (segment max age)
+  
+  **Direct RTSP Cleanup Runbook:**
+  - Adjust `STREAMING_CLEANUP_INTERVAL_MS` to control how often cleanup runs.
+  - Adjust `STREAMING_CLEANUP_MAX_AGE_MS` to control how long `.ts` segments are retained.
+  - HLS output is stored under `STREAMING_BASE_DIR` (default `/tmp/hls` in Docker).
 
 **Folder Structure:**
 ```
@@ -584,6 +606,7 @@ Additional documentation is available in the `docs/` folder:
 - [Testing Strategy](docs/02-TESTING_STRATEGY.md) - Unit, integration, and contract testing
 - [Logging & Observability](docs/03-LOGGING_OBSERVABILITY.md) - Structured logging and metrics
 - [WebSocket Events](docs/04-WEBSOCKET_EVENTS.md) - Real-time event specifications
+- [VMS Integration](docs/VMS_INTEGRATION.md) - Shinobi setup and VMS API endpoints
 
 See also the main design documents:
 

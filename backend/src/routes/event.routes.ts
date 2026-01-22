@@ -2,12 +2,15 @@ import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { EventService, CreateEventData, UpdateEventData } from '../services/event.service';
 import { cameraService } from '../services/camera.service';
+import { vmsService } from '../services/vms.service';
 import { EventStatus, EventPriority } from '../models/event.model';
+import { VmsServer } from '../models';
 import { authenticate, requireAnyRole } from '../middleware';
 import { UserRole } from '../models/user.model';
 import { AppError } from '../utils/errors';
 import { successResponse } from '../utils/response';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 const router = express.Router();
 
@@ -982,15 +985,109 @@ router.get(
         16 // Max 16 cameras for 4x4 grid
       );
 
-      // Format camera data for playback
-      const playbackCameras = nearbyCameras.map((camera: any) => ({
-        cameraId: camera._id,
-        name: camera.name,
-        streamUrl: camera.streamUrl,
-        hasRecording: !!camera.vms?.serverId,
-        location: camera.location,
-        status: camera.status,
-      }));
+      const playbackTimestamp = event.createdAt;
+      const serverIds = Array.from(
+        new Set(
+          nearbyCameras
+            .map((camera: any) => camera.vms?.serverId?.toString())
+            .filter(Boolean)
+        )
+      );
+      const serverQuery: Record<string, unknown> = { _id: { $in: serverIds } };
+      if (searchCompanyId) {
+        serverQuery.companyId = searchCompanyId;
+      }
+      const servers = serverIds.length > 0 ? await VmsServer.find(serverQuery) : [];
+      const serverById = new Map(servers.map((server) => [server._id.toString(), server]));
+      const playbackBaseUrl =
+        config.streaming.publicBaseUrl || `${req.protocol}://${req.get('host')}`;
+
+      // TEST-ONLY: Build playback metadata per camera for event playback responses.
+      const playbackCameras = await Promise.all(
+        nearbyCameras.map(async (camera: any) => {
+          const recordingEnabled =
+            camera.recording?.enabled ?? camera.settings?.recordingEnabled ?? false;
+          const hasVms = !!camera.vms?.serverId;
+          let playbackUrl: string | undefined;
+          let available = false;
+          let playbackReason: string | undefined;
+          let playbackClipStart: string | undefined;
+          let playbackClipEnd: string | undefined;
+          let playbackOffsetSeconds: number | undefined;
+
+          if (hasVms && camera.vms?.monitorId && recordingEnabled) {
+            const server = serverById.get(camera.vms.serverId.toString());
+            if (!server) {
+              playbackReason = 'VMS server not found';
+            } else {
+              try {
+                const playbackInfo = await vmsService.getPlaybackInfo(
+                  server,
+                  camera.vms.monitorId,
+                  playbackTimestamp
+                );
+                if (playbackInfo?.playbackUrl && playbackInfo.filename) {
+                  const token = vmsService.createPlaybackToken(
+                    camera._id.toString(),
+                    camera.companyId.toString(),
+                    server._id.toString(),
+                    camera.vms.monitorId,
+                    playbackInfo.filename
+                  );
+                  playbackUrl = `${playbackBaseUrl}/api/cameras/${camera._id}/playback/${encodeURIComponent(
+                    playbackInfo.filename
+                  )}?token=${encodeURIComponent(token)}`;
+                  if (playbackInfo.clipStart) {
+                    playbackClipStart = playbackInfo.clipStart.toISOString();
+                  }
+                  if (playbackInfo.clipEnd) {
+                    playbackClipEnd = playbackInfo.clipEnd.toISOString();
+                  }
+                  if (playbackInfo.clipStart) {
+                    const offset = (playbackTimestamp.getTime() - playbackInfo.clipStart.getTime()) / 1000;
+                    const duration = playbackInfo.clipEnd
+                      ? (playbackInfo.clipEnd.getTime() - playbackInfo.clipStart.getTime()) / 1000
+                      : undefined;
+                    const clamped = Math.max(0, offset);
+                    playbackOffsetSeconds = duration ? Math.min(clamped, duration) : clamped;
+                  }
+                  available = true;
+                } else {
+                  playbackReason = 'Playback URL not available';
+                }
+              } catch (err) {
+                playbackReason = err instanceof Error ? err.message : 'Playback unavailable';
+              }
+            }
+          } else if (camera.streamConfig?.type === 'direct-rtsp') {
+            // TEST-ONLY: Direct RTSP cameras do not have recording in MVP.
+            playbackReason = 'Direct RTSP recording not available';
+          } else if (!recordingEnabled) {
+            playbackReason = 'Recording not enabled';
+          } else if (!hasVms) {
+            playbackReason = 'No VMS server linked';
+          } else if (!camera.vms?.monitorId) {
+            playbackReason = 'No VMS monitor linked';
+          }
+
+          // TEST-ONLY: Include playback metadata fields expected by the UI.
+          return {
+            cameraId: camera._id,
+            cameraName: camera.name,
+            name: camera.name,
+            streamUrl: camera.streamUrl,
+            hasRecording: recordingEnabled,
+            playbackUrl,
+            available,
+            playbackReason,
+            playbackClipStart,
+            playbackClipEnd,
+            playbackOffsetSeconds,
+            location: camera.location,
+            status: camera.status,
+          };
+        })
+      );
 
       logger.info('event.video_playback', {
         eventId: id,

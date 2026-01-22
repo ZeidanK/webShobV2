@@ -60,7 +60,10 @@ export default function CompanySettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+      // Guard against null users for strict type safety.
+      if (!currentUser) {
+        return;
+      }
       const companyData = await api.companies.get(currentUser.companyId);
       setCompany(companyData);
       setSettings(companyData.settings);

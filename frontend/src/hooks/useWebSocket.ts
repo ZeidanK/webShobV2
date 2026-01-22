@@ -70,6 +70,14 @@ export function useReportCreated(callback: (report: any) => void) {
 /**
  * Hook to listen for camera status updates
  */
+export function useCameraStatus(callback: (payload: any) => void) {
+  const stableCallback = useCallback(callback, [callback]);
+  useWebSocketEvent(WebSocketEvent.CAMERA_STATUS, stableCallback);
+}
+
+/**
+ * Hook to listen for camera status updates
+ */
 export function useCameraStatusUpdated(callback: (update: {
   cameraId: string;
   oldStatus: string;

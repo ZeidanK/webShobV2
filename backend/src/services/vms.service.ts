@@ -10,9 +10,12 @@
  */
 
 import mongoose from 'mongoose';
-import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus } from '../models';
+import jwt from 'jsonwebtoken';
+import { VmsServer, IVmsServer, VmsProvider, Camera, CameraStatus, AuditLog, AuditAction } from '../models';
 import { AppError, ErrorCodes, NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { VmsAdapterFactory, type VmsAdapterCapabilities } from '../adapters/vms/factory';
+import { config } from '../config';
 
 /** Monitor info returned from VMS discovery */
 export interface VmsMonitor {
@@ -32,6 +35,15 @@ export interface StreamUrls {
   raw?: string;
 }
 
+interface PlaybackTokenPayload {
+  scope: 'vms-playback';
+  cameraId: string;
+  companyId: string;
+  serverId: string;
+  monitorId: string;
+  filename: string;
+}
+
 /** Pagination options */
 export interface PaginationOptions {
   page?: number;
@@ -45,6 +57,14 @@ export interface VmsServerFilters {
   provider?: VmsProvider;
   isActive?: boolean;
   search?: string;
+}
+
+/** Optional audit context for VMS operations */
+export interface VmsAuditContext {
+  userId?: mongoose.Types.ObjectId;
+  correlationId?: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /** Create VMS server input */
@@ -100,6 +120,53 @@ class VmsService {
 
     return { baseUrl: trimmedBaseUrl };
   }
+  // TEST-ONLY: Validate Shinobi playback filenames to prevent traversal.
+  private validateShinobiPlaybackFilename(filename: string): boolean {
+    return /^[0-9TZ\-:]+\.mp4$/i.test(filename);
+  }
+
+  // TEST-ONLY: Expose playback filename validation for route guards.
+  isValidPlaybackFilename(filename: string): boolean {
+    return this.validateShinobiPlaybackFilename(filename);
+  }
+
+  // TEST-ONLY: Create a short-lived playback token for proxying Shinobi clips.
+  createPlaybackToken(
+    cameraId: string,
+    companyId: string,
+    serverId: string,
+    monitorId: string,
+    filename: string
+  ): string {
+    const payload: PlaybackTokenPayload = {
+      scope: 'vms-playback',
+      cameraId,
+      companyId,
+      serverId,
+      monitorId,
+      filename,
+    };
+    return jwt.sign(payload, config.jwt.secret, { expiresIn: config.streaming.tokenTtlSeconds });
+  }
+
+  // TEST-ONLY: Verify playback token payload and scope.
+  verifyPlaybackToken(token: string): PlaybackTokenPayload {
+    try {
+      const decoded = jwt.verify(token, config.jwt.secret) as PlaybackTokenPayload;
+      if (decoded.scope !== 'vms-playback') {
+        throw new AppError(ErrorCodes.PLAYBACK_TOKEN_INVALID, 'Invalid playback token scope', 401);
+      }
+      return decoded;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new AppError(ErrorCodes.PLAYBACK_TOKEN_EXPIRED, 'Playback token expired', 401);
+      }
+      throw new AppError(ErrorCodes.PLAYBACK_TOKEN_INVALID, 'Invalid playback token', 401);
+    }
+  }
   // TEST-ONLY: normalize Shinobi monitor status to a camera status.
   private mapShinobiStatus(status?: string): CameraStatus {
     const normalized = (status || '').toLowerCase();
@@ -111,15 +178,42 @@ class VmsService {
     }
     return 'offline';
   }
+  // TEST-ONLY: Persist a VMS audit entry with standard metadata.
+  private async writeAuditLog(
+    action: AuditAction,
+    companyId: mongoose.Types.ObjectId,
+    resourceId: mongoose.Types.ObjectId | undefined,
+    changes: Record<string, unknown> | undefined,
+    metadata: Record<string, unknown> | undefined,
+    context?: VmsAuditContext
+  ): Promise<void> {
+    await AuditLog.create({
+      action,
+      companyId,
+      resourceType: 'VmsServer',
+      resourceId,
+      userId: context?.userId,
+      changes,
+      metadata,
+      correlationId: context?.correlationId,
+      ipAddress: context?.ipAddress,
+      userAgent: context?.userAgent,
+    });
+  }
   /**
    * Create a new VMS server
    */
   async create(
     companyId: mongoose.Types.ObjectId,
     data: CreateVmsServerInput,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<IVmsServer> {
-    logger.info('Creating VMS server', { companyId, provider: data.provider, name: data.name });
+    logger.info({
+      action: 'vms.create.start',
+      context: { companyId: companyId.toString(), provider: data.provider, name: data.name },
+      correlationId: context?.correlationId,
+    });
 
     const urls = this.normalizeVmsUrls(data.baseUrl, data.publicBaseUrl);
     const server = new VmsServer({
@@ -133,7 +227,21 @@ class VmsService {
 
     await server.save();
 
-    logger.info('VMS server created', { serverId: server._id, provider: data.provider });
+    // TEST-ONLY: Record audit metadata for VMS server creation.
+    await this.writeAuditLog(
+      AuditAction.VMS_SERVER_CREATED,
+      companyId,
+      server._id,
+      { name: server.name, provider: server.provider, baseUrl: server.baseUrl },
+      { publicBaseUrl: server.publicBaseUrl },
+      { ...context, userId }
+    );
+
+    logger.info({
+      action: 'vms.create.success',
+      context: { serverId: server._id.toString(), provider: data.provider },
+      correlationId: context?.correlationId,
+    });
     return server;
   }
 
@@ -221,7 +329,8 @@ class VmsService {
     companyId: mongoose.Types.ObjectId,
     serverId: mongoose.Types.ObjectId,
     data: UpdateVmsServerInput,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<IVmsServer> {
     // ALWAYS filter by companyId, include auth for validation
     const server = await VmsServer.findOne({ _id: serverId, companyId })
@@ -251,7 +360,26 @@ class VmsService {
     server.updatedBy = userId;
     await server.save();
 
-    logger.info('VMS server updated', { serverId, provider: server.provider });
+    // TEST-ONLY: Record audit metadata for VMS server updates.
+    await this.writeAuditLog(
+      AuditAction.VMS_SERVER_UPDATED,
+      companyId,
+      server._id,
+      {
+        name: data.name,
+        baseUrl: data.baseUrl,
+        publicBaseUrl: data.publicBaseUrl,
+        isActive: data.isActive,
+      },
+      { provider: server.provider },
+      { ...context, userId }
+    );
+
+    logger.info({
+      action: 'vms.update.success',
+      context: { serverId: server._id.toString(), provider: server.provider },
+      correlationId: context?.correlationId,
+    });
     return server;
   }
 
@@ -260,7 +388,8 @@ class VmsService {
    */
   async delete(
     companyId: mongoose.Types.ObjectId,
-    serverId: mongoose.Types.ObjectId
+    serverId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<void> {
     // ALWAYS filter by companyId
     const result = await VmsServer.deleteOne({ _id: serverId, companyId });
@@ -275,7 +404,21 @@ class VmsService {
       { $set: { isDeleted: true, lastModified: new Date() } }
     );
 
-    logger.info('VMS server deleted', { serverId });
+    // TEST-ONLY: Record audit metadata for VMS server deletion.
+    await this.writeAuditLog(
+      AuditAction.VMS_SERVER_DELETED,
+      companyId,
+      serverId,
+      undefined,
+      undefined,
+      context
+    );
+
+    logger.info({
+      action: 'vms.delete.success',
+      context: { serverId: serverId.toString() },
+      correlationId: context?.correlationId,
+    });
   }
 
   /**
@@ -283,7 +426,8 @@ class VmsService {
    */
   async testConnection(
     companyId: mongoose.Types.ObjectId,
-    serverId: mongoose.Types.ObjectId
+    serverId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<{ success: boolean; message: string; monitors?: number }> {
     const server = await this.findByIdWithAuth(companyId, serverId);
 
@@ -294,12 +438,71 @@ class VmsService {
     try {
       switch (server.provider) {
         case 'shinobi':
-          return await this.testShinobiConnection(server);
+          const result = await this.testShinobiConnection(server);
+          // TEST-ONLY: Audit successful Shinobi connection tests.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: true, monitors: result.monitors },
+            context
+          );
+          return result;
         case 'zoneminder':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
           return { success: false, message: 'ZoneMinder integration not yet implemented' };
         case 'agentdvr':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
           return { success: false, message: 'AgentDVR integration not yet implemented' };
+        case 'milestone':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
+          return { success: false, message: 'Milestone integration not yet implemented' };
+        case 'genetec':
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
+          return { success: false, message: 'Genetec integration not yet implemented' };
         default:
+          // TEST-ONLY: Audit unsupported provider test attempts.
+          await this.writeAuditLog(
+            AuditAction.VMS_SERVER_TESTED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, success: false, message: 'unsupported' },
+            context
+          );
           return { success: false, message: `Unknown provider: ${server.provider}` };
       }
     } catch (error) {
@@ -312,6 +515,16 @@ class VmsService {
           connectionStatus: 'error',
           lastError: message,
         }
+      );
+
+      // TEST-ONLY: Audit failed connection tests for troubleshooting.
+      await this.writeAuditLog(
+        AuditAction.VMS_SERVER_TESTED,
+        companyId,
+        serverId,
+        undefined,
+        { provider: server.provider, success: false, error: message },
+        context
       );
 
       logger.error('VMS connection test failed', { serverId, error: message });
@@ -329,7 +542,8 @@ class VmsService {
    */
   async discoverMonitors(
     companyId: mongoose.Types.ObjectId,
-    serverId: mongoose.Types.ObjectId
+    serverId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<VmsMonitor[]> {
     const server = await this.findByIdWithAuth(companyId, serverId);
 
@@ -340,10 +554,24 @@ class VmsService {
     try {
       switch (server.provider) {
         case 'shinobi':
-          return await this.discoverShinobiMonitors(server);
+          const monitors = await this.discoverShinobiMonitors(server);
+          // TEST-ONLY: Audit monitor discovery counts.
+          await this.writeAuditLog(
+            AuditAction.VMS_MONITORS_DISCOVERED,
+            companyId,
+            server._id,
+            undefined,
+            { provider: server.provider, count: monitors.length },
+            context
+          );
+          return monitors;
         case 'zoneminder':
           return [];
         case 'agentdvr':
+          return [];
+        case 'milestone':
+          return [];
+        case 'genetec':
           return [];
         default:
           return [];
@@ -374,8 +602,137 @@ class VmsService {
         return {};
       case 'agentdvr':
         return {};
+      case 'milestone':
+        return {};
+      case 'genetec':
+        return {};
       default:
         return {};
+    }
+  }
+
+  /**
+   * TEST-ONLY: Resolve playback URL for a VMS camera (Slice 12).
+   */
+  async getPlaybackUrl(
+    server: IVmsServer,
+    monitorId: string,
+    startTime: Date,
+    endTime?: Date
+  ): Promise<string | null> {
+    const info = await this.getPlaybackInfo(server, monitorId, startTime, endTime);
+    return info?.playbackUrl ?? null;
+  }
+
+  /**
+   * TEST-ONLY: Resolve playback details for a VMS camera (Slice 12).
+   */
+  async getPlaybackInfo(
+    server: IVmsServer,
+    monitorId: string,
+    startTime: Date,
+    endTime?: Date
+  ): Promise<{ playbackUrl: string; filename: string; clipStart?: Date; clipEnd?: Date } | null> {
+    switch (server.provider) {
+      case 'shinobi': {
+        const match = await this.findShinobiPlaybackClip(server, monitorId, startTime, endTime);
+        if (!match?.filename || !this.validateShinobiPlaybackFilename(match.filename)) {
+          return null;
+        }
+        const playbackUrl = this.buildShinobiPlaybackUrl(
+          server,
+          monitorId,
+          match.filename,
+          false
+        );
+        if (!playbackUrl) {
+          return null;
+        }
+        const clipStart = match.time ? new Date(match.time) : undefined;
+        const clipEnd = match.end ? new Date(match.end) : undefined;
+        return { playbackUrl, filename: match.filename, clipStart, clipEnd };
+      }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * TEST-ONLY: Build an internal playback download URL for proxying clips.
+   */
+  getPlaybackDownloadUrl(
+    server: IVmsServer,
+    monitorId: string,
+    filename: string
+  ): string | null {
+    return this.buildShinobiPlaybackUrl(server, monitorId, filename, false);
+  }
+
+  /**
+   * TEST-ONLY: Check recording availability for a specific time (Slice 12).
+   */
+  async checkRecordingAvailability(
+    server: IVmsServer,
+    monitorId: string,
+    timestamp: Date
+  ): Promise<{ available: boolean; reason?: string }> {
+    switch (server.provider) {
+      case 'shinobi': {
+        const match = await this.findShinobiPlaybackClip(server, monitorId, timestamp);
+        if (match?.filename) {
+          return { available: true };
+        }
+        return { available: false, reason: 'No recording found for requested time' };
+      }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
+      default:
+        return { available: false, reason: `Playback not supported for ${server.provider}` };
+    }
+  }
+
+  /**
+   * TEST-ONLY: Fetch recording range metadata for a camera (Slice 12).
+   */
+  async getRecordingRange(
+    server: IVmsServer,
+    monitorId: string
+  ): Promise<{ start?: Date; end?: Date } | null> {
+    switch (server.provider) {
+      case 'shinobi': {
+        const videos = await this.fetchShinobiVideos(server, monitorId);
+        if (videos.length === 0) {
+          return null;
+        }
+        const times = videos
+          .map((video) => {
+            const start = Date.parse(video.time || '');
+            const end = Date.parse(video.end || '');
+            return {
+              start: Number.isNaN(start) ? undefined : start,
+              end: Number.isNaN(end) ? undefined : end,
+            };
+          })
+          .filter((entry) => entry.start !== undefined);
+        if (times.length === 0) {
+          return null;
+        }
+        const minStart = Math.min(...times.map((entry) => entry.start as number));
+        const maxEnd = Math.max(...times.map((entry) => (entry.end ?? entry.start) as number));
+        return { start: new Date(minStart), end: new Date(maxEnd) };
+      }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
+      default:
+        return null;
     }
   }
 
@@ -393,6 +750,10 @@ class VmsService {
         const monitor = monitors.find((item) => item.id === monitorId);
         return this.mapShinobiStatus(monitor?.status);
       }
+      case 'milestone':
+      case 'genetec':
+      case 'zoneminder':
+      case 'agentdvr':
       default:
         return null;
     }
@@ -526,6 +887,85 @@ class VmsService {
     };
   }
 
+  // TEST-ONLY: Build a Shinobi playback URL for MP4 clips.
+  private buildShinobiPlaybackUrl(
+    server: IVmsServer,
+    monitorId: string,
+    filename: string,
+    usePublicBaseUrl: boolean
+  ): string | null {
+    const apiKey = server.auth?.apiKey;
+    const groupKey = server.auth?.groupKey;
+    if (!apiKey || !groupKey) {
+      return null;
+    }
+    const base = (usePublicBaseUrl ? server.publicBaseUrl || server.baseUrl : server.baseUrl).replace(/\/+$/, '');
+    return `${base}/${apiKey}/videos/${groupKey}/${monitorId}/${encodeURIComponent(filename)}`;
+  }
+
+  // TEST-ONLY: Shinobi videos metadata used for playback selection.
+  private async fetchShinobiVideos(
+    server: IVmsServer,
+    monitorId: string,
+    limit = config.streaming.playbackLookupLimit
+  ): Promise<Array<{ time?: string; end?: string; filename?: string; href?: string }>> {
+    const { baseUrl, auth } = server;
+    if (!auth?.apiKey || !auth?.groupKey) {
+      return [];
+    }
+    const url = `${baseUrl}/${auth.apiKey}/videos/${auth.groupKey}/${monitorId}?limit=${limit}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      throw new Error(`Shinobi returned status ${response.status}`);
+    }
+    const payload = await response.json();
+    const videos = Array.isArray(payload?.videos) ? payload.videos : [];
+    return videos.map((video: Record<string, unknown>) => ({
+      time: typeof video.time === 'string' ? video.time : undefined,
+      end: typeof video.end === 'string' ? video.end : undefined,
+      filename: typeof video.filename === 'string' ? video.filename : undefined,
+      href: typeof video.href === 'string' ? video.href : undefined,
+    }));
+  }
+
+  // TEST-ONLY: Find the Shinobi playback clip that covers the requested timestamp.
+  private async findShinobiPlaybackClip(
+    server: IVmsServer,
+    monitorId: string,
+    startTime: Date,
+    endTime?: Date
+  ): Promise<{ time?: string; end?: string; filename?: string; href?: string } | null> {
+    const videos = await this.fetchShinobiVideos(server, monitorId, 50);
+    if (videos.length === 0) {
+      return null;
+    }
+    const target = startTime.getTime();
+    const boundedTarget = endTime ? Math.min(endTime.getTime(), target) : target;
+    const match = videos.find((video) => {
+      const start = Date.parse(video.time || '');
+      const end = Date.parse(video.end || '');
+      if (Number.isNaN(start)) {
+        return false;
+      }
+      if (!Number.isNaN(end)) {
+        return boundedTarget >= start && boundedTarget <= end;
+      }
+      return boundedTarget >= start;
+    });
+    if (match?.filename) {
+      return match;
+    }
+    const fallback = videos.find((video) => {
+      const start = Date.parse(video.time || '');
+      return !Number.isNaN(start) && boundedTarget >= start;
+    });
+    return fallback ?? videos[0] ?? null;
+  }
+
   /**
    * Update connection status for a server
    */
@@ -547,6 +987,13 @@ class VmsService {
   }
 
   /**
+   * Resolve adapter capabilities for a provider.
+   */
+  getCapabilities(provider: VmsProvider): VmsAdapterCapabilities {
+    return VmsAdapterFactory.create(provider).capabilities;
+  }
+
+  /**
    * Import monitors from VMS as cameras
    * 
    * @param serverId - VMS server ID
@@ -563,7 +1010,8 @@ class VmsService {
     defaultLocation: { coordinates: [number, number]; address?: string } | undefined,
     source: string | undefined,
     companyId: mongoose.Types.ObjectId,
-    userId: mongoose.Types.ObjectId
+    userId: mongoose.Types.ObjectId,
+    context?: VmsAuditContext
   ): Promise<any[]> {
     // VMS servers do not support soft delete; filter by company only
     // Ensure the VMS server exists for the current tenant
@@ -584,7 +1032,7 @@ class VmsService {
 
     // Discover all monitors
     // Maintain discoverMonitors signature: (companyId, serverId)
-    const monitors = await this.discoverMonitors(companyId, serverId);
+    const monitors = await this.discoverMonitors(companyId, serverId, context);
 
     // Filter to selected monitors if specified
     const selectedMonitors = monitorIds && monitorIds.length > 0
@@ -658,6 +1106,16 @@ class VmsService {
 
     const createdCameras = await Camera.insertMany(camerasToCreate);
     
+    // TEST-ONLY: Audit imported monitor counts for VMS tracking.
+    await this.writeAuditLog(
+      AuditAction.VMS_MONITORS_IMPORTED,
+      companyId,
+      serverId,
+      undefined,
+      { provider: server.provider, count: createdCameras.length },
+      { ...context, userId }
+    );
+
     logger.info('Imported monitors as cameras', {
       serverId,
       companyId,

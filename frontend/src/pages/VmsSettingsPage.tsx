@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { api, VmsServer, VmsMonitor, ApiRequestError } from '../services/api';
+import { api, VmsServer, VmsMonitor, ApiRequestError, VmsCapabilities } from '../services/api';
 import styles from './VmsSettingsPage.module.css';
 
-type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
+type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'milestone' | 'genetec' | 'other';
 
 interface VmsFormData {
   name: string;
@@ -16,6 +16,7 @@ interface VmsFormData {
   groupKey: string;
   username: string;
   password: string;
+  sdkConfig: string;
 }
 
 const defaultFormData: VmsFormData = {
@@ -28,6 +29,7 @@ const defaultFormData: VmsFormData = {
   groupKey: '',
   username: '',
   password: '',
+  sdkConfig: '',
 };
 
 // Normalize API errors to include codes for troubleshooting.
@@ -59,6 +61,47 @@ export default function VmsSettingsPage() {
   // Monitors state
   const [loadingMonitors, setLoadingMonitors] = useState<string | null>(null);
   const [monitors, setMonitors] = useState<Record<string, VmsMonitor[]>>({});
+  // TEST-ONLY: Track per-server capability flags for stubbed adapters.
+  const [capabilitiesByServer, setCapabilitiesByServer] = useState<Record<string, VmsCapabilities | null>>({});
+  const [capabilitiesLoading, setCapabilitiesLoading] = useState<Record<string, boolean>>({});
+  // TEST-ONLY: Track cleanup action per VMS server.
+  const [cleaning, setCleaning] = useState<string | null>(null);
+  // TEST-ONLY: Flag providers that are stubbed in Slice 11.
+  const isComingSoonProvider = (provider: VmsProvider) => provider === 'milestone' || provider === 'genetec';
+
+  // TEST-ONLY: Resolve adapter capabilities for each server to gate UI actions.
+  const fetchCapabilities = useCallback(async (serversData: VmsServer[]) => {
+    if (serversData.length === 0) {
+      setCapabilitiesByServer({});
+      setCapabilitiesLoading({});
+      return;
+    }
+
+    const loadingFlags = serversData.reduce<Record<string, boolean>>((acc, server) => {
+      acc[server._id] = true;
+      return acc;
+    }, {});
+    setCapabilitiesLoading(loadingFlags);
+
+    const entries = await Promise.all(
+      serversData.map(async (server) => {
+        try {
+          const result = await api.vms.capabilities(server._id);
+          return [server._id, result.capabilities] as const;
+        } catch (err) {
+          console.error('Failed to fetch VMS capabilities:', err);
+          return [server._id, null] as const;
+        }
+      })
+    );
+
+    setCapabilitiesByServer((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+    const doneFlags = serversData.reduce<Record<string, boolean>>((acc, server) => {
+      acc[server._id] = false;
+      return acc;
+    }, {});
+    setCapabilitiesLoading((prev) => ({ ...prev, ...doneFlags }));
+  }, []);
 
   // Fetch VMS servers
   const fetchServers = useCallback(async () => {
@@ -67,13 +110,15 @@ export default function VmsSettingsPage() {
       setError(null);
       const serversData = await api.vms.list();
       setServers(serversData || []);
+      // TEST-ONLY: Refresh capability cache whenever servers reload.
+      await fetchCapabilities(serversData || []);
     } catch (err) {
       console.error('Failed to fetch VMS servers:', err);
       setError('Failed to load VMS servers.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchCapabilities]);
 
   useEffect(() => {
     fetchServers();
@@ -93,6 +138,7 @@ export default function VmsSettingsPage() {
         groupKey: '',
         username: '',
         password: '',
+        sdkConfig: server.sdkConfig ? JSON.stringify(server.sdkConfig, null, 2) : '',
       });
     } else {
       setEditingServer(null);
@@ -107,6 +153,18 @@ export default function VmsSettingsPage() {
     
     try {
       setSaving(true);
+
+      let parsedSdkConfig: Record<string, unknown> | undefined;
+      // TEST-ONLY: Parse Genetec SDK config input as JSON.
+      if (formData.provider === 'genetec' && formData.sdkConfig.trim()) {
+        try {
+          parsedSdkConfig = JSON.parse(formData.sdkConfig);
+        } catch (err) {
+          alert(formatApiError(err, 'SDK config must be valid JSON'));
+          setSaving(false);
+          return;
+        }
+      }
       
       const serverData = {
         name: formData.name,
@@ -115,6 +173,7 @@ export default function VmsSettingsPage() {
         baseUrl: formData.baseUrl,
         // Public base URL for browser stream access (optional).
         publicBaseUrl: formData.publicBaseUrl || undefined,
+        sdkConfig: parsedSdkConfig,
         isActive: formData.isActive,
         auth: formData.provider === 'shinobi' ? {
           apiKey: formData.apiKey || undefined,
@@ -247,6 +306,26 @@ export default function VmsSettingsPage() {
     }
   };
 
+  // TEST-ONLY: Remove imported demo cameras for a VMS server.
+  const handleCleanupImported = async (server: VmsServer) => {
+    const ok = confirm(`Remove imported cameras from ${server.name}?`);
+    if (!ok) {
+      return;
+    }
+
+    try {
+      setCleaning(server._id);
+      const result = await api.deleteCamerasBySource('vms-import');
+      alert(`Deleted ${result.deletedCount} imported camera(s).`);
+      fetchServers();
+    } catch (err) {
+      console.error('Failed to cleanup imported cameras:', err);
+      alert(formatApiError(err, 'Failed to cleanup imported cameras'));
+    } finally {
+      setCleaning(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -260,13 +339,11 @@ export default function VmsSettingsPage() {
 
   return (
     <div className={styles.container}>
-      <Link to="/cameras" className={styles.backLink}>
-        ← Back to Cameras
-      </Link>
+      <Link to="/cameras" className={styles.backLink}>\n        Back to Cameras\n      </Link>
 
       {/* Header */}
       <div className={styles.header}>
-        <h1 className={styles.title}>⚙️ VMS Settings</h1>
+        <h1 className={styles.title}>VMS Settings</h1>
         <button className={styles.addButton} onClick={() => openModal()}>
           + Add VMS Server
         </button>
@@ -274,8 +351,7 @@ export default function VmsSettingsPage() {
 
       {/* Error State */}
       {error && (
-        <div className={styles.emptyState}>
-          <span>⚠️</span>
+        <div className={styles.emptyState}>\n          <span>Error</span>
           <h3>Error</h3>
           <p>{error}</p>
           <button className={styles.addButton} onClick={fetchServers}>
@@ -286,8 +362,7 @@ export default function VmsSettingsPage() {
 
       {/* Empty State */}
       {!error && servers.length === 0 && (
-        <div className={styles.emptyState}>
-          <span>🖥️</span>
+        <div className={styles.emptyState}>\n          <span>Error</span>
           <h3>No VMS Servers Configured</h3>
           <p>Add a VMS server to connect cameras and view live streams.</p>
           <button className={styles.addButton} onClick={() => openModal()}>
@@ -299,7 +374,12 @@ export default function VmsSettingsPage() {
       {/* Server List */}
       {!error && servers.length > 0 && (
         <div className={styles.serverGrid}>
-          {servers.map((server) => (
+          {servers.map((server) => {
+            const isComingSoon = isComingSoonProvider(server.provider);
+            const capabilities = capabilitiesByServer[server._id];
+            const isCapabilitiesLoading = capabilitiesLoading[server._id];
+
+            return (
             <div key={server._id} className={styles.serverCard}>
               <div className={styles.serverHeader}>
                 <div className={styles.serverInfo}>
@@ -317,31 +397,37 @@ export default function VmsSettingsPage() {
                   <button
                     className={`${styles.actionButton} ${styles.primary}`}
                     onClick={() => handleTestConnection(server)}
-                    disabled={testing === server._id}
+                    disabled={testing === server._id || isComingSoon}
                   >
-                    {testing === server._id ? '...' : '🔌 Test'}
+                    {testing === server._id ? '...' : 'Test'}
                   </button>
                   <button
                     className={styles.actionButton}
                     onClick={() => handleDiscoverMonitors(server)}
-                    disabled={loadingMonitors === server._id}
+                    disabled={loadingMonitors === server._id || isComingSoon}
                   >
-                    {loadingMonitors === server._id ? '...' : '🔍 Discover'}
+                    {loadingMonitors === server._id ? '...' : 'Discover'}
                   </button>
                   <button
                     className={styles.actionButton}
                     onClick={() => openModal(server)}
                   >
-                    ✏️
+                    Edit
                   </button>
                   <button
                     className={`${styles.actionButton} ${styles.danger}`}
                     onClick={() => handleDelete(server)}
                   >
-                    🗑️
+                    Delete
                   </button>
                 </div>
               </div>
+
+              {isComingSoon && (
+                <div className={styles.comingSoonBanner}>
+                  Coming soon: {server.provider} adapter is stubbed in Slice 11.
+                </div>
+              )}
 
               <div className={styles.serverDetails}>
                 <div className={styles.detailRow}>
@@ -352,12 +438,38 @@ export default function VmsSettingsPage() {
                   <span className={styles.detailLabel}>Provider:</span>
                   <span className={styles.detailValue}>{server.provider}</span>
                 </div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Capabilities:</span>
+                  <div className={styles.capabilityPills}>
+                    {isCapabilitiesLoading ? (
+                      <span className={styles.capabilityLoading}>Loading...</span>
+                    ) : (
+                      <>
+                        <span
+                          className={`${styles.capabilityPill} ${capabilities?.supportsLive ? styles.capabilityEnabled : styles.capabilityDisabled}`}
+                        >
+                          Live
+                        </span>
+                        <span
+                          className={`${styles.capabilityPill} ${capabilities?.supportsPlayback ? styles.capabilityEnabled : styles.capabilityDisabled}`}
+                        >
+                          Playback
+                        </span>
+                        <span
+                          className={`${styles.capabilityPill} ${capabilities?.supportsExport ? styles.capabilityEnabled : styles.capabilityDisabled}`}
+                        >
+                          Export
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Test Result */}
               {testResult && testResult.serverId === server._id && (
                 <div className={`${styles.testResult} ${testResult.success ? styles.success : styles.error}`}>
-                  {testResult.success ? '✓' : '✗'} {testResult.message}
+                  {testResult.success ? 'OK' : 'Failed'} {testResult.message}
                 </div>
               )}
 
@@ -373,8 +485,17 @@ export default function VmsSettingsPage() {
                       <button
                         className={`${styles.actionButton} ${styles.primary}`}
                         onClick={() => handleImportAllMonitors(server)}
+                        disabled={isComingSoon}
                       >
-                        📥 Import All
+                        Import All
+                      </button>
+                      {/* TEST-ONLY: Cleanup imported demo cameras for this VMS. */}
+                      <button
+                        className={`${styles.actionButton} ${styles.danger}`}
+                        onClick={() => handleCleanupImported(server)}
+                        disabled={cleaning === server._id}
+                      >
+                        {cleaning === server._id ? '...' : 'Cleanup Imported'}
                       </button>
                     </div>
                   </div>
@@ -386,8 +507,9 @@ export default function VmsSettingsPage() {
                         <button
                           className={styles.importButton}
                           onClick={() => handleImportCamera(server, monitor)}
+                          disabled={isComingSoon}
                         >
-                          📥 Import
+                          Import
                         </button>
                       </div>
                     ))}
@@ -395,7 +517,7 @@ export default function VmsSettingsPage() {
                 </div>
               )}
             </div>
-          ))}
+          )})}
         </div>
       )}
 
@@ -411,7 +533,7 @@ export default function VmsSettingsPage() {
                 className={styles.modalClose}
                 onClick={() => setShowModal(false)}
               >
-                ×
+                Close
               </button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -446,6 +568,8 @@ export default function VmsSettingsPage() {
                       <option value="shinobi">Shinobi</option>
                       <option value="zoneminder">ZoneMinder</option>
                       <option value="agentdvr">Agent DVR</option>
+                      <option value="milestone">Milestone</option>
+                      <option value="genetec">Genetec</option>
                       <option value="other">Other</option>
                     </select>
                   </div>
@@ -511,6 +635,12 @@ export default function VmsSettingsPage() {
                       </span>
                     )}
                   </h4>
+
+                  {isComingSoonProvider(formData.provider) && (
+                    <div className={styles.comingSoonNote}>
+                      Provider support is stubbed. Configuration is saved, but test/discovery is disabled.
+                    </div>
+                  )}
                   
                   {formData.provider === 'shinobi' ? (
                     <>
@@ -570,6 +700,23 @@ export default function VmsSettingsPage() {
                           placeholder="VMS password"
                         />
                       </div>
+                      {formData.provider === 'genetec' && (
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>SDK Config (JSON)</label>
+                          <textarea
+                            value={formData.sdkConfig}
+                            onChange={(e) =>
+                              setFormData({ ...formData, sdkConfig: e.target.value })
+                            }
+                            className={styles.formInput}
+                            rows={6}
+                            placeholder='{"server":"127.0.0.1","site":"default"}'
+                          />
+                          <p className={styles.formHint}>
+                            Provide Genetec SDK settings as JSON (optional for now).
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -598,3 +745,10 @@ export default function VmsSettingsPage() {
     </div>
   );
 }
+
+
+
+
+
+
+

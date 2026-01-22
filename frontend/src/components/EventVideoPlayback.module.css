@@ -185,11 +185,206 @@
   flex-shrink: 0;
 }
 
+/* Playback availability list for cameras without recordings. */
+.unavailable {
+  padding: 0.75rem 1.5rem 1rem;
+  background: #1d1d1d;
+  border-bottom: 1px solid #2e2e2e;
+  color: #d1d1d1;
+  font-size: 0.9rem;
+}
+
+.unavailableTitle {
+  font-weight: 600;
+  color: #f8d7da;
+  margin-bottom: 0.5rem;
+}
+
+.unavailableList {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #cfcfcf;
+}
+
+.unavailableItem {
+  margin: 0.2rem 0;
+}
+
+.unavailableHint {
+  margin-top: 0.6rem;
+  color: #9aa0a6;
+  font-size: 0.85rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #333;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.toolbarInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timelineControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 240px;
+}
+
+.timelineButton {
+  background: #2a2a2a;
+  border: 1px solid #3b3b3b;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.timelineButton:hover {
+  border-color: #4b5563;
+}
+
+.timeDisplay {
+  color: #d1d5db;
+  font-size: 0.8rem;
+  min-width: 110px;
+  text-align: right;
+}
+
+.timeline {
+  flex: 1;
+  accent-color: #3b82f6;
+  min-width: 140px;
+}
+
+/* TEST-ONLY: Playback timeline event marker positioning. */
+.timelineTrack {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 160px;
+}
+
+.eventMarker {
+  position: absolute;
+  left: var(--event-marker-left, 0%);
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px #0f172a;
+}
+
+.eventMarkerLabel {
+  position: absolute;
+  left: var(--event-marker-left, 0%);
+  top: 50%;
+  transform: translate(-50%, -160%);
+  font-size: 0.7rem;
+  color: #22c55e;
+}
+
+.infoLabel {
+  color: #aaa;
+}
+
+.infoValue {
+  color: #fff;
+  font-weight: 600;
+}
+
+.infoDivider {
+  color: #555;
+}
+
+.layoutLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ddd;
+}
+
+.layoutSelect {
+  background: #111;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.layoutSelect:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
 .gridContainer {
   flex: 1;
   overflow: auto;
   padding: 1rem;
   background: #0a0a0a;
+}
+
+.playbackGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 2), minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.playbackTile {
+  background: #111;
+  border: 1px solid #242424;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+}
+
+.playbackHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: #171717;
+  color: #f3f4f6;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #242424;
+}
+
+.playbackName {
+  font-weight: 600;
+}
+
+.playbackStatus {
+  color: #9ca3af;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.playbackVideo {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  background: #000;
+  object-fit: cover;
 }
 
 .footer {

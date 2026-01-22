@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CameraGrid Component
  * 
  * Displays multiple camera live views in a responsive grid layout.
@@ -13,8 +13,14 @@ export interface CameraItem {
   id: string;
   name: string;
   streamUrl?: string;
+  // TEST-ONLY: Provide an embed URL for non-HLS fallback playback.
+  embedUrl?: string;
   snapshotUrl?: string;
   status?: 'online' | 'offline' | 'error' | 'maintenance';
+  // TEST-ONLY: Track stream type for direct-rtsp heartbeat wiring.
+  streamType?: 'direct-rtsp' | 'vms' | 'manual';
+  // TEST-ONLY: Optional heartbeat callback for direct-rtsp playback.
+  heartbeat?: () => Promise<void>;
 }
 
 interface CameraGridProps {
@@ -23,6 +29,15 @@ interface CameraGridProps {
   
   /** Grid layout mode */
   layout?: '1x1' | '2x2' | '3x3' | '4x4' | 'auto';
+
+  /** Explicit column count for wall grid sizing */
+  columns?: number;
+
+  /** Explicit row count for fixed wall sizing */
+  rows?: number;
+
+  /** Wall viewport height for fixed row sizing */
+  viewportHeight?: number;
   
   /** Callback when camera is selected */
   onCameraSelect?: (camera: CameraItem) => void;
@@ -44,11 +59,17 @@ interface CameraGridProps {
   
   /** Optional CSS class */
   className?: string;
+
+  /** Enable wall layout mode for scrollable grids */
+  wallMode?: boolean;
 }
 
 export const CameraGrid: React.FC<CameraGridProps> = ({
   cameras,
   layout = 'auto',
+  columns,
+  rows,
+  viewportHeight,
   onCameraSelect,
   selectedCameraId,
   showStatus = true,
@@ -56,7 +77,12 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   onSwap,
   resetToken,
   className,
+  wallMode = false,
 }) => {
+  // TEST-ONLY: Allow monitor wall to opt into a scroll-friendly container.
+  const containerClassName = `${styles.container} ${wallMode ? styles.wallContainer : ''} ${
+    className || ''
+  }`;
   const [focusedCameraId, setFocusedCameraId] = useState<string | null>(null);
   const [draggingCameraId, setDraggingCameraId] = useState<string | null>(null);
   const [dragOverCameraId, setDragOverCameraId] = useState<string | null>(null);
@@ -86,8 +112,24 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   const allowsClick = interactionMode !== 'drag';
   const allowsDrag = interactionMode !== 'click';
 
+  // TEST-ONLY: Fixed wall sizing keeps tiles aligned to the selected NxN grid.
+  const baseTileHeight = useMemo(() => {
+    if (!rows || rows <= 0 || !viewportHeight) {
+      return null;
+    }
+    const gridPadding = 8;
+    const gridGap = 4;
+    const available = viewportHeight - gridPadding - (rows - 1) * gridGap;
+    const computed = Math.floor(available / rows);
+    return Math.max(minTileHeight, computed);
+  }, [rows, viewportHeight, minTileHeight]);
+
   // Calculate grid columns based on layout and camera count
   const gridColumns = useMemo(() => {
+    // TEST-ONLY: Respect explicit wall column sizing when provided.
+    if (columns && columns > 0) {
+      return columns;
+    }
     if (layout === 'auto') {
       const count = cameras.length;
       if (count === 1) return 1;
@@ -103,7 +145,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
       case '4x4': return 4;
       default: return 2;
     }
-  }, [layout, cameras.length]);
+  }, [layout, cameras.length, columns]);
 
   // Filter cameras with streams
   const camerasWithStreams = useMemo(() => {
@@ -173,10 +215,6 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     setDragOverCameraId(null);
   };
 
-  const toggleFocus = (cameraId: string) => {
-    setFocusedCameraId((prev) => (prev === cameraId ? null : cameraId));
-  };
-
   const handleResizePointerDown = (
     cameraId: string,
     direction: 'e' | 's' | 'se' | 'ne' | 'sw' | 'nw',
@@ -204,14 +242,16 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     event.stopPropagation();
   };
 
-  const handleResizePointerMove = (cameraId: string, event: React.PointerEvent<HTMLDivElement>) => {
+  const handleResizePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!allowsDrag) {
       return;
     }
     const start = resizeDragRef.current;
-    if (!start || start.id !== cameraId) {
+    if (!start) {
       return;
     }
+    // TEST-ONLY: Use the active resize target for pointer updates.
+    const cameraId = start.id;
     const gridRect = gridRef.current?.getBoundingClientRect();
     const maxWidth = gridRect ? Math.max(gridRect.width - 8, minTileWidth) : Infinity;
     const maxHeight = gridRect ? Math.max(gridRect.height * 2, minTileHeight) : Infinity;
@@ -237,7 +277,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     event.stopPropagation();
   };
 
-  const handleResizePointerUp = (cameraId: string, event: React.PointerEvent<HTMLDivElement>) => {
+  // TEST-ONLY: End a resize drag without per-camera arguments.
+  const handleResizePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!allowsDrag) {
       return;
     }
@@ -262,20 +303,23 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     const focusedCamera = cameras.find(c => c.id === focusedCameraId);
     if (focusedCamera && focusedCamera.streamUrl) {
       return (
-        <div className={`${styles.container} ${styles.focused} ${className || ''}`}>
+        <div className={`${containerClassName} ${styles.focused}`}>
           <div className={styles.focusedView}>
+            {/* TEST-ONLY: Keep fullscreen control label ASCII to avoid mojibake. */}
             <button 
               className={styles.exitFocusButton}
               onClick={() => setFocusedCameraId(null)}
               title="Exit fullscreen"
             >
-              ✕ Exit Fullscreen
+              Exit Fullscreen
             </button>
             <LiveView
               streamUrl={focusedCamera.streamUrl}
+              embedUrl={focusedCamera.embedUrl}
               cameraName={focusedCamera.name}
               snapshotUrl={focusedCamera.snapshotUrl}
               aspectRatio="16:9"
+              onHeartbeat={focusedCamera.streamType === 'direct-rtsp' ? focusedCamera.heartbeat : undefined}
             />
           </div>
           
@@ -304,10 +348,11 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
   }
 
   return (
-    <div className={`${styles.container} ${className || ''}`}>
+    <div className={containerClassName}>
       {cameras.length === 0 ? (
         <div className={styles.empty}>
-          <span className={styles.emptyIcon}>📹</span>
+          {/* TEST-ONLY: ASCII fallback for the empty-state icon label. */}
+          <span className={styles.emptyIcon}>No cameras</span>
           <h3>No cameras configured</h3>
           <p>Add cameras or connect to a VMS server to view live streams.</p>
         </div>
@@ -319,8 +364,11 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
         >
           {cameras.map(camera => {
             const tileSize = tileSizes[camera.id];
+            // TEST-ONLY: Use fixed wall sizing unless an operator resized this tile.
             const tileStyle = tileSize
               ? { width: `${tileSize.width}px`, height: `${tileSize.height}px` }
+              : baseTileHeight
+              ? { height: `${baseTileHeight}px` }
               : undefined;
 
             return (
@@ -347,15 +395,18 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                 {camera.streamUrl ? (
                   <LiveView
                     streamUrl={camera.streamUrl}
+                    embedUrl={camera.embedUrl}
                     cameraName={camera.name}
                     snapshotUrl={camera.snapshotUrl}
                     showControls={false}
                     autoPlay={true}
                     fillParent={true}
+                    onHeartbeat={camera.streamType === 'direct-rtsp' ? camera.heartbeat : undefined}
                   />
                 ) : (
                   <div className={styles.offline}>
-                    <span className={styles.offlineIcon}>dY"ć</span>
+                    {/* TEST-ONLY: ASCII fallback for offline indicator text. */}
+                    <span className={styles.offlineIcon}>Offline</span>
                     <span className={styles.cameraName}>{camera.name}</span>
                   </div>
                 )}
@@ -368,8 +419,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeRight}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'e', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -381,8 +432,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeBottom}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 's', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -394,8 +445,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerBr}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'se', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -407,8 +458,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerTr}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'ne', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -420,8 +471,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerBl}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'sw', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -433,8 +484,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                   className={`${styles.resizeEdge} ${styles.resizeEdgeCorner} ${styles.resizeEdgeCornerTl}`}
                   data-resize-edge="true"
                   onPointerDown={(event) => handleResizePointerDown(camera.id, 'nw', event)}
-                  onPointerMove={(event) => handleResizePointerMove(camera.id, event)}
-                  onPointerUp={(event) => handleResizePointerUp(camera.id, event)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
                   onPointerCancel={handleResizePointerCancel}
                   onClick={handleResizeClick}
                   onPointerEnter={() => setHoverResizeId(camera.id)}
@@ -452,4 +503,8 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
 };
 
 export default CameraGrid;
+
+
+
+
 

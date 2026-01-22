@@ -24,6 +24,9 @@ export enum WebSocketEvent {
   // Reports
   REPORT_CREATED = 'report:created',
   REPORT_UPDATED = 'report:updated',
+
+  // Cameras
+  CAMERA_STATUS = 'camera:status',
   
   // Cameras
   CAMERA_STATUS_UPDATED = 'camera:status_updated',
@@ -63,7 +66,6 @@ export enum ConnectionStatus {
  */
 class WebSocketService {
   private socket: Socket | null = null;
-  private token: string | null = null;
   private connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private listeners: Map<string, Set<EventCallback>> = new Map();
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
@@ -79,7 +81,7 @@ class WebSocketService {
       return;
     }
 
-    this.token = token;
+    // Keep the token only in the socket auth payload to avoid unused state.
     this.setStatus(ConnectionStatus.CONNECTING);
 
     this.socket = io(WS_URL, {
@@ -159,6 +161,11 @@ class WebSocketService {
       console.log('[WebSocket] Report created', data);
       this.emit(WebSocketEvent.REPORT_CREATED, data);
     });
+
+    this.socket.on(WebSocketEvent.CAMERA_STATUS, (data: any) => {
+      console.log('[WebSocket] Camera status', data);
+      this.emit(WebSocketEvent.CAMERA_STATUS, data);
+    });
   }
 
   /**
@@ -169,7 +176,6 @@ class WebSocketService {
       console.log('[WebSocket] Disconnecting');
       this.socket.disconnect();
       this.socket = null;
-      this.token = null;
       this.setStatus(ConnectionStatus.DISCONNECTED);
       this.clearAllListeners();
     }

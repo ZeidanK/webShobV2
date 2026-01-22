@@ -1,267 +1,355 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { api, Camera } from '../services/api';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import {
+  api,
+  Camera,
+  CameraAuditLog,
+  CameraCapabilities,
+  CameraMaintenanceSchedule,
+  CameraStatus,
+  StreamUrls,
+} from '../services/api';
 import { LiveView } from '../components/LiveView';
+import { useCameraStatus } from '../hooks/useWebSocket';
 import styles from './CameraDetailPage.module.css';
+
+type CameraFormState = {
+  tags: string;
+  capabilities: CameraCapabilities;
+  maintenanceSchedule: CameraMaintenanceSchedule;
+};
 
 export default function CameraDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  
   const [camera, setCamera] = useState<Camera | null>(null);
+  const [streams, setStreams] = useState<StreamUrls | null>(null);
+  const [logs, setLogs] = useState<CameraAuditLog[]>([]);
+  const [formState, setFormState] = useState<CameraFormState>({
+    tags: '',
+    capabilities: {},
+    maintenanceSchedule: {},
+  });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [loadingStream, setLoadingStream] = useState(false);
 
-  const loadCamera = async () => {
-    if (!id) return;
-    
+  // TEST-ONLY: Normalize comma-delimited tags for updates.
+  const normalizeTags = useCallback((value: string): string[] => {
+    return value
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+  }, []);
+
+  const formatTimestamp = useCallback((value?: string) => {
+    if (!value) {
+      return 'Never';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return 'Unknown';
+    }
+    return date.toLocaleString();
+  }, []);
+
+  const loadCamera = useCallback(async () => {
+    if (!id) {
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      const data = await api.cameras.get(id);
-      setCamera(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load camera');
-      console.error('[CameraDetailPage] Error loading camera:', err);
+      const response = await api.cameras.get(id, true);
+      setCamera(response);
+      setStreams(response.streams || null);
+      setFormState({
+        tags: response.tags?.join(', ') || '',
+        capabilities: response.capabilities || {},
+        maintenanceSchedule: response.maintenanceSchedule || {},
+      });
+      const auditLogs = await api.cameras.getLogs(id, 50);
+      setLogs(auditLogs || []);
+    } catch (err) {
+      console.error('Failed to load camera details:', err);
+      setError('Failed to load camera details.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadStream = async () => {
-    if (!id) return;
-    
-    try {
-      setLoadingStream(true);
-      const streams = await api.cameras.getStreams(id);
-      if (streams.hls) {
-        setStreamUrl(streams.hls);
-      } else if (streams.raw) {
-        setStreamUrl(streams.raw);
-      } else if (camera?.streamUrl) {
-        setStreamUrl(camera.streamUrl);
-      }
-    } catch (err: any) {
-      console.error('[CameraDetailPage] Error loading stream:', err);
-    } finally {
-      setLoadingStream(false);
-    }
-  };
+  }, [id]);
 
   useEffect(() => {
     loadCamera();
-    loadStream();
-  }, [id]);
+  }, [loadCamera]);
+
+  // TEST-ONLY: Apply real-time status updates to the detail view.
+  useCameraStatus((payload: { cameraId: string; status: CameraStatus; checkedAt?: string }) => {
+    if (!payload?.cameraId || payload.cameraId !== camera?._id) {
+      return;
+    }
+    setCamera((prev) =>
+      prev ? { ...prev, status: payload.status, lastSeen: payload.checkedAt || prev.lastSeen } : prev
+    );
+  });
+
+  const handleSave = useCallback(async () => {
+    if (!camera) {
+      return;
+    }
+    try {
+      setSaving(true);
+      const payload = {
+        tags: normalizeTags(formState.tags),
+        capabilities: formState.capabilities,
+        maintenanceSchedule: {
+          intervalDays: formState.maintenanceSchedule.intervalDays || undefined,
+          lastServiceAt: formState.maintenanceSchedule.lastServiceAt || undefined,
+          nextServiceAt: formState.maintenanceSchedule.nextServiceAt || undefined,
+          notes: formState.maintenanceSchedule.notes || undefined,
+        },
+      };
+      const updated = await api.cameras.update(camera._id, payload);
+      setCamera(updated);
+    } catch (err) {
+      console.error('Failed to update camera:', err);
+      alert('Failed to update camera.');
+    } finally {
+      setSaving(false);
+    }
+  }, [camera, formState, normalizeTags]);
+
+  const streamUrl =
+    streams?.hls || streams?.raw || streams?.embed || streams?.snapshot || camera?.streamUrl || '';
 
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.loading}>Loading camera details...</div>
+        <div className={styles.loading}>Loading camera...</div>
       </div>
     );
   }
 
-  if (error || !camera) {
+  if (!camera) {
     return (
       <div className={styles.container}>
-        <div className={styles.error}>
-          <h2>Error</h2>
-          <p>{error || 'Camera not found'}</p>
-          <button onClick={() => navigate('/cameras')} className={styles.backButton}>
-            Back to Cameras
-          </button>
+        <div className={styles.emptyState}>
+          <h2>Camera not found</h2>
+          <Link to="/cameras" className={styles.backLink}>Back to Cameras</Link>
         </div>
       </div>
     );
   }
-
-  const getStatusClass = (status: string) => {
-    return `${styles.statusBadge} ${styles[`status${status.charAt(0).toUpperCase() + status.slice(1)}`]}`;
-  };
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
-        <div className={styles.headerTop}>
-          <button onClick={() => navigate(-1)} className={styles.backButton}>
-            ← Back
-          </button>
-          <div className={styles.headerActions}>
-            <Link to="/cameras" className={styles.linkButton}>
-              All Cameras
-            </Link>
-            <button
-              onClick={() => {
-                sessionStorage.setItem('monitorWallContext', JSON.stringify({
-                  source: 'camera-detail',
-                  cameraIds: [camera._id],
-                  cameraName: camera.name,
-                  timestamp: new Date().toISOString(),
-                }));
-                navigate('/cameras/monitor-wall');
-              }}
-              className={styles.primaryButton}
-            >
-              Open in Monitor Wall
-            </button>
-          </div>
+        <div>
+          <Link to="/cameras" className={styles.backLink}>Back to Cameras</Link>
+          <h1 className={styles.title}>{camera.name}</h1>
+          <p className={styles.subtitle}>
+            Status: <span className={`${styles.statusBadge} ${styles[camera.status]}`}>{camera.status}</span>
+          </p>
         </div>
-        
-        <div className={styles.headerContent}>
-          <div className={styles.headerInfo}>
-            <h1 className={styles.title}>📹 {camera.name}</h1>
-            <span className={getStatusClass(camera.status)}>
-              {camera.status}
-            </span>
-          </div>
-          {camera.description && (
-            <p className={styles.description}>{camera.description}</p>
-          )}
-        </div>
+        <button className={styles.saveButton} onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
       </div>
 
-      {/* Main Content */}
-      <div className={styles.content}>
-        {/* Live Stream Preview */}
-        <div className={styles.streamSection}>
-          <h2 className={styles.sectionTitle}>Live Stream</h2>
-          {loadingStream ? (
-            <div className={styles.streamLoading}>Loading stream...</div>
-          ) : streamUrl ? (
-            <div className={styles.streamContainer}>
+      {error && (
+        <div className={styles.errorBanner}>
+          {error}
+        </div>
+      )}
+
+      <div className={styles.grid}>
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Live Preview</h2>
+          <div className={styles.preview}>
+            {streamUrl ? (
               <LiveView
-                url={streamUrl}
-                cameraId={camera._id}
+                streamUrl={streamUrl}
+                embedUrl={streams?.embed}
                 cameraName={camera.name}
+                snapshotUrl={streams?.snapshot || camera.streamUrl}
+                onHeartbeat={
+                  camera.streamConfig?.type === 'direct-rtsp'
+                    ? () => api.cameras.heartbeat(camera._id)
+                    : undefined
+                }
               />
-            </div>
-          ) : (
-            <div className={styles.noStream}>
-              <p>No stream available for this camera</p>
-              {camera.streamUrl && (
-                <p className={styles.streamUrl}>
-                  Stream URL: <code>{camera.streamUrl}</code>
-                </p>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className={styles.placeholder}>No stream available</div>
+            )}
+          </div>
         </div>
 
-        {/* Camera Details */}
-        <div className={styles.detailsGrid}>
-          {/* Basic Information */}
-          <div className={styles.detailCard}>
-            <h3 className={styles.cardTitle}>Basic Information</h3>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Camera ID:</span>
-              <span className={styles.detailValue}>{camera._id}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Type:</span>
-              <span className={styles.detailValue}>{camera.type.toUpperCase()}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Status:</span>
-              <span className={styles.detailValue}>
-                <span className={getStatusClass(camera.status)}>
-                  {camera.status}
-                </span>
-              </span>
-            </div>
-            {camera.lastSeen && (
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>Last Seen:</span>
-                <span className={styles.detailValue}>
-                  {new Date(camera.lastSeen).toLocaleString()}
-                </span>
-              </div>
-            )}
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Details</h2>
+          <div className={styles.detailRow}>
+            <span>Type</span>
+            <span>{camera.type}</span>
           </div>
+          <div className={styles.detailRow}>
+            <span>Location</span>
+            <span>{camera.location?.address || 'No location set'}</span>
+          </div>
+          <div className={styles.detailRow}>
+            <span>Last seen</span>
+            <span>{formatTimestamp(camera.lastSeen)}</span>
+          </div>
+          <div className={styles.detailRow}>
+            <span>VMS</span>
+            <span>{camera.vms?.serverId ? 'Connected' : 'Manual'}</span>
+          </div>
+        </div>
 
-          {/* Location Information */}
-          {camera.location && (
-            <div className={styles.detailCard}>
-              <h3 className={styles.cardTitle}>Location</h3>
-              {camera.location.address && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Address:</span>
-                  <span className={styles.detailValue}>{camera.location.address}</span>
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Tags</h2>
+          <input
+            className={styles.input}
+            value={formState.tags}
+            onChange={(event) => setFormState((prev) => ({ ...prev, tags: event.target.value }))}
+            placeholder="comma-separated tags"
+          />
+          <div className={styles.tagList}>
+            {camera.tags?.map((tag) => (
+              <span key={tag} className={styles.tagPill}>{tag}</span>
+            ))}
+            {!camera.tags?.length && <span className={styles.placeholderText}>No tags</span>}
+          </div>
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Capabilities</h2>
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={!!formState.capabilities.ptz}
+              onChange={(event) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  capabilities: { ...prev.capabilities, ptz: event.target.checked },
+                }))
+              }
+            />
+            PTZ
+          </label>
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={!!formState.capabilities.audio}
+              onChange={(event) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  capabilities: { ...prev.capabilities, audio: event.target.checked },
+                }))
+              }
+            />
+            Audio
+          </label>
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={!!formState.capabilities.motionDetection}
+              onChange={(event) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  capabilities: { ...prev.capabilities, motionDetection: event.target.checked },
+                }))
+              }
+            />
+            Motion Detection
+          </label>
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Maintenance</h2>
+          <label className={styles.inputLabel}>Interval (days)</label>
+          <input
+            className={styles.input}
+            type="number"
+            min="1"
+            value={formState.maintenanceSchedule.intervalDays || ''}
+            onChange={(event) =>
+              setFormState((prev) => ({
+                ...prev,
+                maintenanceSchedule: {
+                  ...prev.maintenanceSchedule,
+                  intervalDays: event.target.value ? Number(event.target.value) : undefined,
+                },
+              }))
+            }
+          />
+          <label className={styles.inputLabel}>Last service</label>
+          <input
+            className={styles.input}
+            type="datetime-local"
+            value={formState.maintenanceSchedule.lastServiceAt || ''}
+            onChange={(event) =>
+              setFormState((prev) => ({
+                ...prev,
+                maintenanceSchedule: {
+                  ...prev.maintenanceSchedule,
+                  lastServiceAt: event.target.value || undefined,
+                },
+              }))
+            }
+          />
+          <label className={styles.inputLabel}>Next service</label>
+          <input
+            className={styles.input}
+            type="datetime-local"
+            value={formState.maintenanceSchedule.nextServiceAt || ''}
+            onChange={(event) =>
+              setFormState((prev) => ({
+                ...prev,
+                maintenanceSchedule: {
+                  ...prev.maintenanceSchedule,
+                  nextServiceAt: event.target.value || undefined,
+                },
+              }))
+            }
+          />
+          <label className={styles.inputLabel}>Notes</label>
+          <textarea
+            className={styles.textarea}
+            value={formState.maintenanceSchedule.notes || ''}
+            onChange={(event) =>
+              setFormState((prev) => ({
+                ...prev,
+                maintenanceSchedule: {
+                  ...prev.maintenanceSchedule,
+                  notes: event.target.value,
+                },
+              }))
+            }
+          />
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Activity</h2>
+          {logs.length === 0 && (
+            <div className={styles.placeholderText}>No audit logs available.</div>
+          )}
+          {logs.length > 0 && (
+            <div className={styles.logList}>
+              {logs.map((log) => (
+                <div key={log._id} className={styles.logItem}>
+                  <div className={styles.logHeader}>
+                    <span>{log.action}</span>
+                    <span>{formatTimestamp(log.timestamp)}</span>
+                  </div>
+                  {(() => {
+                    // TEST-ONLY: Guard metadata message type for render safety.
+                    const message =
+                      typeof log.metadata?.message === 'string' ? log.metadata.message : '';
+                    return message ? (
+                      <div className={styles.logMessage}>{message}</div>
+                    ) : null;
+                  })()}
                 </div>
-              )}
-              {camera.location.coordinates && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Coordinates:</span>
-                  <span className={styles.detailValue}>
-                    {camera.location.coordinates[1].toFixed(6)}, {camera.location.coordinates[0].toFixed(6)}
-                  </span>
-                </div>
-              )}
+              ))}
             </div>
           )}
-
-          {/* VMS Information */}
-          {camera.vms && (
-            <div className={styles.detailCard}>
-              <h3 className={styles.cardTitle}>VMS Integration</h3>
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>Provider:</span>
-                <span className={styles.detailValue}>{camera.vms.provider}</span>
-              </div>
-              {camera.vms.monitorId && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Monitor ID:</span>
-                  <span className={styles.detailValue}>{camera.vms.monitorId}</span>
-                </div>
-              )}
-              {camera.vms.groupKey && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Group:</span>
-                  <span className={styles.detailValue}>{camera.vms.groupKey}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Stream Information */}
-          <div className={styles.detailCard}>
-            <h3 className={styles.cardTitle}>Stream Configuration</h3>
-            {camera.streamUrl && (
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>Stream URL:</span>
-                <span className={styles.detailValue}>
-                  <code className={styles.codeBlock}>{camera.streamUrl}</code>
-                </span>
-              </div>
-            )}
-            {streamUrl && streamUrl !== camera.streamUrl && (
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>Active Stream:</span>
-                <span className={styles.detailValue}>
-                  <code className={styles.codeBlock}>{streamUrl}</code>
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Timestamps */}
-          <div className={styles.detailCard}>
-            <h3 className={styles.cardTitle}>Timestamps</h3>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Created:</span>
-              <span className={styles.detailValue}>
-                {new Date(camera.createdAt).toLocaleString()}
-              </span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Last Updated:</span>
-              <span className={styles.detailValue}>
-                {new Date(camera.updatedAt).toLocaleString()}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

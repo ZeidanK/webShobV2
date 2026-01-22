@@ -61,7 +61,8 @@ export function OperatorDashboard() {
     maxLng: number;
     maxLat: number;
   } | null>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Use DOM-friendly timeout typing for browser builds.
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Nearby camera query defaults for the operator map flow.
   const nearbyRadiusMeters = 500;
   const nearbyMaxCameras = 16;
@@ -101,7 +102,15 @@ export function OperatorDashboard() {
       }
 
       if ((displayMode === 'reports' || displayMode === 'both') && mapFilters.display.showReports) {
-        const reportFilters = { ...mapBounds };
+        // Reports filters mirror the API query shape with optional status/type.
+        const reportFilters = { ...mapBounds } as {
+          minLng: number;
+          minLat: number;
+          maxLng: number;
+          maxLat: number;
+          status?: string;
+          type?: string;
+        };
         
         // Apply filter overlay filters for reports
         if (mapFilters.reports.status.length > 0) {
@@ -408,16 +417,16 @@ export function OperatorDashboard() {
           {/* Stats */}
           <div className={styles.stats}>
             <div className={`${styles.statBadge} ${styles.statBadgeActive}`}>
-              📊 {stats.total} Total
+              Total: {stats.total}
             </div>
             <div className={`${styles.statBadge} ${styles.statBadgeActive}`}>
-              🔴 {stats.active} Active
+              Active: {stats.active}
             </div>
             <div className={`${styles.statBadge} ${styles.statBadgeHigh}`}>
-              ⚡ {stats.high} High
+              High: {stats.high}
             </div>
             <div className={`${styles.statBadge} ${styles.statBadgeCritical}`}>
-              ⚠️ {stats.critical} Critical
+              Critical: {stats.critical}
             </div>
           </div>
         </div>
@@ -430,14 +439,14 @@ export function OperatorDashboard() {
           
           {!loading && filteredEvents.length === 0 && (
             <div className={styles.empty}>
-              <div className={styles.emptyIcon}>📍</div>
+              <div className={styles.emptyIcon}>No events</div>
               <h3 className={styles.emptyTitle}>No events found</h3>
               <p className={styles.emptyText}>
                 Move the map or adjust filters to view events
               </p>
             </div>
           )}
-
+          
           {!loading && filteredEvents.map((event) => (
             <div
               key={event._id}
@@ -458,20 +467,19 @@ export function OperatorDashboard() {
 
               <div className={styles.eventCardMeta}>
                 <span className={styles.eventCardMetaItem}>
-                  📍 {event.locationDescription || 'Location'}
+                  Location: {event.locationDescription || 'Location'}
                 </span>
                 <span className={styles.eventCardMetaItem}>
-                  ⏰ {formatDate(event.createdAt)}
+                  Created: {formatDate(event.createdAt)}
                 </span>
                 <span className={styles.eventCardMetaItem}>
-                  📊 {event.status}
+                  Status: {event.status}
                 </span>
               </div>
             </div>
           ))}
         </div>
       </div>
-
       {/* Map */}
       <div className={styles.mapContainer}>
         {/* Filter Toggle Button */}
@@ -544,3 +552,6 @@ export function OperatorDashboard() {
     </div>
   );
 }
+
+
+

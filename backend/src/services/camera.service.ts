@@ -11,8 +11,10 @@
  */
 
 import mongoose, { Document } from 'mongoose';
-import { Camera, ICamera, CameraStatus, VmsServer, IVmsServer } from '../models';
+import { Camera, ICamera, CameraStatus, VmsServer, IVmsServer, AuditLog, AuditAction } from '../models';
+import type { VmsProvider } from '../models/vms-server.model';
 import { vmsService, VmsMonitor, StreamUrls } from './vms.service';
+import { rtspStreamService } from './rtsp-stream.service';
 import { NotFoundError, ValidationError, ConflictError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -39,7 +41,16 @@ export interface CameraFilters {
   vmsServerId?: mongoose.Types.ObjectId;
   hasVms?: boolean;
   search?: string;
+  tags?: string[];
   isDeleted?: boolean;
+}
+
+/** Optional audit context for camera VMS operations */
+export interface CameraAuditContext {
+  userId?: mongoose.Types.ObjectId;
+  correlationId?: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /** Create camera input */
@@ -47,6 +58,28 @@ export interface CreateCameraInput {
   name: string;
   description?: string;
   streamUrl?: string;
+  capabilities?: {
+    ptz?: boolean;
+    audio?: boolean;
+    motionDetection?: boolean;
+  };
+  maintenanceSchedule?: {
+    intervalDays?: number;
+    lastServiceAt?: Date;
+    nextServiceAt?: Date;
+    notes?: string;
+  };
+  tags?: string[];
+  // TEST-ONLY: Stream configuration for Direct RTSP scaffolding.
+  streamConfig?: {
+    type: 'vms' | 'direct-rtsp';
+    rtspUrl?: string;
+    transport?: 'tcp' | 'udp';
+    auth?: {
+      username?: string;
+      password?: string;
+    };
+  };
   type?: 'ip' | 'analog' | 'usb';
   status?: CameraStatus;
   location: {
@@ -58,8 +91,14 @@ export interface CreateCameraInput {
     fps?: number;
     recordingEnabled?: boolean;
   };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
+  };
   vms?: {
-    provider?: 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
+    provider?: VmsProvider;
     serverId?: mongoose.Types.ObjectId;
     monitorId?: string;
   };
@@ -76,6 +115,28 @@ export interface UpdateCameraInput {
   name?: string;
   description?: string;
   streamUrl?: string;
+  capabilities?: {
+    ptz?: boolean;
+    audio?: boolean;
+    motionDetection?: boolean;
+  };
+  maintenanceSchedule?: {
+    intervalDays?: number;
+    lastServiceAt?: Date;
+    nextServiceAt?: Date;
+    notes?: string;
+  };
+  tags?: string[];
+  // TEST-ONLY: Stream configuration for Direct RTSP scaffolding.
+  streamConfig?: {
+    type?: 'vms' | 'direct-rtsp';
+    rtspUrl?: string;
+    transport?: 'tcp' | 'udp';
+    auth?: {
+      username?: string;
+      password?: string;
+    };
+  };
   type?: 'ip' | 'analog' | 'usb';
   status?: CameraStatus;
   location?: {
@@ -86,6 +147,12 @@ export interface UpdateCameraInput {
     resolution?: string;
     fps?: number;
     recordingEnabled?: boolean;
+  };
+  // TEST-ONLY: Recording configuration (Slice 12).
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
   };
   metadata?: Record<string, unknown>;
 }
@@ -99,6 +166,103 @@ export interface CameraWithStreams extends CameraData {
 }
 
 class CameraService {
+  // TEST-ONLY: Normalize tag inputs to trimmed, unique values.
+  private normalizeTags(tags?: string[]): string[] | undefined {
+    if (!tags) {
+      return undefined;
+    }
+    const normalized = tags
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+    return Array.from(new Set(normalized));
+  }
+
+  // TEST-ONLY: Persist a camera audit entry for VMS-related updates.
+  private async writeAuditLog(
+    action: AuditAction,
+    companyId: mongoose.Types.ObjectId,
+    resourceId: mongoose.Types.ObjectId | undefined,
+    changes: Record<string, unknown> | undefined,
+    metadata: Record<string, unknown> | undefined,
+    context?: CameraAuditContext
+  ): Promise<void> {
+    await AuditLog.create({
+      action,
+      companyId,
+      resourceType: 'Camera',
+      resourceId,
+      userId: context?.userId,
+      changes,
+      metadata,
+      correlationId: context?.correlationId,
+      ipAddress: context?.ipAddress,
+      userAgent: context?.userAgent,
+    });
+  }
+  /**
+   * Validate stream configuration and related fields.
+   */
+  private validateStreamConfigInput(
+    data: CreateCameraInput | UpdateCameraInput,
+    existingCamera?: ICamera | null
+  ) {
+    const hasStreamConfig = data.streamConfig !== undefined;
+    const streamType = data.streamConfig?.type || existingCamera?.streamConfig?.type;
+    if (hasStreamConfig && !streamType) {
+      throw new ValidationError('streamConfig.type is required when streamConfig is provided');
+    }
+    if (!streamType) {
+      return;
+    }
+
+    if (streamType === 'direct-rtsp') {
+      // TEST-ONLY: Enforce required RTSP URL and prevent mixed VMS config.
+      const rtspUrl = data.streamConfig?.rtspUrl || existingCamera?.streamConfig?.rtspUrl;
+      if (!rtspUrl) {
+        throw new ValidationError('streamConfig.rtspUrl is required for direct-rtsp cameras');
+      }
+      const vmsInput = (data as CreateCameraInput).vms;
+      if (vmsInput?.serverId || vmsInput?.monitorId) {
+        throw new ValidationError('direct-rtsp cameras cannot be linked to a VMS server');
+      }
+      if (existingCamera?.vms?.serverId) {
+        throw new ValidationError('Disconnect VMS before switching to direct-rtsp');
+      }
+      if (data.streamUrl) {
+        throw new ValidationError('streamUrl is not supported for direct-rtsp cameras');
+      }
+    }
+  }
+
+  private buildStreamConfig(
+    incoming: UpdateCameraInput['streamConfig'] | CreateCameraInput['streamConfig'] | undefined,
+    existing?: ICamera['streamConfig']
+  ) {
+    if (!incoming && !existing) {
+      return undefined;
+    }
+
+    const resolvedType = incoming?.type || existing?.type || 'vms';
+    const next = {
+      type: resolvedType,
+      rtspUrl: incoming?.rtspUrl ?? existing?.rtspUrl,
+      transport: incoming?.transport ?? existing?.transport,
+      auth: incoming?.auth ?? existing?.auth,
+    };
+
+    if (!next.rtspUrl) {
+      delete (next as { rtspUrl?: string }).rtspUrl;
+    }
+    if (!next.transport) {
+      delete (next as { transport?: string }).transport;
+    }
+    if (!next.auth || (!next.auth.username && !next.auth.password)) {
+      delete (next as { auth?: { username?: string; password?: string } }).auth;
+    }
+
+    return next;
+  }
+
   /**
    * Create a new camera
    */
@@ -108,6 +272,8 @@ class CameraService {
     userId?: mongoose.Types.ObjectId
   ): Promise<ICamera> {
     logger.info('Creating camera', { companyId, name: data.name });
+
+    this.validateStreamConfigInput(data);
 
     // Validate VMS server if specified
     if (data.vms?.serverId) {
@@ -126,6 +292,7 @@ class CameraService {
 
     const camera = new Camera({
       ...data,
+      tags: this.normalizeTags(data.tags),
       companyId,
       createdBy: userId,
       updatedBy: userId,
@@ -188,6 +355,10 @@ class CameraService {
         { description: { $regex: filters.search, $options: 'i' } },
         { 'location.address': { $regex: filters.search, $options: 'i' } },
       ];
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      query.tags = { $in: filters.tags };
     }
 
     logger.info('Camera query', {
@@ -261,6 +432,8 @@ class CameraService {
       throw new NotFoundError(`Camera with ID ${cameraId} not found`);
     }
 
+    this.validateStreamConfigInput(data, camera);
+
     // Track old status for WebSocket broadcast
     const oldStatus = camera.status;
 
@@ -268,6 +441,11 @@ class CameraService {
     if (data.name !== undefined) camera.name = data.name;
     if (data.description !== undefined) camera.description = data.description;
     if (data.streamUrl !== undefined) camera.streamUrl = data.streamUrl;
+    // TEST-ONLY: Allow streamConfig updates for Phase 2 scaffolding.
+    if (data.streamConfig !== undefined) {
+      // TEST-ONLY: Preserve streamConfig.type when partial updates omit it.
+      camera.streamConfig = this.buildStreamConfig(data.streamConfig, camera.streamConfig);
+    }
     if (data.type !== undefined) camera.type = data.type;
     if (data.status !== undefined) camera.status = data.status;
 
@@ -282,6 +460,25 @@ class CameraService {
 
     if (data.settings) {
       camera.settings = { ...camera.settings, ...data.settings };
+    }
+
+    if (data.recording) {
+      camera.recording = { ...camera.recording, ...data.recording };
+    }
+
+    if (data.capabilities) {
+      camera.capabilities = { ...camera.capabilities, ...data.capabilities };
+    }
+
+    if (data.maintenanceSchedule) {
+      camera.maintenanceSchedule = {
+        ...camera.maintenanceSchedule,
+        ...data.maintenanceSchedule,
+      };
+    }
+
+    if (data.tags !== undefined) {
+      camera.tags = this.normalizeTags(data.tags) || [];
     }
 
     if (data.metadata) {
@@ -342,8 +539,9 @@ class CameraService {
     cameraId: mongoose.Types.ObjectId,
     serverId: mongoose.Types.ObjectId,
     monitorId: string,
-    userId?: mongoose.Types.ObjectId
-  ): Promise<ICamera> {
+    userId?: mongoose.Types.ObjectId,
+    context?: CameraAuditContext
+  ): Promise<{ camera: ICamera; capabilities: { supportsLive: boolean; supportsPlayback: boolean; supportsExport: boolean } }> {
     // Verify camera exists in this company
     const camera = await Camera.findOne({ _id: cameraId, companyId, isDeleted: false });
     if (!camera) {
@@ -354,6 +552,10 @@ class CameraService {
     const server = await VmsServer.findOne({ _id: serverId, companyId });
     if (!server) {
       throw new NotFoundError(`VMS server with ID ${serverId} not found`);
+    }
+    // TEST-ONLY: Block unsupported VMS providers before connecting.
+    if (server.provider !== 'shinobi') {
+      throw new ValidationError(`VMS provider ${server.provider} is not supported yet`);
     }
 
     // Check if another camera already uses this monitor
@@ -381,8 +583,19 @@ class CameraService {
     camera.updatedBy = userId;
     await camera.save();
 
+    // TEST-ONLY: Record audit metadata for camera VMS connections.
+    await this.writeAuditLog(
+      AuditAction.CAMERA_VMS_CONNECTED,
+      companyId,
+      camera._id,
+      { vms: { serverId: serverId.toString(), monitorId } },
+      { provider: server.provider },
+      { ...context, userId }
+    );
+
+    const capabilities = vmsService.getCapabilities(server.provider);
     logger.info('Camera connected to VMS', { cameraId, serverId, monitorId });
-    return camera;
+    return { camera, capabilities };
   }
 
   /**
@@ -391,7 +604,8 @@ class CameraService {
   async disconnectFromVms(
     companyId: mongoose.Types.ObjectId,
     cameraId: mongoose.Types.ObjectId,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: CameraAuditContext
   ): Promise<ICamera> {
     const camera = await Camera.findOne({ _id: cameraId, companyId, isDeleted: false });
     if (!camera) {
@@ -401,6 +615,16 @@ class CameraService {
     camera.vms = undefined;
     camera.updatedBy = userId;
     await camera.save();
+
+    // TEST-ONLY: Record audit metadata for camera VMS disconnections.
+    await this.writeAuditLog(
+      AuditAction.CAMERA_VMS_DISCONNECTED,
+      companyId,
+      camera._id,
+      undefined,
+      undefined,
+      { ...context, userId }
+    );
 
     logger.info('Camera disconnected from VMS', { cameraId });
     return camera;
@@ -417,7 +641,8 @@ class CameraService {
       name: string;
       location: { coordinates: [number, number]; address?: string };
     }>,
-    userId?: mongoose.Types.ObjectId
+    userId?: mongoose.Types.ObjectId,
+    context?: CameraAuditContext
   ): Promise<{ created: number; skipped: number; cameras: ICamera[] }> {
     const server = await VmsServer.findOne({ _id: serverId, companyId });
     if (!server) {
@@ -469,6 +694,16 @@ class CameraService {
 
     logger.info('Batch import from VMS completed', { serverId, created, skipped, total: monitors.length });
 
+    // TEST-ONLY: Record audit metadata for VMS batch import results.
+    await this.writeAuditLog(
+      AuditAction.VMS_MONITORS_IMPORTED,
+      companyId,
+      undefined,
+      undefined,
+      { serverId: serverId.toString(), created, skipped },
+      { ...context, userId }
+    );
+
     return { created, skipped, cameras };
   }
 
@@ -502,11 +737,22 @@ class CameraService {
    */
   async getStreamUrls(
     companyId: mongoose.Types.ObjectId,
-    cameraId: mongoose.Types.ObjectId
+    cameraId: mongoose.Types.ObjectId,
+    publicBaseUrl?: string
   ): Promise<StreamUrls> {
     const camera = await this.findById(companyId, cameraId);
     if (!camera) {
       throw new NotFoundError(`Camera with ID ${cameraId} not found`);
+    }
+
+    if (camera.streamConfig?.type === 'direct-rtsp') {
+      // TEST-ONLY: Serve direct-rtsp streams from local HLS output.
+      const baseUrl = (publicBaseUrl || '').replace(/\/+$/, '');
+      await rtspStreamService.ensureStream(camera);
+      rtspStreamService.cleanupIdleStreams();
+      const token = rtspStreamService.createStreamToken(camera._id.toString(), camera.companyId.toString());
+      const hlsUrl = `${baseUrl}/api/cameras/${camera._id}/streams/hls/index.m3u8?token=${token}`;
+      return { hls: hlsUrl };
     }
 
     if (!camera.vms?.serverId || !camera.vms?.monitorId) {
@@ -565,6 +811,99 @@ class CameraService {
     return Camera.find(query)
       .limit(limit)
       .lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * TEST-ONLY: Find cameras by status.
+   */
+  async findByStatus(
+    companyId: mongoose.Types.ObjectId | null | undefined,
+    status: CameraStatus
+  ): Promise<ICamera[]> {
+    const query: Record<string, unknown> = { status, isDeleted: false };
+    if (companyId) {
+      query.companyId = companyId;
+    }
+    return Camera.find(query).lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * TEST-ONLY: Find cameras by tag.
+   */
+  async findByTag(
+    companyId: mongoose.Types.ObjectId | null | undefined,
+    tag: string
+  ): Promise<ICamera[]> {
+    const query: Record<string, unknown> = {
+      tags: tag,
+      isDeleted: false,
+    };
+    if (companyId) {
+      query.companyId = companyId;
+    }
+    return Camera.find(query).lean() as unknown as Promise<ICamera[]>;
+  }
+
+  /**
+   * TEST-ONLY: Bulk update camera status.
+   */
+  async bulkUpdateStatus(
+    companyId: mongoose.Types.ObjectId,
+    cameraIds: mongoose.Types.ObjectId[],
+    status: CameraStatus,
+    userId?: mongoose.Types.ObjectId
+  ): Promise<number> {
+    const result = await Camera.updateMany(
+      { companyId, _id: { $in: cameraIds }, isDeleted: false },
+      { $set: { status, updatedBy: userId, lastModified: new Date() } }
+    );
+    return result.modifiedCount || 0;
+  }
+
+  /**
+   * TEST-ONLY: Bulk delete cameras by ID (soft delete).
+   */
+  async bulkDelete(
+    companyId: mongoose.Types.ObjectId,
+    cameraIds: mongoose.Types.ObjectId[],
+    userId?: mongoose.Types.ObjectId
+  ): Promise<number> {
+    const result = await Camera.updateMany(
+      { companyId, _id: { $in: cameraIds }, isDeleted: false },
+      { $set: { isDeleted: true, updatedBy: userId, lastModified: new Date() } }
+    );
+    return result.modifiedCount || 0;
+  }
+
+  /**
+   * TEST-ONLY: Bulk tag cameras with add/remove/set behavior.
+   */
+  async bulkTag(
+    companyId: mongoose.Types.ObjectId,
+    cameraIds: mongoose.Types.ObjectId[],
+    tags: string[],
+    mode: 'add' | 'remove' | 'set',
+    userId?: mongoose.Types.ObjectId
+  ): Promise<number> {
+    const normalizedTags = this.normalizeTags(tags) || [];
+    const update: Record<string, unknown> = {
+      updatedBy: userId,
+      lastModified: new Date(),
+    };
+
+    if (mode === 'set') {
+      update.tags = normalizedTags;
+    } else if (mode === 'add') {
+      update.$addToSet = { tags: { $each: normalizedTags } };
+    } else {
+      update.$pull = { tags: { $in: normalizedTags } };
+    }
+
+    const result = await Camera.updateMany(
+      { companyId, _id: { $in: cameraIds }, isDeleted: false },
+      update
+    );
+    return result.modifiedCount || 0;
   }
 
   /**

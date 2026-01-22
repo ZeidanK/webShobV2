@@ -107,6 +107,16 @@
   color: #15803d;
 }
 
+.providerBadge.milestone {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.providerBadge.genetec {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
 .statusIndicator {
   display: inline-flex;
   align-items: center;
@@ -146,6 +156,8 @@
   background: white;
   border-radius: 6px;
   font-size: 0.75rem;
+  /* TEST-ONLY: Keep action labels visible on light backgrounds. */
+  color: #111827;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -156,6 +168,13 @@
   background: #f3f4f6;
 }
 
+.actionButton:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
 .actionButton.primary {
   background: #3b82f6;
   color: white;
@@ -164,6 +183,12 @@
 
 .actionButton.primary:hover {
   background: #2563eb;
+}
+
+.actionButton.primary:disabled {
+  background: #93c5fd;
+  border-color: #93c5fd;
+  color: #f8fafc;
 }
 
 .actionButton.danger {
@@ -178,6 +203,14 @@
 /* Server Details */
 .serverDetails {
   padding: 1.25rem;
+}
+
+.comingSoonBanner {
+  padding: 0.5rem 1.25rem;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  border-bottom: 1px solid #fcd34d;
 }
 
 .detailRow {
@@ -196,6 +229,38 @@
   font-size: 0.8125rem;
   color: #1a1a2e;
   word-break: break-all;
+}
+
+.capabilityPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.capabilityPill {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.capabilityEnabled {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.capabilityDisabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.capabilityLoading {
+  font-size: 0.75rem;
+  color: #6b7280;
 }
 
 /* Monitor List */
@@ -348,6 +413,9 @@
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   font-size: 0.875rem;
+  /* TEST-ONLY: Ensure select/input text stays readable. */
+  color: #111827;
+  background: white;
 }
 
 .formHint {
@@ -375,6 +443,16 @@
   font-weight: 600;
   color: #374151;
   margin: 0 0 0.75rem;
+}
+
+.comingSoonNote {
+  /* TEST-ONLY: Highlight stubbed providers without blocking configuration. */
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  font-size: 0.75rem;
 }
 
 .modalFooter {

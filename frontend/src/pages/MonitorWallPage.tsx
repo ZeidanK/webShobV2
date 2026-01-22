@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// TEST-ONLY: Use named hooks to avoid unused default React import.
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CameraGrid, CameraItem } from '../components/CameraGrid';
-import { api } from '../services/api';
+import { api, CameraStatus } from '../services/api';
+import { useCameraStatus } from '../hooks/useWebSocket';
 import styles from './MonitorWallPage.module.css';
 
 type GridSize = '2x2' | '3x3' | '4x4';
@@ -50,6 +52,8 @@ export default function MonitorWallPage() {
   const [gridResetToken, setGridResetToken] = useState(0);
   const [nearbyContext, setNearbyContext] = useState<NearbyCameraContext | null>(null);
   const [nearbyMode, setNearbyMode] = useState(false);
+  const gridWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [gridViewportHeight, setGridViewportHeight] = useState<number | null>(null);
 
   const updateWallSettings = useCallback((updates: Partial<WallSettings>) => {
     // TEST-ONLY: Keep settings changes local for operator-level customization.
@@ -100,10 +104,15 @@ export default function MonitorWallPage() {
     return Promise.all(
       (cameraList || []).map(async (camera) => {
         let streamUrl = camera.streamUrl;
-        if (!streamUrl && camera.vms?.serverId) {
+        let embedUrl = camera.embedUrl;
+        let snapshotUrl = camera.snapshotUrl;
+        if (!streamUrl && (camera.vms?.serverId || camera.streamConfig?.type === 'direct-rtsp')) {
           try {
             const streams = await api.cameras.getStreams(camera._id);
             streamUrl = streams.hls || streams.raw || streams.embed || streams.snapshot;
+            // TEST-ONLY: Preserve embed/snapshot URLs for fallback playback.
+            embedUrl = streams.embed || embedUrl;
+            snapshotUrl = streams.snapshot || snapshotUrl;
           } catch (err) {
             console.error('Failed to load camera streams:', err);
           }
@@ -113,7 +122,14 @@ export default function MonitorWallPage() {
           id: camera._id,
           name: camera.name,
           streamUrl,
+          embedUrl,
+          snapshotUrl,
           status: camera.status,
+          // TEST-ONLY: Track direct-rtsp streams for heartbeat support.
+          streamType: camera.streamConfig?.type || (camera.vms?.serverId ? 'vms' : 'manual'),
+          heartbeat: camera.streamConfig?.type === 'direct-rtsp'
+            ? () => api.cameras.heartbeat(camera._id)
+            : undefined,
         } as CameraItem;
       })
     );
@@ -183,10 +199,37 @@ export default function MonitorWallPage() {
     return () => clearInterval(interval);
   }, [fetchCameras, loadNearbyCameras, nearbyMode, nearbyContext]);
 
+  // TEST-ONLY: Apply real-time status updates to the wall tiles.
+  useCameraStatus((payload: { cameraId: string; status: CameraStatus }) => {
+    if (!payload?.cameraId) {
+      return;
+    }
+    setCameras((prev) =>
+      prev.map((camera) =>
+        camera.id === payload.cameraId ? { ...camera, status: payload.status } : camera
+      )
+    );
+  });
+
   useEffect(() => {
     // TEST-ONLY: Reset session-only tile sizes when grid size changes.
     setGridResetToken((prev) => prev + 1);
   }, [gridSize]);
+
+  useEffect(() => {
+    // TEST-ONLY: Track wall viewport height for fixed NxN sizing with overflow scroll.
+    const wrapper = gridWrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const updateHeight = () => {
+      setGridViewportHeight(wrapper.getBoundingClientRect().height);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(() => updateHeight());
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
 
   const handleSwap = useCallback((sourceId: string, targetId: string) => {
     // TEST-ONLY: Apply drag swaps to the local grid ordering.
@@ -221,11 +264,6 @@ export default function MonitorWallPage() {
     setNearbyMode(false);
     await fetchCameras(true);
   }, [fetchCameras]);
-  
-  const handleBackToMap = useCallback(() => {
-    // Navigate back to operator map view
-    navigate('/operator');
-  }, [navigate]);
 
   const gridSizeMap: Record<GridSize, number> = {
     '2x2': 4,
@@ -279,13 +317,19 @@ export default function MonitorWallPage() {
               onChange={(e) => setGridSize(e.target.value as GridSize)}
               className={styles.select}
             >
-              <option value="2x2">2×2 (4 cameras)</option>
-              <option value="3x3">3×3 (9 cameras)</option>
-              <option value="4x4">4×4 (16 cameras)</option>
+              <option value="2x2">2x2 (4 cameras)</option>
+              <option value="3x3">3x3 (9 cameras)</option>
+              <option value="4x4">4x4 (16 cameras)</option>
             </select>
           </label>
-          <button onClick={fetchCameras} className={styles.refreshBtn} title="Refresh cameras">
-            dY", Refresh
+          {/* TEST-ONLY: Use ASCII-only labels to avoid mojibake in operator controls. */}
+          {/* TEST-ONLY: Wrap refresh to avoid event-typed callback mismatch. */}
+          <button
+            onClick={() => fetchCameras()}
+            className={styles.refreshBtn}
+            title="Refresh cameras"
+          >
+            Refresh
           </button>
           <button onClick={handleResetLayout} className={styles.resetBtn} title="Reset wall layout">
             Reset Layout
@@ -335,31 +379,42 @@ export default function MonitorWallPage() {
 
       {error && (
         <div className={styles.error}>
-          ⚠️ {error}
+          {/* TEST-ONLY: Keep error copy ASCII to avoid encoding issues in the wall UI. */}
+          Error: {error}
         </div>
       )}
 
-      {!loading && displayCameras.length === 0 ? (
+      {!loading && cameras.length === 0 ? (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>📹</div>
+          {/* TEST-ONLY: ASCII fallback for empty-state icon text. */}
+          <div className={styles.emptyIcon}>No cameras</div>
           <div className={styles.emptyTitle}>No cameras available</div>
           <div className={styles.emptyText}>
             Add online cameras to start monitoring.
           </div>
         </div>
       ) : (
-        <div className={styles.gridWrapper}>
+        <div className={styles.gridWrapper} ref={gridWrapperRef}>
           <CameraGrid
-            cameras={displayCameras}
-            columns={parseInt(gridSize[0])}
+            cameras={cameras}
+            columns={parseInt(gridSize.split('x')[0], 10)}
+            rows={parseInt(gridSize.split('x')[1], 10)}
+            viewportHeight={gridViewportHeight ?? undefined}
             interactionMode={wallSettings.interactionMode}
             onSwap={handleSwap}
             showStatus={true}
             resetToken={gridResetToken}
+            // TEST-ONLY: Keep wall tiles in a scrollable container when overflow occurs.
+            wallMode={true}
           />
         </div>
       )}
     </div>
   );
 }
+
+
+
+
+
 

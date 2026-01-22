@@ -7,8 +7,9 @@ import styles from './CompaniesPage.module.css';
 interface Company {
   _id: string;
   name: string;
-  type: 'standard' | 'mobile_partner' | 'enterprise';
-  status: 'active' | 'suspended' | 'inactive';
+  // Accept backend strings to avoid over-constraining the list view.
+  type: string;
+  status: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,5 +1,11 @@
 # Test log outputs
 logs/
+# Direct RTSP stream outputs
+streams/
+# Shinobi VMS lab data
+vms-lab/data/
+vms-lab/mysql/
+vms-lab/.env
 
 # Test reports and coverage
 junit.xml

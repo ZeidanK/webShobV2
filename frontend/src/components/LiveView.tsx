@@ -18,6 +18,9 @@ interface LiveViewProps {
   
   /** Optional snapshot URL for poster image */
   snapshotUrl?: string;
+
+  /** Optional embed URL for iframe fallback */
+  embedUrl?: string;
   
   /** Enable/disable autoplay */
   autoPlay?: boolean;
@@ -45,6 +48,12 @@ interface LiveViewProps {
 
   /** Fill parent container (for resizable tiles) */
   fillParent?: boolean;
+
+  /** Optional heartbeat callback for keeping streams alive */
+  onHeartbeat?: () => Promise<unknown>;
+
+  /** Optional heartbeat interval override (ms) */
+  heartbeatIntervalMs?: number;
 }
 
 interface StreamState {
@@ -55,6 +64,7 @@ interface StreamState {
 
 export const LiveView: React.FC<LiveViewProps> = ({
   streamUrl,
+  embedUrl,
   cameraName,
   snapshotUrl,
   autoPlay = true,
@@ -66,10 +76,13 @@ export const LiveView: React.FC<LiveViewProps> = ({
   aspectRatio = '16:9',
   headerRight,
   fillParent = false,
+  onHeartbeat,
+  heartbeatIntervalMs = 30000,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const retryRef = useRef({ network: 0, media: 0 });
+  const [useIframe, setUseIframe] = useState(false);
   
   const [state, setState] = useState<StreamState>({
     loading: true,
@@ -90,7 +103,7 @@ export const LiveView: React.FC<LiveViewProps> = ({
   // Initialize HLS stream
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !streamUrl) {
+    if (!video || (!streamUrl && !embedUrl)) {
       setState({ loading: false, error: 'Stream URL is missing', playing: false });
       return;
     }
@@ -98,6 +111,15 @@ export const LiveView: React.FC<LiveViewProps> = ({
     cleanupHls();
     retryRef.current = { network: 0, media: 0 };
     setState({ loading: true, error: null, playing: false });
+    // TEST-ONLY: Reset iframe fallback when retrying.
+    setUseIframe(false);
+
+    if (!streamUrl && embedUrl) {
+      // TEST-ONLY: Use iframe fallback when only embed URL is available.
+      setUseIframe(true);
+      setState({ loading: false, error: null, playing: false });
+      return;
+    }
 
     // Check if native HLS is supported (Safari, iOS)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -121,6 +143,12 @@ export const LiveView: React.FC<LiveViewProps> = ({
 
     // Use hls.js for other browsers
     if (!Hls.isSupported()) {
+      if (embedUrl) {
+        // TEST-ONLY: Fall back to iframe embed when HLS is unsupported.
+        setUseIframe(true);
+        setState({ loading: false, error: null, playing: false });
+        return;
+      }
       const errorMsg = 'HLS is not supported in this browser';
       setState({ loading: false, error: errorMsg, playing: false });
       onError?.(errorMsg);
@@ -193,13 +221,26 @@ export const LiveView: React.FC<LiveViewProps> = ({
     });
 
     hls.attachMedia(video);
-  }, [streamUrl, autoPlay, cleanupHls, onLoad, onError]);
+  }, [streamUrl, embedUrl, autoPlay, cleanupHls, onLoad, onError]);
 
   // Initialize on mount and URL change
   useEffect(() => {
     initializeHls();
     return cleanupHls;
   }, [initializeHls, cleanupHls]);
+
+  useEffect(() => {
+    if (!onHeartbeat || !streamUrl) {
+      return undefined;
+    }
+    // TEST-ONLY: Keep direct-rtsp streams alive while LiveView is active.
+    const interval = window.setInterval(() => {
+      onHeartbeat().catch(() => {
+        // Ignore heartbeat failures; LiveView will surface stream errors separately.
+      });
+    }, heartbeatIntervalMs);
+    return () => window.clearInterval(interval);
+  }, [onHeartbeat, heartbeatIntervalMs, streamUrl]);
 
   // Handle play state
   const handlePlay = () => {
@@ -238,8 +279,9 @@ export const LiveView: React.FC<LiveViewProps> = ({
           <span className={styles.cameraName}>{cameraName}</span>
           {/* TEST-ONLY: Optional header actions for wall resize control. */}
           <div className={styles.headerActions}>
+            {/* TEST-ONLY: ASCII status label to avoid encoding issues. */}
             <span className={`${styles.status} ${state.playing ? styles.live : ''}`}>
-              {state.playing ? 'ƒ-? LIVE' : state.loading ? 'Loading...' : 'Offline'}
+              {state.playing ? 'LIVE' : state.loading ? 'Loading...' : 'Offline'}
             </span>
             {headerRight}
           </div>
@@ -247,16 +289,29 @@ export const LiveView: React.FC<LiveViewProps> = ({
       )}
 
       {/* Video player */}
-      <video
-        ref={videoRef}
-        className={`${styles.video} ${fillParent ? styles.videoFill : ''}`}
-        controls={showControls}
-        muted={muted}
-        playsInline
-        poster={snapshotUrl}
-        onPlay={handlePlay}
-        onPause={handlePause}
-      />
+      {!useIframe && (
+        <video
+          ref={videoRef}
+          className={`${styles.video} ${fillParent ? styles.videoFill : ''}`}
+          controls={showControls}
+          muted={muted}
+          playsInline
+          poster={snapshotUrl}
+          onPlay={handlePlay}
+          onPause={handlePause}
+        />
+      )}
+
+      {/* TEST-ONLY: Iframe fallback for non-HLS browsers */}
+      {useIframe && embedUrl && (
+        <iframe
+          className={styles.iframe}
+          src={embedUrl}
+          title={cameraName || 'Camera stream'}
+          allow="autoplay; fullscreen"
+          onLoad={() => onLoad?.()}
+        />
+      )}
 
       {/* Loading overlay */}
       {state.loading && (
@@ -269,7 +324,8 @@ export const LiveView: React.FC<LiveViewProps> = ({
       {/* Error overlay */}
       {state.error && (
         <div className={styles.overlay}>
-          <div className={styles.errorIcon}>âš ï¸</div>
+          {/* TEST-ONLY: ASCII error glyph to avoid mojibake. */}
+          <div className={styles.errorIcon}>!</div>
           <span className={styles.errorText}>{state.error}</span>
           <button className={styles.retryButton} onClick={handleRetry}>
             Retry Connection
@@ -281,4 +337,5 @@ export const LiveView: React.FC<LiveViewProps> = ({
 };
 
 export default LiveView;
+
 

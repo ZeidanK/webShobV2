@@ -1,4 +1,4 @@
-import { Link, useNavigate, Outlet } from 'react-router-dom';
+﻿import { Link, useNavigate, Outlet } from 'react-router-dom';
 import { getCurrentUser } from '../utils/auth';
 import { canManageUsers, canManageCompanySettings, canManageAllCompanies, UserRole } from '../utils/rbac';
 import styles from './Layout.module.css';
@@ -33,29 +33,30 @@ export function Layout() {
       <div className={styles.container}>
         <aside className={styles.sidebar}>
           <nav className={styles.nav}>
+            {/* Use ASCII labels to avoid mojibake in navigation text. */}
             <Link to="/dashboard" className={styles.navItem}>
-              ���� Dashboard
+              Dashboard
             </Link>
             
             {/* All users can access Reports */}
             <Link to="/reports" className={styles.navItem}>
-              📝 Reports
+              Reports
             </Link>
             
             {/* Operators see Events & Cameras (monitoring) */}
             {(userRole === 'operator' || userRole === 'admin' || userRole === 'company_admin' || userRole === 'super_admin') && (
               <>
                 <Link to="/operator" className={styles.navItem}>
-                  🗺️ Map View
+                  Map View
                 </Link>
                 <Link to="/events" className={styles.navItem}>
-                  🚨 Events
+                  Events
                 </Link>
                 <Link to="/cameras" className={styles.navItem}>
-                  📹 Cameras
+                  Cameras
                 </Link>
                 <Link to="/monitor" className={styles.navItem}>
-                  📺 Monitor Wall
+                  Monitor Wall
                 </Link>
               </>
             )}
@@ -63,13 +64,13 @@ export function Layout() {
             {/* Admins see User Management, Company Settings, and Cameras */}
             {canManageUsers(userRole) && (
               <Link to="/users" className={styles.navItem}>
-                👥 Users
+                Users
               </Link>
             )}
             
             {canManageCompanySettings(userRole) && (
               <Link to="/company-settings" className={styles.navItem}>
-                ⚙️ Company Settings
+                Company Settings
               </Link>
             )}
             
@@ -77,10 +78,10 @@ export function Layout() {
             {canManageAllCompanies(userRole) && (
               <>
                 <Link to="/admin/events" className={styles.navItem}>
-                  🚨 All Events
+                  All Events
                 </Link>
                 <Link to="/companies" className={styles.navItem}>
-                  🏢 Companies
+                  Companies
                 </Link>
               </>
             )}
@@ -94,3 +95,5 @@ export function Layout() {
     </div>
   );
 }
+
+

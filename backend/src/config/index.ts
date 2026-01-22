@@ -43,9 +43,30 @@ export const config = {
     uploadDir: process.env.UPLOAD_DIR || './uploads',
   },
 
+  // Direct RTSP streaming
+  streaming: {
+    baseDir: process.env.STREAMING_BASE_DIR || './streams',
+    tokenTtlSeconds: parseInt(process.env.STREAMING_TOKEN_TTL_SECONDS || '300', 10),
+    ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
+    idleTimeoutMs: parseInt(process.env.STREAMING_IDLE_TIMEOUT_MS || '300000', 10),
+    cleanupIntervalMs: parseInt(process.env.STREAMING_CLEANUP_INTERVAL_MS || '300000', 10),
+    cleanupMaxAgeMs: parseInt(process.env.STREAMING_CLEANUP_MAX_AGE_MS || '3600000', 10),
+    playbackLookupLimit: parseInt(process.env.STREAMING_PLAYBACK_LOOKUP_LIMIT || '200', 10),
+    publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
+    transcodeEnabled: process.env.STREAMING_TRANSCODE_ENABLED === 'true',
+    transcodePreset: process.env.STREAMING_TRANSCODE_PRESET || 'veryfast',
+    maxProcesses: parseInt(process.env.STREAMING_MAX_PROCESSES || '8', 10),
+  },
+
   // AI Service
   aiService: {
     url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
+  },
+
+  // Camera status monitoring
+  cameraStatusMonitor: {
+    enabled: process.env.CAMERA_STATUS_MONITOR_ENABLED !== 'false',
+    intervalMs: parseInt(process.env.CAMERA_STATUS_MONITOR_INTERVAL_MS || '60000', 10),
   },
 };
 

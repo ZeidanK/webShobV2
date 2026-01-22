@@ -11,7 +11,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 /** VMS Provider types - limited for MVP */
-export type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'other';
+export type VmsProvider = 'shinobi' | 'zoneminder' | 'agentdvr' | 'milestone' | 'genetec' | 'other';
 
 /** VMS Server document interface */
 export interface IVmsServer extends Document {
@@ -41,6 +41,9 @@ export interface IVmsServer extends Document {
     /** Password for basic auth */
     password?: string;
   };
+
+  /** Provider-specific SDK configuration (stub for Slice 11) */
+  sdkConfig?: Record<string, unknown>;
   
   /** Whether server is active and should be used */
   isActive: boolean;
@@ -77,7 +80,7 @@ const VmsServerSchema = new Schema<IVmsServer>(
       type: String,
       required: [true, 'VMS provider type is required'],
       enum: {
-        values: ['shinobi', 'zoneminder', 'agentdvr', 'other'],
+        values: ['shinobi', 'zoneminder', 'agentdvr', 'milestone', 'genetec', 'other'],
         message: '{VALUE} is not a supported VMS provider',
       },
     },
@@ -123,6 +126,9 @@ const VmsServerSchema = new Schema<IVmsServer>(
         type: String,
         select: false, // Hide by default for security
       },
+    },
+    sdkConfig: {
+      type: Schema.Types.Mixed,
     },
     isActive: {
       type: Boolean,

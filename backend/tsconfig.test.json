@@ -1,0 +1,8 @@
+// TEST-ONLY: TypeScript config for Jest test files in the backend.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*.test.ts", "src/test/**/*.ts"]
+}

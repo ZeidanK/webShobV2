@@ -16,6 +16,24 @@ export type CameraType = 'ip' | 'analog' | 'usb';
 /** Camera status options */
 export type CameraStatus = 'online' | 'offline' | 'error' | 'maintenance';
 
+/** TEST-ONLY: Stream configuration types for Phase 2 scaffolding. */
+export type StreamConfigType = 'vms' | 'direct-rtsp';
+
+/** TEST-ONLY: Camera capability flags */
+export interface CameraCapabilities {
+  ptz?: boolean;
+  audio?: boolean;
+  motionDetection?: boolean;
+}
+
+/** TEST-ONLY: Maintenance schedule metadata */
+export interface CameraMaintenanceSchedule {
+  intervalDays?: number;
+  lastServiceAt?: Date;
+  nextServiceAt?: Date;
+  notes?: string;
+}
+
 /** Camera document interface */
 export interface ICamera extends Document {
   /** Multi-tenant isolation */
@@ -29,12 +47,32 @@ export interface ICamera extends Document {
   
   /** Direct stream URL (RTSP, HTTP, etc.) */
   streamUrl?: string;
+
+  /** Stream configuration (Phase 2) */
+  streamConfig?: {
+    type: StreamConfigType;
+    rtspUrl?: string;
+    transport?: 'tcp' | 'udp';
+    auth?: {
+      username?: string;
+      password?: string;
+    };
+  };
   
   /** Camera type */
   type: CameraType;
   
   /** Camera status */
   status: CameraStatus;
+
+  /** TEST-ONLY: Optional capability flags */
+  capabilities?: CameraCapabilities;
+
+  /** TEST-ONLY: Maintenance schedule tracking */
+  maintenanceSchedule?: CameraMaintenanceSchedule;
+
+  /** TEST-ONLY: Tag list for categorization */
+  tags?: string[];
   
   /** Physical location */
   location: {
@@ -48,6 +86,13 @@ export interface ICamera extends Document {
     resolution?: string;
     fps?: number;
     recordingEnabled?: boolean;
+  };
+
+  /** TEST-ONLY: Recording configuration (Slice 12) */
+  recording?: {
+    enabled?: boolean;
+    retentionDays?: number;
+    vmsHandled?: boolean;
   };
   
   /** VMS integration data */
@@ -114,6 +159,44 @@ const CameraSchema = new Schema<ICamera>(
         message: 'Stream URL must be a valid RTSP, RTMP, HTTP, or HTTPS URL',
       },
     },
+    streamConfig: {
+      type: {
+        type: String,
+        enum: ['vms', 'direct-rtsp'],
+        default: 'vms',
+      },
+      rtspUrl: {
+        type: String,
+        trim: true,
+        validate: {
+          validator: function (url: string) {
+            // TEST-ONLY: Require rtspUrl when using direct-rtsp config.
+            const streamType = this.streamConfig?.type;
+            if (streamType === 'direct-rtsp') {
+              return !!url && /^(rtsp|rtmp|http|https):\/\/.+/.test(url);
+            }
+            if (!url) return true;
+            return /^(rtsp|rtmp|http|https):\/\/.+/.test(url);
+          },
+          message: 'RTSP URL is required for direct-rtsp and must be a valid RTSP/HTTP URL',
+        },
+      },
+      transport: {
+        type: String,
+        enum: ['tcp', 'udp'],
+      },
+      auth: {
+        username: {
+          type: String,
+          trim: true,
+        },
+        password: {
+          type: String,
+          // TEST-ONLY: Prevent auth secrets from leaking in camera responses.
+          select: false,
+        },
+      },
+    },
     type: {
       type: String,
       enum: {
@@ -129,6 +212,47 @@ const CameraSchema = new Schema<ICamera>(
         message: '{VALUE} is not a valid camera status',
       },
       default: 'offline',
+    },
+    capabilities: {
+      ptz: {
+        type: Boolean,
+        default: false,
+      },
+      audio: {
+        type: Boolean,
+        default: false,
+      },
+      motionDetection: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    maintenanceSchedule: {
+      intervalDays: {
+        type: Number,
+        min: [1, 'Maintenance interval must be at least 1 day'],
+      },
+      lastServiceAt: {
+        type: Date,
+      },
+      nextServiceAt: {
+        type: Date,
+      },
+      notes: {
+        type: String,
+        trim: true,
+        maxlength: [500, 'Maintenance notes must be less than 500 characters'],
+      },
+    },
+    tags: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (values: string[]) {
+          return Array.isArray(values) && values.every((value) => value.trim().length > 0);
+        },
+        message: 'Tags must be non-empty strings',
+      },
     },
     location: {
       type: {
@@ -174,10 +298,24 @@ const CameraSchema = new Schema<ICamera>(
         default: false,
       },
     },
+    recording: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      retentionDays: {
+        type: Number,
+        min: [1, 'Retention days must be at least 1'],
+        max: [3650, 'Retention days must be at most 3650'],
+      },
+      vmsHandled: {
+        type: Boolean,
+      },
+    },
     vms: {
       provider: {
         type: String,
-        enum: ['shinobi', 'zoneminder', 'agentdvr', 'other'],
+        enum: ['shinobi', 'zoneminder', 'agentdvr', 'milestone', 'genetec', 'other'],
       },
       serverId: {
         type: Schema.Types.ObjectId,
@@ -223,6 +361,7 @@ const CameraSchema = new Schema<ICamera>(
 CameraSchema.index({ companyId: 1, isDeleted: 1 });
 CameraSchema.index({ companyId: 1, name: 1 });
 CameraSchema.index({ companyId: 1, status: 1 });
+CameraSchema.index({ companyId: 1, tags: 1 });
 CameraSchema.index({ 'vms.serverId': 1 });
 CameraSchema.index({ 'vms.monitorId': 1 });
 CameraSchema.index({ 'metadata.source': 1 });

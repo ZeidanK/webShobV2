@@ -9,12 +9,16 @@ export function requestLoggerMiddleware(req: Request, res: Response, next: NextF
   const logger = createRequestLogger(req.correlationId);
 
   // Log request start (DEBUG level)
+  const safeQuery = { ...req.query } as Record<string, unknown>;
+  if (safeQuery.token) {
+    safeQuery.token = '[redacted]';
+  }
   logger.debug('Request started', {
     action: 'http.request.started',
     context: {
       method: req.method,
       path: req.path,
-      query: req.query,
+      query: safeQuery,
       userAgent: req.headers['user-agent'],
     },
   });
