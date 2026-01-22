@@ -112,6 +112,70 @@ router.get(
 
 /**
  * @swagger
+ * /cameras/nearby:
+ *   get:
+ *     summary: Find cameras near a location
+ *     tags: [Cameras]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: maxDistance
+ *         schema:
+ *           type: number
+ *           default: 5000
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: number
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: List of nearby cameras
+ */
+router.get(
+  '/nearby',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Determine company ID based on user role
+      let companyId: mongoose.Types.ObjectId | undefined;
+      if (req.user!.role !== UserRole.SUPER_ADMIN) {
+        companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+      }
+      
+      const { lng, lat, maxDistance, limit } = req.query;
+
+      if (!lng || !lat) {
+        throw new ValidationError('lng and lat query parameters are required');
+      }
+
+      const cameras = await cameraService.findNearby(
+        companyId,
+        [parseFloat(lng as string), parseFloat(lat as string)],
+        maxDistance ? parseInt(maxDistance as string, 10) : 5000,
+        limit ? parseInt(limit as string, 10) : 10
+      );
+
+      res.json(successResponse(cameras, req.correlationId));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
  * /cameras/{id}:
  *   get:
  *     summary: Get a camera by ID
@@ -623,37 +687,6 @@ router.get(
  *         schema:
  *           type: number
  *           default: 5000
- *     responses:
- *       200:
- *         description: List of nearby cameras
- */
-router.get(
-  '/nearby',
-  authenticate,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Super admins can see all cameras, others see only their company's cameras
-      const companyId = req.user!.role === UserRole.SUPER_ADMIN 
-        ? null 
-        : new mongoose.Types.ObjectId(req.user!.companyId);
-      const { lng, lat, maxDistance, limit } = req.query;
-
-      if (!lng || !lat) {
-        throw new ValidationError('lng and lat query parameters are required');
-      }
-
-      const cameras = await cameraService.findNearby(
-        companyId,
-        [parseFloat(lng as string), parseFloat(lat as string)],
-        maxDistance ? parseInt(maxDistance as string, 10) : 5000,
-        limit ? parseInt(limit as string, 10) : 10
-      );
-
-      res.json(successResponse(cameras, req.correlationId));
-    } catch (error) {
-      next(error);
-    }
-  }
 );
 
 /**
